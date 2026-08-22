@@ -5,10 +5,16 @@
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- Release and isolated builds may point this at an exact dependency
+         stack without changing or building the workspace siblings. -->
+    <QuetooDependencyRoot Condition="'$(QuetooDependencyRoot)'==''">$(SolutionDir)..\..\</QuetooDependencyRoot>
+  </PropertyGroup>
+
   <!-- SDL3 (core via ObjectivelyGPU, plus SDL3_image and SDL3_ttf from
        ObjectivelyMVC) is fetched on demand by this imported targets file, which
        defines $(SDL3Dir), $(SDL3ImageDir), $(SDL3TtfDir) and $(SDL3LibArch). -->
-  <Import Project="..\..\ObjectivelyMVC\ObjectivelyMVC.vs15\sdl3.targets" />
+  <Import Project="$(QuetooDependencyRoot)ObjectivelyMVC\ObjectivelyMVC.vs15\sdl3.targets" />
 
   <!-- This props file is imported before Microsoft.Cpp.props, which only sets
        the default Include/LibraryPath (Windows SDK + CRT dirs) when they are
@@ -51,19 +57,19 @@
   </PropertyGroup>
 
   <PropertyGroup Label="UserMacros">
-    <QuetooObjectivelyPath>$(SolutionDir)..\..\Objectively\</QuetooObjectivelyPath>
+    <QuetooObjectivelyPath>$(QuetooDependencyRoot)Objectively\</QuetooObjectivelyPath>
     <QuetooObjectivelyWinPath>$(QuetooObjectivelyPath)Objectively.vs15\</QuetooObjectivelyWinPath>
     <QuetooObjectivelyLibsPath>$(QuetooObjectivelyWinPath)libs\</QuetooObjectivelyLibsPath>
     <QuetooObjectivelyIncludePath>$(QuetooObjectivelyPath)Sources\;$(QuetooObjectivelyWinPath)Sources\;$(QuetooObjectivelyWinPath)Sources\gnu\</QuetooObjectivelyIncludePath>
     <QuetooObjectivelyLibraryPath>$(QuetooObjectivelyWinPath)bin\$(Platform)$(Configuration)\</QuetooObjectivelyLibraryPath>
 
-    <QuetooObjectivelyGPUPath>$(SolutionDir)..\..\ObjectivelyGPU\</QuetooObjectivelyGPUPath>
+    <QuetooObjectivelyGPUPath>$(QuetooDependencyRoot)ObjectivelyGPU\</QuetooObjectivelyGPUPath>
     <QuetooObjectivelyGPUWinPath>$(QuetooObjectivelyGPUPath)ObjectivelyGPU.vs15\</QuetooObjectivelyGPUWinPath>
     <QuetooObjectivelyGPULibsPath>$(QuetooObjectivelyGPUWinPath)libs\</QuetooObjectivelyGPULibsPath>
     <QuetooObjectivelyGPUIncludePath>$(QuetooObjectivelyGPUPath)Sources\;$(QuetooObjectivelyGPUWinPath)Sources\</QuetooObjectivelyGPUIncludePath>
     <QuetooObjectivelyGPULibraryPath>$(QuetooObjectivelyGPUWinPath)bin\$(Platform)$(Configuration)\</QuetooObjectivelyGPULibraryPath>
 
-    <QuetooObjectivelyMVCPath>$(SolutionDir)..\..\ObjectivelyMVC\</QuetooObjectivelyMVCPath>
+    <QuetooObjectivelyMVCPath>$(QuetooDependencyRoot)ObjectivelyMVC\</QuetooObjectivelyMVCPath>
     <QuetooObjectivelyMVCWinPath>$(QuetooObjectivelyMVCPath)ObjectivelyMVC.vs15\</QuetooObjectivelyMVCWinPath>
     <QuetooObjectivelyMVCLibsPath>$(QuetooObjectivelyMVCWinPath)libs\</QuetooObjectivelyMVCLibsPath>
     <QuetooObjectivelyMVCIncludePath>$(QuetooObjectivelyMVCPath)Sources\;$(QuetooObjectivelyMVCWinPath)Sources\</QuetooObjectivelyMVCIncludePath>

@@ -173,8 +173,8 @@
 /* Set MINIZ_USE_UNALIGNED_LOADS_AND_STORES only if not set */
 #if !defined(MINIZ_USE_UNALIGNED_LOADS_AND_STORES)
 #if MINIZ_X86_OR_X64_CPU
-/* Set MINIZ_USE_UNALIGNED_LOADS_AND_STORES to 1 on CPU's that permit efficient integer loads and stores from unaligned addresses. */
-#define MINIZ_USE_UNALIGNED_LOADS_AND_STORES 1
+/* Use the portable bytewise path: unaligned typed loads are undefined C even on x86. */
+#define MINIZ_USE_UNALIGNED_LOADS_AND_STORES 0
 #define MINIZ_UNALIGNED_USE_MEMCPY
 #else
 #define MINIZ_USE_UNALIGNED_LOADS_AND_STORES 0

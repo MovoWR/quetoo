@@ -1,0 +1,6 @@
+*.ac text eol=lf
+*.am text eol=lf
+*.m4 text eol=lf
+*.sh text eol=lf
+Makefile text eol=lf
+**/Makefile text eol=lf
