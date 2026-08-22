@@ -1,0 +1,873 @@
+/* The Join route, ported from "Menu v2 - Play" (Quetoo Race Design System,
+   `_ds/quetoo-race-design-system-3b6491be`), its "Play route - implementation
+   spec" and "Play route - Join fixes". The token-to-hex mapping lives in the
+   header of ui/main/MainView.css.
+
+   Authored from the Maps route's desktop canvas. The first cut
+   used `autoresizing-mask: contain | width` throughout, which in this dialect
+   resolves a view's width from its *content*: nothing right-aligned to the
+   viewport, the three filter Inputs collapsed to zero width and stacked on one
+   another, and the ColumnsView could not tell it had room for two columns. The
+   preferred canvas is 1642 x 856 - the Maps numbers. MainView now treats those
+   large exact widths as desktop maxima and reflows the two panes below their
+   minimum column width.
+
+   Two departures from the fixes document, both because the alternative is
+   worse here:
+
+   - `.joinColumns` is promoted to ColumnsView at the navigation boundary. Its
+     panes occupy two equal flow slots when they fit and stack when they do not.
+   - The list pane keeps its footprint when the list is empty rather than
+     collapsing to the empty state. `View::sizeThatContains` is a high-water
+     mark, so a pane that sizes to its content never shrinks back once the
+     table has been shown; pinning is the only shape that is stable across a
+     refresh. The empty state is a 200-tall left-aligned block at the top of
+     the body instead, so the void the capture showed is gone and Refresh does
+     not jump. */
+
+/* ---- Canvas -------------------------------------------------------------
+   The menu window tops out at 1680 x 960; 1642 x 868 survives the header, the
+   12px inset and the scrollbar gutter, and 856 is what is left for the page.
+   Each Play tab owns one vertical page ScrollView; native tables retain their
+   own local scrolling inside it. */
+
+#Join {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  background-color: transparent;
+  max-width: 1642;
+  min-width: 1642;
+  width: 1642;
+}
+
+#Join .join {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  distribution: default;
+  max-width: 1642;
+  min-width: 1642;
+  padding: 0;
+  spacing: 12;
+  width: 1642;
+}
+
+/* ---- Filters ------------------------------------------------------------
+   Connect and Quick join used to share this band with the filters; they now
+   live in the details pane, beside the server they act on, which is the whole
+   reason this row shrank to filters. Every Input here is pinned: an Input with
+   no width resolves to a zero-wide frame, and a horizontal stack then packs
+   all three at the same origin with their labels painting outside them. */
+
+#Join .joinToolbar {
+  autoresizing-mask: contain | width;
+  height: 56;
+  max-height: 56;
+  max-width: 1642;
+  min-column-width: 600;
+  min-height: 56;
+  min-width: 1642;
+  spacing: 8;
+  width: 1642;
+}
+
+#Join .joinFilters {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 44;
+  max-height: 44;
+  max-width: 768;
+  min-height: 44;
+  min-width: 768;
+  spacing: 24;
+  width: 768;
+}
+
+#Join .joinFilter {
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+  spacing: 8;
+}
+
+#Join .joinFilter > Label {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+}
+
+/* Right-aligned inside its slot: left-aligned, a 116-wide label put 30 points
+   of air between "Hide empty" and the box it belongs to, and the pair stopped
+   reading as one control. */
+#Join .joinFilter > Label > Text {
+  alignment: middle-right;
+  color: #93aec1;
+  font-size: 13;
+}
+
+/* The dialect's Selector has no :nth-of-type, so the two checkbox filters
+   carry their own class rather than being addressed by position. */
+#Join .joinFilterCheck {
+  max-width: 150;
+  min-width: 150;
+  width: 150;
+}
+
+#Join .joinFilterCheck > Label {
+  max-width: 116;
+  min-width: 116;
+  width: 116;
+}
+
+#Join .joinPingFilter {
+  max-width: 420;
+  min-width: 420;
+  width: 420;
+}
+
+#Join .joinPingFilter > Label {
+  max-width: 176;
+  min-width: 176;
+  width: 176;
+}
+
+/* Slider::layoutSubviews reserves its readout out of its own bar width, so the
+   value rides inside these 210 rather than floating past them - no separate
+   value label is needed. */
+#Join #maxPing {
+  autoresizing-mask: none;
+  height: 34;
+  max-height: 34;
+  max-width: 210;
+  min-height: 34;
+  min-width: 210;
+  width: 210;
+}
+
+/* The route's one slider, in the shell's slider language. This was the only
+   place in the menu that mounted a Slider and then styled nothing under it, so
+   it fell through to ObjectivelyMVC's own stylesheet: `Slider > .bar` there is
+   `autoresizing-mask: fill`, which is the bar taking the control's whole 34
+   points. What drew was a 210x34 filled block with a 34-tall blue fill inside
+   it and the stock 8x16 handle - a solid rectangle where every other route
+   draws a 4px track.
+
+   The mask, not just the height: `fill` is re-applied on every layout pass, so
+   `height` alone is overwritten before the control draws. The bar's colour and
+   the handle's come from the shell (`#main Slider > .bar`), which is more
+   specific than anything this file could say about them without restating the
+   whole ladder - so only the geometry the shell leaves open is set here. */
+#Join Slider > .bar {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  height: 4;
+  max-height: 4;
+  min-height: 4;
+}
+
+/* Size only. `#main Slider > .bar > .handle` scores exactly what this selector
+   scores, and Selector.c resolves a tie by qsort order - so the shell keeps
+   sole ownership of the handle's fill and border, and this states the one thing
+   the shell leaves open. */
+#Join Slider > .bar > .handle {
+  height: 20;
+  max-height: 20;
+  max-width: 11;
+  min-height: 20;
+  min-width: 11;
+  width: 11;
+}
+
+#Join Slider Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+/* The route's one line of guidance, in the slot the design keeps it in: the
+   right of the filter row, where a route with a search box puts its hint. The
+   8 on the right is the design's own inset: the hint is the last thing on the
+   band, so without it the sentence ends exactly on the pane's edge and reads as
+   overflow rather than as copy.
+
+   One rule, not two. Two rules with this selector score the same, and
+   Selector.c resolves a tie by qsort order - which is to say arbitrarily. They
+   happened to be safe because only one of them named `padding`, but the next
+   attribute added to either would not be. */
+#Join .joinRouteHint {
+  alignment: middle-right;
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  max-width: 460;
+  min-height: 44;
+  min-width: 460;
+  padding: 0 8 0 0;
+  width: 460;
+}
+
+#Join .joinRouteHint > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+/* ---- Content: the list and its details ---------------------------------- */
+
+#Join .joinColumns {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  max-width: 1642;
+  min-column-width: 700;
+  min-width: 1642;
+  spacing: 40;
+  width: 1642;
+}
+
+#Join .joinListPane,
+#Join .joinDetailsPane {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 0;
+  spacing: 0;
+}
+
+/* 901 / 701 within 1642 is the design's 1.7:1, and the Maps split byte for
+   byte. */
+#Join .joinListPane {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Join .joinDetailsPane {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+#Join .joinPaneHeader {
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+  padding: 0;
+}
+
+#Join .joinListPane .joinPaneHeader {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Join .joinDetailsPane .joinPaneHeader {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+/* The route's count lives beside the pane title rather than in a second
+   right-aligned stat under the master page's own Players / Map time / Physics
+   trio, which read as a duplicate of it. */
+#Join .joinPaneTitleGroup {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 44;
+  max-height: 44;
+  max-width: 300;
+  min-height: 44;
+  min-width: 300;
+  spacing: 12;
+  width: 300;
+}
+
+#Join .joinPaneTitle {
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  max-width: 130;
+  min-height: 44;
+  min-width: 130;
+  width: 130;
+}
+
+#Join .joinPaneTitle > Text {
+  alignment: middle-left;
+  color: #dde8f1;
+  font-size: 15;
+}
+
+#Join .joinPaneCount {
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  max-width: 158;
+  min-height: 44;
+  min-width: 158;
+  width: 158;
+}
+
+#Join .joinPaneCount > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 11;
+}
+
+/* Sort order and server source are stated in words beside the pane title, so
+   that both survive a screenshot. */
+#Join .joinPaneStatus {
+  alignment: middle-right;
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  max-width: 300;
+  min-height: 44;
+  min-width: 300;
+  width: 300;
+}
+
+#Join .joinPaneStatus {
+  padding: 0 8 0 0;
+}
+
+#Join .joinPaneStatus > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Join .joinPaneRule,
+#Join .joinPaneFootRule {
+  autoresizing-mask: none;
+  background-color: #2f4a5e73;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+#Join .joinListPane > .joinPaneRule,
+#Join .joinListPane > .joinPaneFootRule {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Join .joinDetailsPane .joinPaneRule,
+#Join .joinDetailsPane .joinPaneFootRule {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+/* ---- Server list -------------------------------------------------------- */
+
+/* Heights here are deliberately absent. Both pane bodies and both tables are
+   sized from the controller - a table to its header and rows, a body to
+   whatever it is currently showing - so that a nine-server list does not
+   reserve room for nineteen and leave the legend stranded at the bottom of the
+   canvas. `bindInlets` only writes attributes a computed style carries, so an
+   attribute this sheet never names is one the C owns outright; naming a height
+   here would take it back on the next restyle. The reserved maxima live beside
+   the row height in JoinServerViewController.c. */
+#Join .joinListBody {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  distribution: default;
+  max-width: 901;
+  min-width: 901;
+  padding: 12 0 12 0;
+  spacing: 0;
+  width: 901;
+}
+
+/* clips-subviews so a selected row's fill cannot paint past the table's content
+   rect into the gutter between the panes. */
+#Join #servers {
+  autoresizing-mask: none;
+  clips-subviews: true;
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Join #servers TableCellView,
+#Join #roster TableCellView {
+  height: 34;
+  max-height: 34;
+  min-height: 34;
+}
+
+/* Sorting is stated twice: the sorted column's own header cell carries the
+   arrow and the brighter label, and the pane header spells the order in words.
+   Inactive columns stay at tertiary text so the active one reads as active. */
+#Join #servers TableHeaderView {
+  background-color: #0c1b27;
+  border-color: #31516a;
+}
+
+#Join #servers TableHeaderView TableCellView > Text {
+  color: #93aec1;
+}
+
+#Join #servers TableHeaderView .sorted > Text {
+  color: #f4f8fb;
+}
+
+/* 250 + 160 + 118 + 100 + 92 + five cells of 2+2 padding = 740, inside 901. */
+#Join #servers #Server {
+  min-width: 250;
+  width: 250;
+}
+
+#Join #servers #Map {
+  min-width: 160;
+  width: 160;
+}
+
+#Join #servers #Physics {
+  min-width: 118;
+  width: 118;
+}
+
+#Join #servers #Players {
+  min-width: 100;
+  width: 100;
+}
+
+#Join #servers #Ping {
+  min-width: 92;
+  width: 92;
+}
+
+#Join #servers #Players > Text,
+#Join #servers #Ping > Text {
+  alignment: middle-right;
+}
+
+/* Row tints go on the row, not on its cells. A TableRowView is table-wide
+   while its cells only add up to the columns' own widths, so a tint painted per
+   cell leaves the row's own background showing through the difference - and the
+   framework sheet paints that background `darkgray` on a selected row, which
+   read as grey blocks punched between the columns. Painting the row and
+   clearing the cells tints the whole width evenly, and takes the selection
+   right out to the table's clipped edge. */
+#Join #servers TableRowView,
+#Join #roster TableRowView {
+  background-color: transparent;
+}
+
+#Join #servers TableRowView TableCellView,
+#Join #roster TableRowView TableCellView {
+  background-color: transparent;
+}
+
+#Join #servers TableRowView:nth-child(even),
+#Join #roster TableRowView:nth-child(even) {
+  background-color: #ffffff0a;
+}
+
+#Join #servers TableRowView:hover {
+  background-color: #ffffff12;
+}
+
+#Join #servers TableRowView:selected,
+#Join #roster TableRowView:selected {
+  background-color: #1e496b;
+}
+
+/* A server that could not be queried reports its error in the name column. */
+#Join #servers .error > Text {
+  color: #dc7488;
+}
+
+/* Ping is coloured against cg_quick_join_max_ping, so that moving the slider
+   visibly splits the list. The menu palette has no green - the saturated
+   --hud-* trio is in-world only. */
+#Join #servers .pingOver > Text {
+  color: #dc7488;
+}
+
+#Join #servers .pingFast > Text {
+  color: #73c7f2;
+}
+
+/* Never answered: stated as unset rather than painted as a slow but joinable
+   server, which is what 999 ms looked like. */
+#Join #servers .pingUnanswered > Text {
+  color: #93aec1;
+}
+
+/* Left-aligned, not centred: centring inside a frame is what pushed this text
+   off the left edge when the frame was narrower than the route, and it reads
+   better against the pane's hairline anyway. */
+#Join .joinEmptyState {
+  alignment: top-left;
+  autoresizing-mask: none;
+  height: 200;
+  max-height: 200;
+  min-height: 200;
+}
+
+#Join .joinListBody > .joinEmptyState {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Join .joinDetailsBody > .joinEmptyState {
+  height: 120;
+  max-height: 120;
+  max-width: 701;
+  min-height: 120;
+  min-width: 701;
+  width: 701;
+}
+
+#Join .joinEmptyState > Text {
+  alignment: top-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+#Join .joinListFooter {
+  autoresizing-mask: none;
+  height: 56;
+  max-height: 56;
+  max-width: 901;
+  min-height: 56;
+  min-width: 901;
+  padding: 0;
+  width: 901;
+}
+
+#Join .joinListFooterText {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  height: 56;
+  max-height: 56;
+  max-width: 500;
+  min-height: 56;
+  min-width: 500;
+  width: 500;
+}
+
+#Join .joinListFooterText > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Join #refresh {
+  alignment: middle-right;
+  autoresizing-mask: none;
+  height: 40;
+  max-height: 40;
+  max-width: 120;
+  min-height: 40;
+  min-width: 120;
+  width: 120;
+}
+
+/* ---- Server details ----------------------------------------------------- */
+
+#Join .joinDetailsBody {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  distribution: default;
+  max-width: 701;
+  min-width: 701;
+  padding: 12 0 12 0;
+  spacing: 12;
+  width: 701;
+}
+
+#Join .joinDetailTitleRow {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  distribution: default;
+  height: 54;
+  max-height: 54;
+  max-width: 701;
+  min-height: 54;
+  min-width: 701;
+  spacing: 4;
+  width: 701;
+}
+
+/* 22, not 30: in the empty state this headline is the only thing in the pane,
+   and at 30 it read as a page title rather than as a prompt. */
+#Join .joinDetailTitle {
+  autoresizing-mask: none;
+  height: 30;
+  max-height: 30;
+  max-width: 701;
+  min-height: 30;
+  min-width: 701;
+  width: 701;
+}
+
+#Join .joinDetailTitle > Text {
+  alignment: middle-left;
+  color: #f4f8fb;
+  font-size: 22;
+}
+
+#Join .joinDetailAddress {
+  autoresizing-mask: none;
+  height: 20;
+  max-height: 20;
+  max-width: 701;
+  min-height: 20;
+  min-width: 701;
+  width: 701;
+}
+
+#Join .joinDetailAddress > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+/* The empty pane is one prompt and one line, not a skeleton of dashes: the
+   grid, the roster and its rule are hidden until a row is selected. */
+#Join .joinDetailHint {
+  autoresizing-mask: none;
+  height: 22;
+  max-height: 22;
+  max-width: 701;
+  min-height: 22;
+  min-width: 701;
+  width: 701;
+}
+
+#Join .joinDetailHint > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+#Join .joinDetailMotd {
+  autoresizing-mask: none;
+  height: 26;
+  max-height: 26;
+  max-width: 701;
+  min-height: 26;
+  min-width: 701;
+  width: 701;
+}
+
+#Join .joinDetailMotd > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 13;
+}
+
+#Join .joinDetailGrid {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  distribution: default;
+  height: 150;
+  max-height: 150;
+  max-width: 701;
+  min-height: 150;
+  min-width: 701;
+  spacing: 0;
+  width: 701;
+}
+
+#Join .joinDetailRow {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 30;
+  max-height: 30;
+  max-width: 701;
+  min-height: 30;
+  min-width: 701;
+  spacing: 0;
+  width: 701;
+}
+
+#Join .joinDetailCaption {
+  autoresizing-mask: none;
+  height: 30;
+  max-height: 30;
+  max-width: 130;
+  min-height: 30;
+  min-width: 130;
+  width: 130;
+}
+
+#Join .joinDetailCaption > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Join .joinDetailValue {
+  autoresizing-mask: none;
+  height: 30;
+  max-height: 30;
+  max-width: 571;
+  min-height: 30;
+  min-width: 571;
+  width: 571;
+}
+
+#Join .joinDetailValue > Text {
+  alignment: middle-left;
+  color: #dde8f1;
+  font-size: 13;
+}
+
+/* The roster header carries its own count, the way every other section head on
+   this route does - the design states the occupancy beside the label rather
+   than leaving the reader to count table rows. */
+#Join .joinRosterHeader {
+  autoresizing-mask: none;
+  height: 28;
+  max-height: 28;
+  max-width: 701;
+  min-height: 28;
+  min-width: 701;
+  width: 701;
+}
+
+#Join .joinRosterTitle {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  height: 28;
+  max-height: 28;
+  max-width: 200;
+  min-height: 28;
+  min-width: 200;
+  width: 200;
+}
+
+#Join .joinRosterTitle > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 12;
+}
+
+#Join .joinRosterCount {
+  alignment: middle-right;
+  autoresizing-mask: none;
+  height: 28;
+  max-height: 28;
+  max-width: 160;
+  min-height: 28;
+  min-width: 160;
+  width: 160;
+}
+
+#Join .joinRosterCount > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Join #roster {
+  autoresizing-mask: none;
+  clips-subviews: true;
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+/* Runner, their own record here, and what they are doing - the three things
+   worth knowing about a stranger on a server you have not joined yet. Ping is
+   the server's, and it is already stated twice on this pane. */
+#Join #roster #Runner {
+  min-width: 300;
+  width: 300;
+}
+
+#Join #roster #Best {
+  min-width: 150;
+  width: 150;
+}
+
+#Join #roster #Status {
+  min-width: 140;
+  width: 140;
+}
+
+#Join #roster #Best > Text {
+  alignment: middle-right;
+}
+
+#Join #roster #Status > Text {
+  alignment: middle-right;
+}
+
+/* The local player reads in the design system's local-row tint. */
+#Join #roster .rosterLocal > Text {
+  color: #8fd5f5;
+}
+
+#Join #roster .rosterBot > Text {
+  color: #74899b;
+}
+
+/* ---- Actions: beside the server they act on ----------------------------- */
+
+#Join .joinActions {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 60;
+  max-height: 60;
+  max-width: 701;
+  min-height: 60;
+  min-width: 701;
+  padding: 14 0 0 0;
+  spacing: 10;
+  width: 701;
+}
+
+#Join .joinActions Button {
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  max-width: 150;
+  min-height: 44;
+  min-width: 150;
+  width: 150;
+}
+
+#Join #connect {
+  background-color: #173d57;
+  border-color: #4f91b8;
+}
+
+#Join #connect:hover,
+#Join #connect:focused {
+  background-color: #215778;
+  border-color: #73c7f2;
+}
+
+#Join #connect:disabled {
+  background-color: #0b1721aa;
+  border-color: #293b4a88;
+}

@@ -1,0 +1,1249 @@
+/* Race Settings route.
+
+   Ported from "Menu v2 - Settings"; see MainView.css for the token mapping.
+   The route is a page strip over one flow of sections, the same grammar the
+   Controls roster uses (MovementCombatViewController.css) - every section from
+   every page lives in the same flow, and the C side shows or hides them, so
+   switching pages and running a filter query are the same pass.
+
+   ColumnsView is the dialect's auto-fit: `min-column-width` is the minmax floor
+   and the flow drops a slot when the viewport can no longer afford one. The
+   floor has to be at least the width a section actually needs, or the flow
+   oscillates: `slotsThatFit` grants a slot narrower than its content, the
+   sections report their natural width instead, and this view's own
+   `contain` mask - a high-water mark - grows to that sum, while the `width`
+   mask pulls it back to the viewport on the next pass. On a 1602px window that
+   thrashed 1506 against 1630 every frame, and whichever pass rendered last
+   decided whether the third column was clipped.
+
+   530 is that floor. The old 460 counted the 240px label track and the 200px
+   control track and stopped there, forgetting the modified dot, the two 6px
+   gaps and the revert affordance beside the label - the sections measure ~527.
+   Three columns therefore need ~1638 of content width, which a 1920 window has
+   and a 1600 one does not, so the latter now correctly drops to two.
+
+   Rows are plain Views, not StackViews: the label group pins left and the
+   control group pins right, so the control column stays flush however long a
+   setting name runs. The dialect has no per-side borders, so each row separator
+   is an explicit 1px View (`.rowRule`) pinned to the row's bottom edge.
+
+   The design's staged commit is one thing this route does not reproduce
+   literally: a Cvar* control writes its cvar the moment it moves, so the value
+   is already live. Apply keeps its meaning by doing the half that is genuinely
+   deferred - the renderer and sound restarts - and by taking a new baseline for
+   Revert changes. */
+
+/* The footer is the Panel's accessoryView, which the Panel's vertical stack
+   places after the content - so the content must not claim the whole route.
+   MainView::pageScrollViewport subtracts each ancestor's bottom padding from
+   the scroll viewport, so reserving it here is what shortens the ScrollView and
+   leaves the accessory a visible strip. */
+Panel.settingsMenu {
+  alignment: top-left;
+  autoresizing-mask: width | height;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0 0 70 0;
+}
+
+Panel.settingsMenu > StackView {
+  autoresizing-mask: width | height;
+  axis: vertical;
+  distribution: default;
+  spacing: 10;
+}
+
+/* `width | height`, not `width` alone. The height is the whole of why the
+   footer was invisible: `Panel::layoutSubviews` sizes its contentView from
+   `Panel::contentSize`, which is `sizeThatContains(contentView)` minus the
+   accessory - and `sizeThatContains` is max(current, sizeThatFits), while a
+   contentView masked `width` alone is not a container, so its `sizeThatFits`
+   is just its own current height. The Panel therefore derives the content
+   height *from the content height*, subtracting the accessory's 58 and the
+   stack's 10 from it on every single layout pass. Nothing in that loop ever
+   refers to the viewport, so where the accessory lands is a function of
+   accumulated state rather than of the route's size, and the strip this
+   Panel's 70pt bottom padding reserves is not where it ends up.
+
+   With the height mask, `View::layoutSubviews` - which `StackView::layoutSubviews`
+   runs before its own pass - sizes the contentView to the stack's bounds, which
+   are the Panel's bounds, which are the viewport less that 70. The accessory
+   then flows to exactly `bounds.h + spacing`: inside the reserved strip, every
+   pass, from any starting state. */
+/* Two children now, not one: the utility bar, then the scrolling document. The
+   bar carries the page strip, and primary navigation that scrolls out of reach
+   is the one thing a route may not do - a player three sections down the strafe
+   helper had no way back to Display without scrolling up first. The spacing is
+   the gap between them, and it used to be the document's own. */
+Panel.settingsMenu > StackView > .contentView {
+  alignment: top-left;
+  autoresizing-mask: width | height;
+  padding: 0;
+  spacing: 12;
+}
+
+/* No right inset of its own any more: MainView reserves the scroll rail out of
+   the document's width (MAIN_PAGE_SCROLL_RAIL), so a second gutter here just
+   pulled every section 14 further off the edge it is composed against. */
+Panel.settingsMenu .settingsBody {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  min-width: 0;
+  padding: 0 0 28 0;
+  spacing: 12;
+}
+
+/* Utility bar: the page strip and the one filter slot ---------------------- */
+
+/* `distribution: default` deliberately: StackViewDistributionFill scales every
+   subview by availableSize/requestedSize rather than handing the slack to one
+   flexible child, which shrank the tab strip below its content width and let
+   the filter field overlap the last tab. */
+/* The right inset matches the rail the document below it gives up, so the
+   filter field's right edge and the sections' right edge are the same line even
+   though only one of the two is inside the scroller. */
+Panel.settingsMenu .settingsUtilityBar {
+  alignment: middle-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  padding: 4 12 4 0;
+  spacing: 16;
+}
+
+Panel.settingsMenu .settingsPageTabs {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  distribution: default;
+  spacing: 2;
+}
+
+/* Every state states the same box. A tab that only names its metrics in the
+   resting rule inherits whatever the framework's `Button:highlighted` and the
+   focus rules say about bevel and border-width in the others, and the strip
+   re-flows by those few points the moment one of its tabs is selected - which
+   moves every tab after it. */
+#main Panel.settingsMenu .settingsPageTab {
+  background-color: transparent;
+  border-width: 0;
+  bevel: none;
+  min-height: 34;
+  min-width: 0;
+  padding: 8 14 8 14;
+}
+
+/* Metrics only - no `background-color`, which the state rules below own. Two
+   rules naming the same attribute at the same specificity is a tie, and
+   Selector.c resolves a tie by qsort order. */
+#main Panel.settingsMenu .settingsPageTab:hover,
+#main Panel.settingsMenu .settingsPageTab:selected,
+#main Panel.settingsMenu .settingsPageTab:focused {
+  border-width: 0;
+  bevel: none;
+  min-height: 34;
+  min-width: 0;
+  padding: 8 14 8 14;
+}
+
+#main Panel.settingsMenu .settingsPageTab > Text {
+  color: #93aec1;
+  font-size: 14;
+}
+
+#main Panel.settingsMenu .settingsPageTab:hover {
+  background-color: #22557f57;
+}
+
+#main Panel.settingsMenu .settingsPageTab:hover > Text,
+#main Panel.settingsMenu .settingsPageTab:selected > Text {
+  color: #f4f8fb;
+}
+
+#main Panel.settingsMenu .settingsPageTab:selected {
+  background-color: #22557f;
+}
+
+/* A tab with no hits for the current query recedes rather than disappearing:
+   the strip must not change width while the player is typing. */
+#main Panel.settingsMenu .settingsPageTab.noHits > Text {
+  color: #46586a;
+}
+
+Panel.settingsMenu .settingsFilter {
+  background-color: #0c1721;
+  border-color: #31516a;
+  border-width: 1;
+  bevel: none;
+  max-width: 260;
+  min-height: 34;
+  min-width: 260;
+  padding: 6 11 6 11;
+  width: 260;
+}
+
+Panel.settingsMenu .settingsFilter > Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+Panel.settingsMenu .settingsFilter:focused {
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+Panel.settingsMenu .settingsIntro,
+Panel.settingsMenu .settingsEmptyState {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-width: 0;
+  height: 22;
+  max-height: 22;
+  min-height: 22;
+  padding: 0;
+}
+
+Panel.settingsMenu .settingsIntro > Text,
+Panel.settingsMenu .settingsEmptyState > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+/* The strafe preview's own host, outside the section flow. The flow is a
+   ColumnsView, and a slot in it is one column of however many the viewport
+   affords - too narrow for a picture of the screen to read as one. Here the
+   section takes the whole content width, and the sub-tab strip below it reads
+   as governing the roster rather than the preview. */
+Panel.settingsMenu .settingsStrafePreview {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  min-width: 0;
+  padding: 0 0 8 0;
+  spacing: 0;
+}
+
+/* The strafe helper sub-tab strip. One step quieter than the page strip above
+   it - same grammar, smaller type - because it governs one page rather than the
+   route. It is a slot in the resource rather than a section in the flow: the
+   flow is a ColumnsView, and a strip that governs the whole page cannot sit
+   inside one of its columns. */
+Panel.settingsMenu .settingsStrafeTabs {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  distribution: default;
+  spacing: 2;
+}
+
+#main Panel.settingsMenu .settingsStrafeTab {
+  background-color: transparent;
+  border-width: 0;
+  bevel: none;
+  min-height: 30;
+  min-width: 0;
+  padding: 6 12 6 12;
+}
+
+/* Same reservation as the page strip above it, for the same reason. */
+#main Panel.settingsMenu .settingsStrafeTab:hover,
+#main Panel.settingsMenu .settingsStrafeTab:selected,
+#main Panel.settingsMenu .settingsStrafeTab:focused {
+  border-width: 0;
+  bevel: none;
+  min-height: 30;
+  min-width: 0;
+  padding: 6 12 6 12;
+}
+
+#main Panel.settingsMenu .settingsStrafeTab > Text {
+  color: #93aec1;
+  font-size: 13;
+}
+
+#main Panel.settingsMenu .settingsStrafeTab:hover {
+  background-color: #22557f57;
+}
+
+#main Panel.settingsMenu .settingsStrafeTab:hover > Text,
+#main Panel.settingsMenu .settingsStrafeTab:selected > Text {
+  color: #f4f8fb;
+}
+
+#main Panel.settingsMenu .settingsStrafeTab:selected {
+  background-color: #22557f;
+}
+
+/* `max-column-width` is what keeps a one-section page reading like every other
+   page. The flow hands `count` columns `slotsThatFit` slots and clamps the slot
+   count to the number of columns it actually has, so a tab with a single
+   section - the strafe helper's Colours tab is the whole roster of one - gets
+   one slot as wide as the viewport. Every row on it is `autoresizing-mask:
+   width`, and `.rowRight` pins to the row's right edge, so the H/S/V pickers
+   ended up against the window's far edge with ~1500px of dead air between each
+   label and its own control, while the preset strip clipped off the right side
+   entirely. Capped, the lone column is the same 700-odd points a two-column
+   page gives each of its columns, and the label-then-control reading returns. */
+Panel.settingsMenu .settingsColumns {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  max-column-width: 760;
+  min-column-width: 530;
+  min-width: 0;
+  spacing: 24;
+}
+
+/* Sections ---------------------------------------------------------------- */
+
+/* Unframed: hierarchy is the eyebrow, its rule, and the row hairlines. Each
+   section is a ColumnsView slot, so it sizes to its own content height. */
+Panel.settingsMenu .settingSection {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0;
+  spacing: 0;
+}
+
+Panel.settingsMenu .sectionHead {
+  alignment: middle-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  height: 20;
+  max-height: 20;
+  min-height: 20;
+  min-width: 0;
+  spacing: 8;
+}
+
+Panel.settingsMenu .sectionEyebrow {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel.settingsMenu .sectionEyebrow > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 12;
+}
+
+/* The chip only appears on a section the query dragged in from another page. */
+Panel.settingsMenu .sectionTag {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-color: #2f4a5e8c;
+  border-width: 1;
+  bevel: none;
+  padding: 1 6 1 6;
+}
+
+Panel.settingsMenu .sectionTag > Text {
+  alignment: middle-left;
+  color: #5f7488;
+  font-size: 11;
+}
+
+Panel.settingsMenu .sectionRule {
+  autoresizing-mask: width;
+}
+
+Panel.settingsMenu .settingRows {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  min-width: 0;
+  padding: 12 0 0 0;
+  spacing: 0;
+}
+
+Panel.settingsMenu .rowRule {
+  autoresizing-mask: width;
+  background-color: #24333f57;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+/* Rows -------------------------------------------------------------------- */
+
+Panel.settingsMenu .settingRow {
+  autoresizing-mask: width;
+  clips-subviews: true;
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+}
+
+Panel.settingsMenu .rowLeft,
+Panel.settingsMenu .rowRight {
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 6;
+}
+
+/* The changed marker. Hidden until the row differs from what the client ships,
+   so a page of untouched settings carries no marks at all.
+
+   `alignment` matters as much as the size: a horizontal StackView positions each
+   child by that child's own alignment, and the default writes no y at all - so a
+   5pt square in a group whose label is three times its height sat on the group's
+   top edge and read as a stray dot above the name rather than as a mark against
+   it. */
+Panel.settingsMenu .rowDot {
+  alignment: middle-left;
+  background-color: #73c7f2;
+  height: 5;
+  max-height: 5;
+  max-width: 5;
+  min-height: 5;
+  min-width: 5;
+  width: 5;
+}
+
+/* The label column is only as wide as the roster's longer names need; anything
+   longer clips rather than widening the column and pushing every control
+   right. */
+Panel.settingsMenu .rowLabel {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  max-width: 240;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.settingsMenu .rowLabel > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+Panel.settingsMenu .settingRow.modified .rowLabel > Text {
+  color: #f4f8fb;
+}
+
+/* An outlined pill, not bare text. Drawn transparent and unbordered it sat one
+   6pt gap after the setting's own name in a quieter shade of the same colour,
+   and the pair read as one label - "Opacity revert" - rather than as a name and
+   a thing to click. The box is the affordance, and its own padding is most of
+   the separation. */
+#main Panel.settingsMenu .rowRevert {
+  alignment: middle-left;
+  background-color: #16232e;
+  border-color: #31516a;
+  border-width: 1;
+  bevel: none;
+  min-height: 22;
+  min-width: 0;
+  padding: 2 9 2 9;
+}
+
+#main Panel.settingsMenu .rowRevert > Text {
+  color: #93aec1;
+  font-size: 11;
+}
+
+#main Panel.settingsMenu .rowRevert:hover {
+  background-color: #1c3a52;
+  border-color: #6395bd;
+}
+
+#main Panel.settingsMenu .rowRevert:hover > Text {
+  color: #dde8f1;
+}
+
+#main Panel.settingsMenu .rowRevert:focused {
+  border-color: #73c7f2;
+  border-width: 1;
+}
+
+/* Controls ---------------------------------------------------------------- */
+
+/* One control track for the whole route. Fixed rather than flexed: `fill`
+   scales a subview by availableSize/requestedSize, which pushes the control to
+   the section's far right after a short label and then snaps it back the moment
+   hover re-runs View::applyStyle. */
+Panel.settingsMenu Select,
+Panel.settingsMenu Slider,
+Panel.settingsMenu Checkbox,
+Panel.settingsMenu .rowValue {
+  max-width: 200;
+  min-height: 34;
+  min-width: 200;
+  width: 200;
+}
+
+Panel.settingsMenu Select {
+  background-color: #12212e;
+  border-width: 0;
+  bevel: none;
+  padding: 6 11 6 11;
+}
+
+Panel.settingsMenu Select Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+Panel.settingsMenu Select:hover {
+  background-color: #1c3a52;
+}
+
+Panel.settingsMenu Select:focused {
+  background-color: #122a3a;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+Panel.settingsMenu Select:disabled {
+  background-color: #0b1721;
+}
+
+Panel.settingsMenu Select:disabled Text {
+  color: #6d8291;
+}
+
+/* A read-only readout is text, not a field: the design draws the GPU backend
+   as a plain right-aligned value. */
+Panel.settingsMenu .rowValue {
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel.settingsMenu .rowValue > Text {
+  alignment: middle-right;
+  color: #dde8f1;
+  font-size: 13;
+}
+
+/* Strafe helper ----------------------------------------------------------- */
+
+/* Four segments, and the four names are longer than the quality strip's five.
+   The row label gives back what it can and the segments carry tighter padding,
+   which is what keeps the strip inside a 460px column without truncating
+   "CGAZ classic". */
+Panel.settingsMenu .strafePresetRow .rowLabel {
+  max-width: 56;
+}
+
+#main Panel.settingsMenu .strafePresetSegments .presetSegment {
+  padding: 7 9 7 9;
+}
+
+/* The strip owns "Custom" as its fifth segment, so what is left for this
+   caption is the one state a selected segment cannot express: a hand-edited
+   page that is inert anyway because the helper is switched off. Middle-aligned
+   because it shares a row with 34pt segments - left to the stack's default it
+   sat at the top of the row and read as loose text above the control. */
+Panel.settingsMenu .strafePresetStatus {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  height: 18;
+  max-height: 18;
+  min-height: 18;
+  padding: 0 0 0 4;
+}
+
+Panel.settingsMenu .strafePresetStatus > Text {
+  alignment: middle-left;
+  color: #5c8fb5;
+  font-size: 12;
+}
+
+/* A row whose parent toggle is off. Dimmed rather than hidden: the page is a
+   fixed roster, and a section that changed height every time a toggle moved
+   would make the rows below it jump under the pointer. The C side also disables
+   the control, so this is the appearance half of one state. */
+Panel.settingsMenu .settingRow.inert .rowLabel > Text {
+  color: #5f7488;
+}
+
+/* The preview is a picture of the screen, so it takes the whole row rather than
+   the shared 200px control track. The height is declared here as well as being
+   laid out from C: stylesheet re-application resets what the stylesheet does
+   not mention, and a preview that collapsed to h=0 would take its readouts with
+   it.
+
+   Compounded onto `.settingRow` deliberately, not written as `.previewRow`
+   alone. Specificity here is CSS's (id 100, class 10, type 1), so
+   `Panel.settingsMenu .previewRow` scored exactly what `Panel.settingsMenu
+   .settingRow` scores - a tie, which Selector.c resolves by qsort order, which
+   is to say arbitrarily. The row lost it, inherited the roster's 44, and since
+   `.settingRow` also carries `clips-subviews` the 168px preview was cropped to
+   a ~40px band: one sliver across the middle of the bar, with the centre label,
+   both markers and all three readouts outside the clip. That reads as "the
+   preview does not draw", not as "the row is too short". */
+Panel.settingsMenu .settingRow.previewRow {
+  height: 200;
+  max-height: 200;
+  min-height: 200;
+}
+
+/* The row is 200 tall rather than the roster's 44, so the label group has to be
+   told to sit at the top of it instead of centring on the preview. */
+Panel.settingsMenu .previewRow .rowLeft {
+  alignment: top-left;
+}
+
+Panel.settingsMenu .previewRow .rowLabel > Text {
+  color: #93aec1;
+  font-size: 12;
+}
+
+Panel.settingsMenu .strafePreview {
+  alignment: bottom-left;
+  autoresizing-mask: width;
+  background-color: #081a2866;
+  border-color: #24333f57;
+  border-width: 1;
+  height: 168;
+  max-height: 168;
+  min-height: 168;
+}
+
+/* Sized and placed from StrafeHelperPreview::layoutSubviews, which runs after
+   the stylesheet every pass; the floor here is what keeps a readout legible on
+   a pass that lands between the two. */
+Panel.settingsMenu .strafePreviewReadout,
+Panel.settingsMenu .strafePreviewCenterLabel {
+  background-color: transparent;
+  border-width: 0;
+  min-height: 14;
+  padding: 0;
+}
+
+Panel.settingsMenu .strafePreviewReadout > Text {
+  alignment: middle-center;
+  color: #f4f8fb;
+}
+
+Panel.settingsMenu .strafePreviewCenterLabel > Text {
+  alignment: middle-right;
+  color: #4d7796;
+  font-size: 11;
+}
+
+/* Colours editor: a target strip over one picker.
+
+   Not three rows of three sliders. Three colour cvars behind three roster rows
+   put a swatch and three rails into the cell the roster sizes for one control,
+   and `Slider::layoutSubviews` then spent what was left of it on the readout -
+   which is how a 200px track became a ~50px rail with its value clipped against
+   the row's right edge. The sub-tab is one editor with a selector instead, the
+   shape the preview and preset rows on this page already have.
+
+   The row is the whole editor rather than a label beside a control, so it takes
+   the row's full width and states its own height: the roster is fixed-height,
+   and a row that derived its height from content inside a `clips-subviews`
+   roster would be cropped rather than grown - see `.previewRow` above for the
+   same trap. */
+Panel.settingsMenu .settingRow.strafeColorsRow {
+  height: 268;
+  max-height: 268;
+  min-height: 268;
+}
+
+/* No label on this row - the section's "Colours" eyebrow already heads it and
+   the editor captions itself with the selected target - so the left group is
+   only the modified dot and the row revert, and it rides the top of a tall row
+   rather than its middle. */
+Panel.settingsMenu .strafeColorsRow .rowLeft {
+  alignment: top-left;
+}
+
+Panel.settingsMenu .strafeColorsRow .rowRight {
+  min-width: 0;
+}
+
+Panel.settingsMenu .strafeColors {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  padding: 4 0 0 0;
+  spacing: 14;
+}
+
+/* Chips ------------------------------------------------------------------- */
+
+Panel.settingsMenu .strafeColorChips {
+  alignment: top-center;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 8;
+}
+
+/* The padding-left is the room the swatch occupies: the swatch is an
+   `alignment: internal` subview, which the layout does not see and
+   `sizeThatFits` does not measure, so nothing else would reserve it.
+   11 inset + 22 swatch + 9 gap = 42. */
+#main Panel.settingsMenu .strafeColorChip {
+  autoresizing-mask: contain;
+  background-color: #12212e;
+  border-width: 0;
+  bevel: none;
+  min-height: 30;
+  min-width: 0;
+  padding: 6 12 6 42;
+}
+
+#main Panel.settingsMenu .strafeColorChip > Text {
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+#main Panel.settingsMenu .strafeColorChip:hover {
+  background-color: #1b3346;
+}
+
+/* The menu's standard selected treatment, and one pixel less padding on every
+   side so that gaining a 2px border does not grow the box and shove the strip's
+   other two chips sideways. */
+#main Panel.settingsMenu .strafeColorChip:selected {
+  background-color: #22557f;
+  border-color: #73c7f2;
+  border-width: 2;
+  padding: 5 11 5 41;
+}
+
+#main Panel.settingsMenu .strafeColorChip:selected > Text,
+#main Panel.settingsMenu .strafeColorChip:hover > Text {
+  color: #f4f8fb;
+}
+
+/* A chip whose target the helper is not currently drawing. Dimmed but still
+   selectable: the colour is worth seeing either way, and the centre marker is
+   switched on one sub-tab over rather than here. */
+#main Panel.settingsMenu .strafeColorChip.inert > Text {
+  color: #5f7488;
+}
+
+/* No `background-color`: it is painted from the cvar in C, and a rule here
+   would repaint all three the same on every applyStyle pass. `internal` is what
+   keeps it out of the Button's own `Button > * { alignment: middle-center }`,
+   which would otherwise stack it under the title; `left` and `top` are then
+   read in the chip's own coordinates rather than inside its padding. */
+Panel.settingsMenu .strafeColorChipSwatch {
+  alignment: internal;
+  border-color: #2a3f4f;
+  border-width: 1;
+  height: 12;
+  left: 11;
+  max-height: 12;
+  max-width: 22;
+  min-height: 12;
+  min-width: 22;
+  top: 9;
+  width: 22;
+}
+
+/* Header ------------------------------------------------------------------ */
+
+Panel.settingsMenu .strafeColorHead {
+  alignment: top-center;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 10;
+}
+
+Panel.settingsMenu .strafeColorName {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.settingsMenu .strafeColorName > Text {
+  alignment: middle-left;
+  color: #dde8f1;
+  font-size: 17;
+}
+
+/* What the colour paints, on the target's own baseline: the cvar's name says
+   what it is, not what it draws, and "Inner edge of each zone" is the thing a
+   player looking at the bar is trying to find. */
+Panel.settingsMenu .strafeColorPaints {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 3 0 0 0;
+}
+
+Panel.settingsMenu .strafeColorPaints > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+/* Capped and centred on the picker below it: this hairline separates the target
+   from its axes, not the row from the next one, so a rule the width of the row
+   would draw a second section divider under the one the section already has. */
+Panel.settingsMenu .strafeColorRule {
+  alignment: center;
+  autoresizing-mask: width;
+  background-color: #21384a;
+  height: 1;
+  max-height: 1;
+  max-width: 760;
+  min-height: 1;
+  min-width: 0;
+}
+
+/* Picker ------------------------------------------------------------------ */
+
+/* The whole fix for the collapsed rails, and it is four declarations.
+
+   The shipped picker lived in `.rowRight`, the roster's 200px control track,
+   of which `Slider::layoutSubviews` then spent the width of the widest
+   formatted readout - leaving a rail of about fifty points and a value string
+   with nowhere to sit. This block is `width`-masked instead, so it takes the
+   tab and gives back only what `max-width` caps, and `alignment: center` puts
+   what is left in the middle of the row.
+
+   Stated here rather than measured in C on purpose: this route's
+   `ViewController::respondToEvent` is never called - `WindowController` hands a
+   mouse event to the View under the cursor and only falls through to the view
+   controller when there is no touch target, which on a page of Controls is
+   never - so the route's refresh pass runs twice, at load and at appear, both
+   before the first layout. Any geometry computed there is computed from zeroes.
+   The layout pass, by contrast, runs every frame, which is what `width` and
+   `max-width` are read by.
+
+   The height is stated for a different reason: `sizeThatContains` is
+   max(current, fits), so a `contain` picker would read its own width back from
+   axis rows that had not been re-measured yet and ratchet permanently wide.
+   Four fixed-height axes is a constant - 4 x 28 plus 3 x 4 of spacing. */
+Panel.settingsMenu .strafeColorPicker {
+  alignment: center;
+  autoresizing-mask: width;
+  background-color: transparent;
+  distribution: default;
+  height: 124;
+  max-height: 124;
+  max-width: 760;
+  min-height: 124;
+  min-width: 0;
+  spacing: 4;
+}
+
+Panel.settingsMenu .strafeColorPicker.inert .strafeColorAxisLabel > Text {
+  color: #5f7488;
+}
+
+/* `padding-left` is the room the axis letter occupies, and the letter itself is
+   `alignment: internal` - out of the layout, drawn in the row's own coordinates
+   - for the same reason the chip swatches are. That is what lets the rail be
+   `width`-masked: it is then the only child the stack places, so it takes the
+   whole of the padded bounds and ends flush with the picker's right edge,
+   whatever width the tab has. A rail sized in C, or a label and a rail sharing
+   the row with `distribution: fill`, would each need a second copy of these
+   numbers to agree with. 14 letter + 8 gap = 22. */
+Panel.settingsMenu .strafeColorAxis {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  height: 28;
+  max-height: 28;
+  min-height: 28;
+  min-width: 0;
+  padding: 0 0 0 22;
+  spacing: 0;
+}
+
+Panel.settingsMenu .strafeColorAxisLabel {
+  alignment: internal;
+  background-color: transparent;
+  border-width: 0;
+  height: 28;
+  left: 0;
+  max-height: 28;
+  max-width: 14;
+  min-height: 28;
+  min-width: 14;
+  padding: 0;
+  top: 0;
+  width: 14;
+}
+
+Panel.settingsMenu .strafeColorAxisLabel > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+/* The mask is the width: the rail is the axis row's only laid-out child, so it
+   is handed the padded bounds every pass and cannot be left holding a width the
+   viewport no longer has.
+
+   `max-width` has to be restated even though nothing here wants a cap. The
+   route pins one 200pt control track for every `Panel.settingsMenu Slider`,
+   and `View::resize` clamps against exactly that field - so a rail that is
+   handed 738 points by the layout is given back 200 unless this rule says
+   otherwise. 760 is the picker's own cap, which is the real bound. */
+#main Panel.settingsMenu .strafeColorSlider {
+  autoresizing-mask: width;
+  height: 28;
+  max-height: 28;
+  max-width: 760;
+  min-height: 28;
+  min-width: 0;
+}
+
+/* Meta line --------------------------------------------------------------- */
+
+Panel.settingsMenu .strafeColorMetaLine {
+  alignment: top-center;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 16;
+}
+
+/* The raw cvar string, then the product of its alpha and the helper's own
+   opacity - which is what the colour actually reaches the screen at, and is not
+   derivable from anything else on the page. */
+Panel.settingsMenu .strafeColorMeta {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.settingsMenu .strafeColorMeta > Text {
+  alignment: middle-left;
+  color: #5c8fb5;
+  font-size: 12;
+}
+
+/* Emptied rather than hidden by C, so the line cannot change height under a
+   thumb that is still moving - which is exactly when it appears and goes. */
+Panel.settingsMenu .strafeColorWarning {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.settingsMenu .strafeColorWarning > Text {
+  alignment: middle-left;
+  color: #dc7488;
+  font-size: 12;
+}
+
+/* The caption the preview's eyebrow carries while the Colours editor is
+   isolating one element - beside "Live preview", because it belongs to the
+   picture it changes rather than to the strip that selected it. */
+Panel.settingsMenu .strafeEditing {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.settingsMenu .strafeEditing > Text {
+  alignment: middle-left;
+  color: #73c7f2;
+  font-size: 12;
+}
+
+/* The mask, not just the height: ObjectivelyMVC's stylesheet fills the bar to
+   the Slider's full height, so `height` alone is overwritten every layout
+   pass. */
+Panel.settingsMenu Slider > .bar {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  background-color: #152532;
+  height: 4;
+  max-height: 4;
+  min-height: 4;
+}
+
+/* The filled track is the shared control language now, in MainView.css, so that
+   every route's sliders read the same - see `#main Slider > .bar > .fill`. */
+
+Panel.settingsMenu Slider > .bar > .handle {
+  background-color: #73c7f2;
+  border-width: 0;
+  height: 20;
+  max-height: 20;
+  max-width: 11;
+  min-height: 20;
+  min-width: 11;
+  width: 11;
+}
+
+Panel.settingsMenu Slider:hover > .bar > .handle,
+Panel.settingsMenu Slider:focused > .bar > .handle {
+  background-color: #d3efff;
+}
+
+Panel.settingsMenu Slider:focused > .bar {
+  background-color: #365163;
+}
+
+Panel.settingsMenu Slider Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+Panel.settingsMenu Slider:disabled > .bar {
+  background-color: #101c27;
+}
+
+Panel.settingsMenu Slider:disabled > .bar > .handle {
+  background-color: #365163;
+}
+
+Panel.settingsMenu Slider:disabled Text {
+  color: #6d8291;
+}
+
+Panel.settingsMenu Checkbox {
+  alignment: middle-right;
+}
+
+Panel.settingsMenu Checkbox > Control {
+  alignment: middle-right;
+  background-color: #16232e;
+  border-color: #2a3f4f;
+  border-width: 1;
+  bevel: none;
+  height: 24;
+  max-height: 24;
+  max-width: 24;
+  min-height: 24;
+  min-width: 24;
+  width: 24;
+}
+
+Panel.settingsMenu Checkbox:hover > Control {
+  background-color: #1c3a52;
+  border-color: #6395bd;
+}
+
+Panel.settingsMenu Checkbox:focused > Control {
+  background-color: #122a3a;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+/* Quality preset ---------------------------------------------------------- */
+
+/* Five segments hugging their own labels, which is wider than the shared
+   control track - so the preset row gives its label back to the segments. The
+   section eyebrow already reads "Quality preset", so the row label only has to
+   carry "Preset". */
+Panel.settingsMenu .presetRow .rowLabel {
+  max-width: 90;
+}
+
+Panel.settingsMenu .presetSegments {
+  alignment: middle-right;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  spacing: 2;
+}
+
+#main Panel.settingsMenu .presetSegment {
+  background-color: #12212e;
+  border-width: 0;
+  bevel: none;
+  min-height: 34;
+  min-width: 0;
+  padding: 7 12 7 12;
+}
+
+#main Panel.settingsMenu .presetSegment > Text {
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+#main Panel.settingsMenu .presetSegment:hover {
+  background-color: #1c3a52;
+}
+
+#main Panel.settingsMenu .presetSegment:selected {
+  background-color: #22557f;
+}
+
+#main Panel.settingsMenu .presetSegment:selected > Text {
+  color: #f4f8fb;
+}
+
+/* Footer ------------------------------------------------------------------ */
+
+/* `distribution: default` throughout, for the same reason as the rows: `fill`
+   scales every child by availableSize/requestedSize, so the status labels
+   claimed the whole bar and squeezed the actions off the right edge. */
+/* `width`, not `contain | width`. The footer's height is declared here, so it
+   never needed `contain` to measure itself - and `contain` is what let it
+   inflate the entire route. The hint names the hovered row's cvar and the
+   engine's own description for it, which is an unbounded string; `contain` grew
+   the footer to fit it, the Panel's stack grew to the footer, the contentView
+   took that width, and `settingsColumns` alternated between the viewport and
+   its content width. Everything right-aligned to the wider measurement and
+   then fell off the visible page - the preset
+   strip's last segment, the far column's controls, and the commit pair. */
+Panel.settingsMenu .settingsFooter {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  axis: horizontal;
+  background-color: transparent;
+  border-color: #2f4a5e99;
+  border-width: 1;
+  distribution: default;
+  height: 58;
+  max-height: 58;
+  min-height: 58;
+  padding: 0;
+  spacing: 24;
+}
+
+/* The footer's one child, spanning it, so the two halves can pin to opposite
+   edges: the accessoryView Panel hands us is a StackView, and a StackView packs
+   its children from its own origin - a child's `alignment` is overwritten along
+   the stack axis. Every other left-thing-plus-right-thing band in this menu is
+   a plain View for exactly this reason. */
+Panel.settingsMenu .settingsFooterBar {
+  autoresizing-mask: width | height;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0 16 0 16;
+}
+
+/* Contextual help pins left and takes the slack, the way the design system's
+   own footer gives `.m-note` `flex: 1 1 140px` and leaves everything after it
+   `flex: none` against the right edge. */
+Panel.settingsMenu .settingsHint {
+  alignment: middle-left;
+}
+
+/* The commit group: what changed, what it costs, and the pair of buttons that
+   act on it, read as one thing against the right edge rather than as three
+   items scattered across the bar.
+
+   `fit`, not `contain`. `sizeThatContains` is max(current, sizeThatFits) - a
+   high-water mark - so a group that was once as wide as a 620px hint never
+   narrows again, and the caption ends up stranded at the far left of a box
+   whose right edge is still where the longest hint left it. That is the gap
+   this route was reported for. `sizeToFit` resizes to `sizeThatFits` outright,
+   so the group tracks its contents in both directions. */
+Panel.settingsMenu .settingsFooterCommit {
+  alignment: middle-right;
+  autoresizing-mask: fit;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  padding: 0;
+  spacing: 20;
+}
+
+Panel.settingsMenu .settingsFooterActions {
+  autoresizing-mask: fit;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  spacing: 8;
+}
+
+/* Each status line hugs its own text, and is bounded and clipped at the widest
+   caption it can ever hold. The bound is the safety net, not the layout: a
+   Label whose Text outgrows it does not push its siblings along, it draws
+   straight through them - which is how the caption came to render underneath
+   the commit pair rather than beside it. */
+Panel.settingsMenu .settingsStatus,
+Panel.settingsMenu .settingsHint {
+  autoresizing-mask: fit;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  height: 18;
+  max-height: 18;
+  min-height: 18;
+  min-width: 0;
+  padding: 0;
+}
+
+/* "85 settings changed - Renderer and sound restart required" is the longest
+   this line gets, measured at the 12pt it draws at. */
+Panel.settingsMenu .settingsDirtyStatus {
+  max-width: 380;
+}
+
+Panel.settingsMenu .settingsStatus > Text,
+Panel.settingsMenu .settingsHint > Text {
+  alignment: middle-left;
+  font-size: 12;
+}
+
+/* Bounded and clipped, the same way `.rowLabel` is. The width of this label is
+   whatever `Cvar_Add` was given as a description, which is not a number this
+   route gets to choose - so it is capped and allowed to run out of its own box
+   rather than out of the footer's. Without the cap the status group crowds the
+   commit pair off the right edge even once the footer stops inflating. */
+Panel.settingsMenu .settingsHint {
+  clips-subviews: true;
+  max-width: 620;
+}
+
+Panel.settingsMenu .settingsHint > Text {
+  color: #5c8fb5;
+}
+
+/* Gold is the shell's warning tint: the restart requirement rides on this line
+   and is the one thing here the player has to act on. */
+Panel.settingsMenu .settingsDirtyStatus > Text {
+  color: #e7c368;
+}
+
+#main Panel.settingsMenu .settingsFooterActions > Button {
+  min-height: 36;
+  min-width: 0;
+}
+
+#main Panel.settingsMenu .settingsFooterActions > Button.primaryButton {
+  background-color: #22557f;
+}
+
+#main Panel.settingsMenu .settingsFooterActions > Button.primaryButton > Text {
+  color: #f4f8fb;
+}

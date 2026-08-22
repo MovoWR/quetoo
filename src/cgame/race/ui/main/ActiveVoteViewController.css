@@ -1,0 +1,155 @@
+#activeVote {
+  axis: horizontal;
+  background-color: #071522f8;
+  border-color: #4d7796;
+  border-width: 1;
+  distribution: default;
+  padding: 7 12 7 14;
+  spacing: 10;
+}
+
+.voteCopy {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  height: 70;
+  max-height: 70;
+  min-height: 70;
+  min-width: 0;
+  spacing: 2;
+}
+
+.voteCopy > Label {
+  autoresizing-mask: width;
+  min-width: 0;
+}
+
+#voteTitle,
+#voteDetail,
+#voteTally {
+  clips-subviews: true;
+}
+
+#voteTitle {
+  height: 18;
+}
+
+#voteTitle > Text {
+  color: #79bde5;
+  font-size: 11;
+  font-style: bold;
+}
+
+#voteDetail {
+  height: 32;
+}
+
+#voteDetail > Text {
+  color: #edf4f8;
+  font-size: 15;
+  font-style: bold;
+}
+
+#voteTally {
+  height: 20;
+}
+
+#voteTally > Text {
+  color: #a2b4c0;
+  font-size: 11;
+}
+
+#voteRemaining {
+  alignment: middle-center;
+  autoresizing-mask: contain;
+  background-color: #0b2639;
+  border-color: #3d6987;
+  border-width: 1;
+  height: 54;
+  max-width: 72;
+  min-width: 72;
+  width: 72;
+}
+
+#voteRemaining > Text {
+  alignment: middle-center;
+  color: #eaf4fa;
+  font-size: 18;
+  font-style: bold;
+}
+
+#voteActions {
+  alignment: middle-right;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  distribution: fill-equally;
+  max-width: 240;
+  min-width: 240;
+  spacing: 8;
+  width: 240;
+}
+
+#voteActions Button {
+  background-color: #0c2232;
+  border-color: #365f7b;
+  border-width: 1;
+  bevel: none;
+  height: 44;
+  min-height: 44;
+  min-width: 116;
+  padding: 7 10 7 10;
+}
+
+#voteActions Button > Text {
+  color: #e7f0f6;
+  font-size: 11;
+  font-style: bold;
+}
+
+#voteActions Button:hover {
+  background-color: #153349;
+  border-color: #6095b8;
+}
+
+#voteActions Button:focused {
+  background-color: #16384f;
+  border-color: #8bc9ed;
+  border-width: 2;
+}
+
+#voteActions Button:highlighted {
+  background-color: #214a68;
+  border-color: #a9daf5;
+  bevel: inset;
+}
+
+#voteActions Button:disabled {
+  background-color: #09141c;
+  border-color: #263b49;
+}
+
+#voteActions Button:disabled > Text {
+  color: #657b8a;
+}
+
+#voteYes {
+  background-color: #1e5375;
+  border-color: #5797bf;
+}
+
+#voteYes:hover,
+#voteYes:focused {
+  background-color: #28688f;
+  border-color: #91cceb;
+}
+
+#voteNo {
+  background-color: #0b1b27;
+  border-color: #49677b;
+}
+
+#voteNo:hover,
+#voteNo:focused {
+  background-color: #173144;
+  border-color: #84aec9;
+}

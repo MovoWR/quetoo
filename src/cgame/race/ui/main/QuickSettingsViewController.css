@@ -1,0 +1,287 @@
+/* The host (MainView.css `#quickSettingsHost`) paints #060d15f5 under this
+   #071522f8, and the two together are effectively opaque. That is deliberate:
+   the backdrop here is menu text, not the 3D scene, so the panel alpha used
+   for HUD surfaces does not apply. Both borders read `--line-400`, the same
+   hairline as every other pane. */
+#quickSettingsDrawer {
+  axis: vertical;
+  background-color: #071522f8;
+  border-color: #2a3f4f;
+  border-width: 1;
+  padding: 14;
+  spacing: 0;
+}
+
+#quickHeader,
+#quickHintRow,
+#quickFooter {
+  autoresizing-mask: width;
+  axis: horizontal;
+  spacing: 8;
+}
+
+#quickHeader {
+  distribution: default;
+  height: 44;
+}
+
+#quickHintRow {
+  distribution: default;
+  height: 22;
+}
+
+/* The rule above the footer, and the 12px the design puts between them. */
+#quickFooterRule {
+  autoresizing-mask: width;
+}
+
+#quickFooter {
+  distribution: fill-equally;
+  height: 54;
+  padding: 12 0 0 0;
+}
+
+#quickTitle {
+  alignment: middle-left;
+  max-width: 352;
+  min-width: 352;
+  width: 352;
+}
+
+#quickTitle > Text {
+  color: #f4f8fb;
+  font-size: 18;
+  font-style: bold;
+}
+
+#quickClose {
+  max-width: 72;
+  min-width: 72;
+  width: 72;
+}
+
+#quickHint {
+  alignment: middle-left;
+  height: 22;
+  max-width: 320;
+  min-width: 320;
+  width: 320;
+}
+
+#quickHint > Text {
+  color: #93aec1;
+  font-size: 11;
+}
+
+/* The C already closes the drawer on Esc; until now nothing said so. */
+#quickEscHint {
+  alignment: middle-left;
+  height: 22;
+  max-width: 104;
+  min-width: 104;
+  width: 104;
+}
+
+#quickEscHint > Text {
+  alignment: middle-right;
+  color: #5c8fb5;
+  font-size: 11;
+}
+
+#quickSettingsContent {
+  autoresizing-mask: contain | width;
+  padding: 8 0 10 0;
+  spacing: 8;
+}
+
+/* Sentence-case eyebrow over a hairline rule, the same section language every
+   route uses - `#main .sectionEyebrow` and `#main .sectionRule` in MainView.css
+   carry the type and the rule fill, so only geometry belongs here. The 6px
+   spacing is the gap the design puts between the eyebrow and its rule; the
+   8px below it is `#quickSettingsContent`'s own spacing. */
+#quickSettingsContent .quickSection {
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  spacing: 6;
+}
+
+#quickSettingsContent .quickSectionSpaced {
+  padding: 6 0 0 0;
+}
+
+#quickSettingsContent .quickSectionHeader {
+  autoresizing-mask: width;
+  axis: horizontal;
+  distribution: default;
+  height: 20;
+  spacing: 8;
+}
+
+#quickSettingsContent .quickSectionHeader .sectionEyebrow {
+  alignment: middle-left;
+  height: 20;
+  max-width: 264;
+  min-width: 264;
+  width: 264;
+}
+
+/* The drawer's audience knows the cvar names, and this is the one route that
+   can afford to print them; the helper section prints its on/off count here
+   instead, so the group reads without parsing three checkboxes. */
+#quickSettingsContent .quickSectionStatus {
+  alignment: middle-left;
+  height: 20;
+  max-width: 160;
+  min-width: 160;
+  width: 160;
+}
+
+#quickSettingsContent .quickSectionStatus > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 11;
+}
+
+#quickSettingsContent .sectionRule {
+  autoresizing-mask: width;
+}
+
+#quickSettingsContent Input {
+  autoresizing-mask: width;
+  min-height: 44;
+}
+
+#quickSettingsContent Input > Label {
+  max-width: 236;
+  min-width: 236;
+  width: 236;
+}
+
+#quickSettingsContent Input > Label > Text {
+  color: #c2d1dc;
+  font-size: 12;
+}
+
+#quickSettingsContent Input > Control {
+  min-height: 44;
+  max-width: 180;
+  min-width: 180;
+  width: 180;
+}
+
+#quickSettingsContent Slider {
+  min-height: 44;
+  max-width: 180;
+  min-width: 180;
+  width: 180;
+}
+
+/* Slider::layoutSubviews takes the readout's width out of the bar, so the
+   180px control is bar plus number rather than bar alone. */
+#quickSettingsContent Slider Text {
+  color: #dde8f1;
+  font-size: 12;
+}
+
+#quickSettingsContent Slider > .bar {
+  background-color: #203b4b;
+  height: 4;
+}
+
+#quickSettingsContent Slider > .bar > .handle {
+  background-color: #5a9bc2;
+  border-color: #9bcce8;
+  border-width: 1;
+  min-height: 22;
+  min-width: 12;
+}
+
+#quickSettingsContent Slider:hover > .bar > .handle,
+#quickSettingsContent Slider:focused > .bar > .handle {
+  background-color: #80c2e8;
+  border-color: #d3efff;
+}
+
+#quickSettingsContent Slider:focused > .bar {
+  background-color: #396c88;
+}
+
+#quickSettingsContent Checkbox {
+  alignment: middle-right;
+  min-height: 44;
+  max-width: 180;
+  min-width: 180;
+  width: 180;
+}
+
+#quickSettingsContent Checkbox > Control {
+  alignment: middle-right;
+  background-color: #0b1c28;
+  border-color: #385f79;
+  border-width: 1;
+  bevel: none;
+  min-height: 28;
+  min-width: 28;
+  padding: 7 7 7 7;
+}
+
+#quickSettingsContent Checkbox:hover > Control {
+  background-color: #102b3d;
+  border-color: #5f91b2;
+}
+
+#quickSettingsContent Checkbox:focused > Control {
+  background-color: #123148;
+  border-color: #8bc9ed;
+  border-width: 2;
+}
+
+#quickSettingsDrawer Button {
+  background-color: #0c2232;
+  border-color: #365f7b;
+  border-width: 1;
+  bevel: none;
+  min-height: 42;
+  padding: 7 10 7 10;
+}
+
+#quickSettingsDrawer Button > Text {
+  color: #e7f0f6;
+  font-size: 11;
+  font-style: bold;
+}
+
+#quickSettingsDrawer Button:hover {
+  background-color: #153349;
+  border-color: #6095b8;
+}
+
+#quickSettingsDrawer Button:focused {
+  background-color: #16384f;
+  border-color: #8bc9ed;
+  border-width: 2;
+}
+
+#quickSettingsDrawer Button:highlighted {
+  background-color: #214a68;
+  border-color: #a9daf5;
+  bevel: inset;
+}
+
+#quickSettingsDrawer Button:disabled {
+  background-color: #09141c;
+  border-color: #263b49;
+}
+
+#quickSettingsDrawer Button:disabled > Text {
+  color: #657b8a;
+}
+
+/* `distribution: fill-equally` sizes each button to half the row and then
+   calls layoutIfNeeded on it - which, under the framework's
+   `Button { autoresizing-mask: contain }`, shrinks it straight back to its
+   title width. Dropping the mask is what makes the halves stick. */
+#quickFooter Button {
+  autoresizing-mask: none;
+  min-width: 0;
+}

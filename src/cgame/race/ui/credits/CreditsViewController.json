@@ -1,0 +1,59 @@
+{
+  "class": "Panel",
+  "identifier": "raceCreditsRoot",
+  "classNames": [
+    "menu",
+    "creditsMenu",
+    "masterPage"
+  ],
+  "contentView": {
+    "classNames": [
+      "creditsContent"
+    ],
+    "subviews": [
+      {
+        "class": "StackView",
+        "identifier": "creditsDocument",
+        "classNames": [
+          "container",
+          "creditsBody",
+          "esc-page-scroll-content"
+        ],
+        "subviews": [
+          {
+            "class": "StackView",
+            "classNames": [
+              "creditsUtilityBar"
+            ],
+            "subviews": [
+              {
+                "class": "StackView",
+                "identifier": "creditsPageTabs",
+                "classNames": [
+                  "creditsPageTabs"
+                ]
+              }
+            ]
+          },
+          {
+            "class": "StackView",
+            "identifier": "creditsColumns",
+            "classNames": [
+              "columns",
+              "container",
+              "creditsColumns"
+            ]
+          },
+          {
+            "class": "StackView",
+            "identifier": "creditsWideColumn",
+            "classNames": [
+              "container",
+              "creditsWideColumn"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

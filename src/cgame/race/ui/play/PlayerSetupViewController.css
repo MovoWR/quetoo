@@ -1,0 +1,570 @@
+/* The Runner route, ported from "Menu v2 - Play" (Quetoo Race Design System,
+   `_ds/quetoo-race-design-system-3b6491be`) and its "Play - Create server and
+   Runner implementation spec". The token-to-hex mapping lives in the header of
+   ui/main/MainView.css; the section and row grammar is the one Settings ports
+   and Create server reuses, so all three routes head a section the same way.
+
+   Race owns this page's resources but not its controller: the stock
+   PlayerSetupViewController.c resolves `skin`, `helmet`, `shirt`, `pants`,
+   `effects`, `hand` and `player` out of whichever JSON the search path finds
+   first, so this file may restyle and re-shape the page but may not drop an
+   outlet - `View::resolve` asserts on a missing one.
+
+   Three things the spec asks about, answered by measurement rather than by
+   restyling:
+
+   - The 6px "red bar" over each set of sliders is not a hue track failing to
+     draw a gradient. It is HSVColorPicker's own `colorView`, whose fill is the
+     colour currently chosen (HSVColorPicker.c: `colorView->backgroundColor =
+     $(this, rgbColor)`), and the design mock draws exactly the same thing - a
+     flat 6px swatch of the current colour above the H/S/V rows. Nothing to file
+     upstream. It is widened and given breathing room here rather than removed.
+
+   - The preview's framing is this sheet's to fix, not PlayerModelView's. Its
+     vertical field of view is derived from the viewport's own aspect
+     (`fov.y = Degrees(atan2(w, w/tan(30))) * (w/h) / 2`), so a view that ends
+     up taller than it is wide narrows the field and crops the pedestal. The old
+     rule left `min-width: 0` under a `width` mask and a fixed 620 height, which
+     is how it reached the ~1:1.6 portrait the capture showed. Pinned to
+     701 x 430 the aspect is 1.63, the field is ~24 degrees, and the platform
+     stays in frame. Pinning also matters because the render framebuffer is
+     built once at the first viewport size and only rebuilt on a device reset.
+
+   - The "duplicate head" in the corner is `.iconView`, the model's own portrait
+     icon. It is real content, but beside the model's head it read as a render
+     artefact, so it moves to the opposite corner as a labelled badge.
+
+   As in Create server, `.sectionEyebrow > Text` and the `.sectionRule` fill are
+   left to MainView.css's shared section language: restating them here would tie
+   on specificity, and Selector.c resolves ties by qsort order. */
+
+/* ---- Canvas ------------------------------------------------------------- */
+
+#Player {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  background-color: transparent;
+  max-width: 1642;
+  min-width: 1642;
+  width: 1642;
+}
+
+#Player .playerColumns {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  max-width: 1642;
+  min-column-width: 700;
+  min-width: 1642;
+  padding: 0;
+  spacing: 40;
+  width: 1642;
+}
+
+#Player .playerFormPane,
+#Player .playerPreviewPane {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 0;
+}
+
+#Player .playerFormPane {
+  max-width: 901;
+  min-width: 901;
+  spacing: 20;
+  width: 901;
+}
+
+#Player .playerPreviewPane {
+  max-width: 701;
+  min-width: 701;
+  spacing: 28;
+  width: 701;
+}
+
+/* ---- Sections ----------------------------------------------------------- */
+
+#Player .playerSection {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 0;
+  spacing: 0;
+}
+
+#Player .playerFormPane .playerSection {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Player .playerPreviewPane .playerSection {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+#Player .sectionHead {
+  autoresizing-mask: none;
+  height: 20;
+  max-height: 20;
+  min-height: 20;
+  padding: 0;
+}
+
+#Player .playerFormPane .sectionHead {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Player .playerPreviewPane .sectionHead {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+#Player .sectionEyebrow {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+  height: 20;
+  max-height: 20;
+  max-width: 320;
+  min-height: 20;
+  min-width: 320;
+  padding: 0;
+  width: 320;
+}
+
+#Player .sectionMeta {
+  alignment: middle-right;
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+  height: 20;
+  max-height: 20;
+  max-width: 360;
+  min-height: 20;
+  min-width: 360;
+  padding: 0;
+  width: 360;
+}
+
+#Player .sectionMeta > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Player .sectionRule {
+  autoresizing-mask: none;
+}
+
+#Player .playerFormPane .sectionRule {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Player .playerPreviewPane .sectionRule {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+/* ---- Rows --------------------------------------------------------------- */
+
+#Player .playerRows {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  distribution: default;
+  max-width: 901;
+  min-width: 901;
+  padding: 12 0 0 0;
+  spacing: 0;
+  width: 901;
+}
+
+/* A plain View so the label pins left and the control pins right whatever the
+   label's length; the colour rows below override the height and give the whole
+   width back to the picker, which is the design's `.row.wide`. */
+#Player .playerRow {
+  autoresizing-mask: none;
+  clips-subviews: true;
+  height: 44;
+  max-height: 44;
+  max-width: 901;
+  min-height: 44;
+  min-width: 901;
+  width: 901;
+}
+
+#Player .rowLeft,
+#Player .rowRight {
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  padding: 0;
+  spacing: 6;
+}
+
+#Player .rowLeft {
+  alignment: middle-left;
+}
+
+#Player .rowRight {
+  alignment: middle-right;
+}
+
+#Player .rowLabel {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  max-width: 300;
+  min-width: 0;
+  padding: 0;
+}
+
+#Player .rowLabel > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+#Player .rowRule {
+  alignment: bottom-left;
+  autoresizing-mask: none;
+  background-color: #24333f57;
+  height: 1;
+  max-height: 1;
+  max-width: 901;
+  min-height: 1;
+  min-width: 901;
+  width: 901;
+}
+
+/* ---- Controls ----------------------------------------------------------- */
+
+#Player .rowField,
+#Player .rowSelect {
+  autoresizing-mask: none;
+  background-color: #12212e;
+  border-width: 0;
+  bevel: none;
+  height: 34;
+  max-height: 34;
+  max-width: 200;
+  min-height: 34;
+  min-width: 200;
+  padding: 6 11 6 11;
+  width: 200;
+}
+
+#Player .rowField Text,
+#Player .rowSelect Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+#Player .rowField:hover,
+#Player .rowSelect:hover {
+  background-color: #1c3a52;
+}
+
+#Player .rowField:focused,
+#Player .rowSelect:focused {
+  background-color: #122a3a;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+/* ---- Colour rows -------------------------------------------------------- */
+
+/* Wide rows: the label sits above its picker rather than beside it, so the
+   three sliders get a track worth dragging instead of the 200 the select
+   column would leave them. This is the design's own shape for this block. */
+/* Compounded onto `.playerRow` rather than written as a bare `.colorRow`: on
+   its own it scores exactly what `.playerRow` scores, and Selector.c resolves a
+   tie by qsort order - so which of the two heights won would be arbitrary. */
+#Player .playerRow.colorRow {
+  height: 124;
+  max-height: 124;
+  min-height: 124;
+}
+
+#Player .playerRow.hueRow {
+  height: 72;
+  max-height: 72;
+  min-height: 72;
+}
+
+#Player .colorGroup {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  background-color: transparent;
+  distribution: default;
+  max-width: 901;
+  min-width: 901;
+  padding: 0;
+  spacing: 8;
+  width: 901;
+}
+
+#Player .colorLabel {
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+  height: 18;
+  max-height: 18;
+  max-width: 901;
+  min-height: 18;
+  min-width: 901;
+  padding: 0;
+  width: 901;
+}
+
+#Player .colorLabel > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+#Player .rowPicker,
+#Player .rowPicker > StackView {
+  alignment: top-left;
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  max-width: 420;
+  min-width: 420;
+  padding: 0;
+  spacing: 4;
+  width: 420;
+}
+
+#Player .colorRow .rowPicker,
+#Player .colorRow .rowPicker > StackView {
+  height: 86;
+  max-height: 86;
+  min-height: 86;
+}
+
+#Player .hueRow .rowPicker,
+#Player .hueRow .rowPicker > StackView {
+  height: 34;
+  max-height: 34;
+  min-height: 34;
+}
+
+/* The swatch, not a hue track: this is the colour currently chosen, and the
+   design draws it as a flat bar over the sliders that set it. Charcoal here
+   means the part is left at the model's own colour (HSVColorPicker paints it
+   that way for a hue below zero, which is the "default" the cvar holds).
+
+   398 and right-aligned, not the picker's full 420: an axis row spends its
+   first 22 on the H / S / V letter and its remaining 398 on the track, so a
+   swatch at the picker's width overhangs the sliders it belongs to by that
+   letter. Ending both on the same two edges is what makes it read as the
+   readout for those three sliders rather than as a band above them.
+
+   The framework's own `HSVColorPicker .colorView { autoresizing-mask: width }`
+   is left in force on purpose - overriding the mask to `none` leaves the width
+   to a single stylesheet assignment and nothing to restore it if anything
+   resizes the view, whereas a pinned `min-width == max-width` is re-imposed by
+   `View::resize` on every pass. That is the shape the one working precedent in
+   this tree uses: `.responseService HueColorPicker .colorView`. */
+#Player .rowPicker .colorView {
+  alignment: top-right;
+  height: 8;
+  max-height: 8;
+  max-width: 398;
+  min-height: 8;
+  min-width: 398;
+  width: 398;
+}
+
+#Player .rowPicker Input {
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 22;
+  max-height: 22;
+  max-width: 420;
+  min-height: 22;
+  min-width: 420;
+  padding: 0;
+  spacing: 6;
+  width: 420;
+}
+
+#Player .rowPicker Input > Label {
+  autoresizing-mask: none;
+  height: 22;
+  max-height: 22;
+  max-width: 16;
+  min-height: 22;
+  min-width: 16;
+  padding: 0;
+  width: 16;
+}
+
+#Player .rowPicker Input > Label > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+/* Slider::layoutSubviews takes its readout out of its own bar width, so the
+   value rides inside these 398 rather than needing a label beside them. */
+#Player .rowPicker Input > Slider {
+  autoresizing-mask: none;
+  height: 22;
+  max-height: 22;
+  max-width: 398;
+  min-height: 22;
+  min-width: 398;
+  width: 398;
+}
+
+/* ---- Notes -------------------------------------------------------------- */
+
+/* The two things this page is otherwise silent about: that the name field is
+   the same setting Settings edits, and that shirt colour is what a ghost or a
+   replay of your run renders in. */
+#Player .playerNote {
+  autoresizing-mask: none;
+  height: 36;
+  max-height: 36;
+  max-width: 901;
+  min-height: 36;
+  min-width: 901;
+  width: 901;
+}
+
+/* `lineWrap` wraps a Text at its own frame, and a Text sizes itself to the
+   unwrapped string - so a paragraph that is not told to take its width from the
+   Label around it renders as one long line and gets clipped at the column edge
+   instead of wrapping. `autoresizing-mask: width` is what hands it the Label's
+   width; Credits and Home already read this way. */
+#Player .playerNote > Text {
+  alignment: top-left;
+  autoresizing-mask: width;
+  color: #74899b;
+  font-size: 12;
+}
+
+/* ---- Preview ------------------------------------------------------------ */
+
+#Player .playerPreviewBody {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  distribution: default;
+  height: 442;
+  max-height: 442;
+  max-width: 701;
+  min-height: 442;
+  min-width: 701;
+  padding: 12 0 0 0;
+  spacing: 0;
+  width: 701;
+}
+
+/* 701 x 430 is a 1.63 aspect, which is what keeps the pedestal in frame - see
+   the note at the head of this file. Pinned rather than flexed, because the
+   render framebuffer is sized once from the first viewport it sees. */
+#Player #player {
+  autoresizing-mask: none;
+  background-color: #02080d;
+  border-color: #2a3f4f;
+  border-width: 1;
+  height: 430;
+  max-height: 430;
+  max-width: 701;
+  min-height: 430;
+  min-width: 701;
+  padding: 6;
+  width: 701;
+}
+
+#Player #player > .modelView {
+  autoresizing-mask: fill;
+}
+
+/* Bottom-left, away from the model's own head: at top-right this portrait read
+   as a second head rendered into the corner rather than as the model's icon. */
+#Player #player > .iconView {
+  alignment: bottom-left;
+  autoresizing-mask: none;
+  background-color: #071621e8;
+  border-color: #2a3f4f;
+  border-width: 1;
+  height: 56;
+  max-height: 56;
+  max-width: 56;
+  min-height: 56;
+  min-width: 56;
+  width: 56;
+}
+
+/* ---- Your record -------------------------------------------------------- */
+
+/* Ranked runs, personal bests and finishes are all held server-side: the only
+   aggregate the client can see is the per-map page the Maps route asks a
+   connected server for, and there is no such thing to read from the menu. The
+   section says so in words rather than reserving three rows of em dashes. */
+#Player .playerRecordBody {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  distribution: default;
+  height: 130;
+  max-height: 130;
+  max-width: 701;
+  min-height: 130;
+  min-width: 701;
+  padding: 12 0 0 0;
+  spacing: 10;
+  width: 701;
+}
+
+#Player .playerRecordCopy,
+#Player .playerRecordHint {
+  autoresizing-mask: none;
+  height: 54;
+  max-height: 54;
+  max-width: 701;
+  min-height: 54;
+  min-width: 701;
+  width: 701;
+}
+
+#Player .playerRecordCopy > Text {
+  alignment: top-left;
+  autoresizing-mask: width;
+  color: #93aec1;
+  font-size: 13;
+}
+
+#Player .playerRecordHint > Text {
+  alignment: top-left;
+  autoresizing-mask: width;
+  color: #74899b;
+  font-size: 12;
+}

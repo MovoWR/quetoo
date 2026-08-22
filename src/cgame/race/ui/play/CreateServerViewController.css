@@ -1,0 +1,545 @@
+/* The Create server route, ported from "Menu v2 - Play" (Quetoo Race Design
+   System, `_ds/quetoo-race-design-system-3b6491be`) and its "Play - Create
+   server and Runner implementation spec". The token-to-hex mapping lives in
+   the header of ui/main/MainView.css.
+
+   The page it replaces was framed: two notched `Box`es in a `ColumnsView` that
+   flowed on `min-column-width: 440`. The design has no frames here - hierarchy
+   is a sentence-case eyebrow over a hairline, then rows separated by hairlines,
+   which is the grammar Settings already ports (`.sectionHead` / `.sectionRule`
+   / `.rowLeft` / `.rowRight` / `.rowRule`, see SettingsViewController.css) and
+   which this route reuses name for name rather than inventing a second one.
+
+   The 1642 x 856 desktop composition is retained as a preferred maximum.
+   MainView promotes its split to ColumnsView, lets it use two slots when they
+   fit, and stacks the panes inside the tab's vertical document when they do not.
+
+   Create and Runner get all 856 for their columns where Join spends the first
+   68 on a filter band: the design gives those two pages `noFilter` and an empty
+   hint, so there is no band to reserve.
+
+   Two rules are deliberately absent. `.sectionEyebrow > Text` and the
+   `.sectionRule` fill both come from MainView.css's shared section language;
+   restating them here at the same specificity (one id, one class) would be a
+   tie, and Selector.c resolves ties by qsort order - which is to say
+   arbitrarily. Only attributes that sheet does not name are set below. */
+
+/* ---- Canvas ------------------------------------------------------------- */
+
+#Create {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  background-color: transparent;
+  max-width: 1642;
+  min-width: 1642;
+  width: 1642;
+}
+
+/* 901 / 701 within 1642 is the design's 1.7fr / 1fr, and Join's split byte for
+   byte - the form is the master column, the rotation the detail one. */
+#Create .createColumns {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  max-width: 1642;
+  min-column-width: 700;
+  min-width: 1642;
+  padding: 0;
+  spacing: 40;
+  width: 1642;
+}
+
+#Create .createFormPane,
+#Create .createMapsPane {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 0;
+}
+
+#Create .createFormPane {
+  max-width: 901;
+  min-width: 901;
+  spacing: 28;
+  width: 901;
+}
+
+#Create .createMapsPane {
+  max-width: 701;
+  min-width: 701;
+  spacing: 0;
+  width: 701;
+}
+
+/* ---- Sections ----------------------------------------------------------- */
+
+/* Unframed, and sized to their own rows: the form pane is top-aligned, so two
+   sections that add up to less than the canvas leave air at the bottom rather
+   than stretching to fill it. */
+#Create .createSection {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  max-width: 901;
+  min-width: 901;
+  padding: 0;
+  spacing: 0;
+  width: 901;
+}
+
+/* A plain View, not a StackView: the eyebrow pins left and the status pins
+   right, so the status stays flush however long the section name runs. */
+#Create .sectionHead {
+  autoresizing-mask: none;
+  height: 20;
+  max-height: 20;
+  min-height: 20;
+  padding: 0;
+}
+
+#Create .createFormPane .sectionHead {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Create .createMapsPane .sectionHead {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+#Create .sectionEyebrow {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+  height: 20;
+  max-height: 20;
+  max-width: 320;
+  min-height: 20;
+  min-width: 320;
+  padding: 0;
+  width: 320;
+}
+
+/* The right half of the head is the section's own state in words - what the
+   rules apply to, how many maps are selected - so both survive a screenshot. */
+#Create .sectionMeta {
+  alignment: middle-right;
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+  height: 20;
+  max-height: 20;
+  max-width: 360;
+  min-height: 20;
+  min-width: 360;
+  padding: 0;
+  width: 360;
+}
+
+#Create .sectionMeta > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Create .sectionRule,
+#Create .sectionFootRule {
+  autoresizing-mask: none;
+}
+
+/* `.sectionRule` takes its fill and its 1px from MainView.css; the rule that
+   closes a pane is this route's own, so it has to state both here. */
+#Create .sectionFootRule {
+  background-color: #2f4a5e73;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+#Create .createFormPane .sectionRule {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Create .createMapsPane .sectionRule,
+#Create .createMapsPane .sectionFootRule {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+/* ---- Rows --------------------------------------------------------------- */
+
+#Create .createRows {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  distribution: default;
+  max-width: 901;
+  min-width: 901;
+  padding: 12 0 0 0;
+  spacing: 0;
+  width: 901;
+}
+
+/* Also a plain View, for the same reason the section head is: a horizontal
+   StackView would lay the label and the control end to end and step the control
+   column in and out with every label length. `clips-subviews` keeps a long
+   server name inside its own row instead of over the rotation beside it. */
+#Create .createRow {
+  autoresizing-mask: none;
+  clips-subviews: true;
+  height: 44;
+  max-height: 44;
+  max-width: 901;
+  min-height: 44;
+  min-width: 901;
+  width: 901;
+}
+
+#Create .rowLeft,
+#Create .rowRight {
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  padding: 0;
+  spacing: 6;
+}
+
+#Create .rowLeft {
+  alignment: middle-left;
+}
+
+#Create .rowRight {
+  alignment: middle-right;
+}
+
+/* Capped rather than flexed: a label longer than the track clips, instead of
+   widening the label column and pushing every control on the page right. */
+#Create .rowLabel {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  max-width: 300;
+  min-width: 0;
+  padding: 0;
+}
+
+#Create .rowLabel > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+/* The eyebrow grammar the section heads use, at row scale: it qualifies the
+   value beside it without competing with the setting's own name. Shown only
+   when there is something to qualify. */
+#Create .rowCaption {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+#Create .rowCaption > Text {
+  alignment: middle-left;
+  color: #5f7488;
+  font-size: 11;
+}
+
+/* The dialect has no per-side borders, so each row separator is an explicit
+   hairline pinned to the row's bottom edge. The last row of a section carries
+   none, which is the design's `.row:last-child`. */
+#Create .rowRule {
+  alignment: bottom-left;
+  autoresizing-mask: none;
+  background-color: #24333f57;
+  height: 1;
+  max-height: 1;
+  max-width: 901;
+  min-height: 1;
+  min-width: 901;
+  width: 901;
+}
+
+/* ---- Controls ----------------------------------------------------------- */
+
+/* One control track for the whole route, matching Settings'. Fixed rather than
+   flexed: `fill` scales a subview by availableSize/requestedSize, which walks
+   the control to the pane's far right after a short label and snaps it back the
+   moment hover re-runs View::applyStyle. */
+#Create .rowField,
+#Create .rowSelect,
+#Create .rowToggle {
+  autoresizing-mask: none;
+  height: 34;
+  max-height: 34;
+  max-width: 200;
+  min-height: 34;
+  min-width: 200;
+  width: 200;
+}
+
+/* The hairline is the affordance. At `border-width: 0` the fill alone had to
+   carry it, and against the pane's own dark ground a select read as a line of
+   text rather than as a box that opens - the Teams row, whose value is one
+   short phrase, read as a caption. The toggle beside it already draws its box
+   at exactly this weight. */
+#Create .rowField,
+#Create .rowSelect {
+  background-color: #12212e;
+  border-color: #2a3f4f;
+  border-width: 1;
+  bevel: none;
+  padding: 6 11 6 11;
+}
+
+#Create .rowField Text,
+#Create .rowSelect Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+#Create .rowField:hover,
+#Create .rowSelect:hover {
+  background-color: #1c3a52;
+}
+
+#Create .rowField:focused,
+#Create .rowSelect:focused {
+  background-color: #122a3a;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+/* The toggle keeps the 200 track so its box lands on the same edge as every
+   select on the page, and pins the box itself to the right of that track. */
+#Create .rowToggle {
+  alignment: middle-right;
+  background-color: transparent;
+  border-width: 0;
+}
+
+#Create .rowToggle > Control {
+  alignment: middle-right;
+  background-color: #16232e;
+  border-color: #2a3f4f;
+  border-width: 1;
+  bevel: none;
+  height: 24;
+  max-height: 24;
+  max-width: 24;
+  min-height: 24;
+  min-width: 24;
+  width: 24;
+}
+
+#Create .rowToggle:hover > Control {
+  background-color: #1c3a52;
+  border-color: #6395bd;
+}
+
+#Create .rowToggle:focused > Control {
+  background-color: #122a3a;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+/* ---- Form footnote ------------------------------------------------------ */
+
+/* The one thing this form does that a deathmatch server's does not: the
+   ruleset it is started under is what its records are kept against. */
+#Create .createNote {
+  autoresizing-mask: none;
+  height: 40;
+  max-height: 40;
+  max-width: 901;
+  min-height: 40;
+  min-width: 901;
+  width: 901;
+}
+
+/* `lineWrap` wraps a Text at its own frame, and a Text sizes itself to the
+   unwrapped string - so a paragraph that is not told to take its width from the
+   Label around it renders as one long line and gets clipped at the column edge
+   instead of wrapping. `autoresizing-mask: width` is what hands it the Label's
+   width; Credits and Home already read this way. */
+#Create .createNote > Text {
+  alignment: top-left;
+  autoresizing-mask: width;
+  color: #74899b;
+  font-size: 12;
+}
+
+/* ---- Map rotation ------------------------------------------------------- */
+
+#Create .createMapsBody {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  distribution: default;
+  height: 724;
+  max-height: 724;
+  max-width: 701;
+  min-height: 724;
+  min-width: 701;
+  padding: 12 0 12 0;
+  spacing: 0;
+  width: 701;
+}
+
+/* Two-up inside the 701 column, which is the one real knock-on of moving this
+   route onto the shared canvas: the old `item-size: 552 236` was sized for a
+   pane that flowed to 1184 and would drop to one tile per row here.
+   CollectionView wraps when `x + itemSize.w > bounds.w`, so 2 x 338 + 16 = 692
+   fits inside 701 and 3 x 338 + 32 = 1046 does not. 338 x 190 is the mapshot's
+   own 16:9 rather than the old 2.3:1, so the blit no longer squashes it. */
+#Create #mapList {
+  autoresizing-mask: none;
+  background-color: #050f17;
+  border-color: #24333f;
+  border-width: 1;
+  height: 700;
+  item-size: 338 190;
+  item-spacing: 16 16;
+  max-height: 700;
+  max-width: 701;
+  min-height: 700;
+  min-width: 701;
+  padding: 0;
+  width: 701;
+}
+
+/* A map whose BSP carries no mapshot draws no image at all, so what shows
+   through is the item's own fill. At the old near-black #07131c that read as a
+   hole punched in the grid; at the design's interactive fill it reads as a flat
+   named tile, which is what it is. */
+#Create #mapList CollectionItemView {
+  background-color: #101c27;
+  border-color: #2a3f4f;
+  border-width: 1;
+}
+
+/* The deliberately blank tile: lighter than the grid's ground and hairlined
+   like a card, so a map with no art reads as a named entry rather than as a
+   gap. Its title is the only thing in it, so the title is what it is for. */
+#Create #mapList CollectionItemView.noMapshot {
+  background-color: #17252f;
+  border-color: #3a5364;
+}
+
+#Create #mapList CollectionItemView > Text {
+  background-color: #04101dd9;
+  color: #e7f1f8;
+  font-size: 13;
+  font-style: bold;
+  padding: 6 10 6 10;
+}
+
+#Create #mapList CollectionItemView:selected {
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+#Create #mapList CollectionItemView:selected > .selectionOverlay {
+  background-color: #63bce91c;
+  border-color: #9ddcff;
+  border-width: 2;
+}
+
+/* ---- Actions: beside the rotation they act on --------------------------- */
+
+/* The 10 at the bottom is breathing room, not decoration: the commit is the
+   last thing in the last column of the document, so without it the button's
+   own bottom edge is the document's, and the route scroller has nothing left
+   to expose it against. */
+#Create .createMapsFooter {
+  autoresizing-mask: none;
+  height: 110;
+  max-height: 110;
+  max-width: 701;
+  min-height: 110;
+  min-width: 701;
+  padding: 0 0 10 0;
+  width: 701;
+}
+
+#Create .createFooterText {
+  alignment: top-left;
+  autoresizing-mask: none;
+  height: 40;
+  max-height: 40;
+  max-width: 701;
+  min-height: 40;
+  min-width: 701;
+  padding: 12 0 0 0;
+  width: 701;
+}
+
+#Create .createFooterText > Text {
+  alignment: top-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Create .createActions {
+  alignment: bottom-left;
+  autoresizing-mask: width;
+  axis: horizontal;
+  distribution: default;
+  height: 58;
+  max-height: 58;
+  max-width: 701;
+  min-height: 58;
+  min-width: 0;
+  padding: 14 0 0 0;
+  spacing: 10;
+  width: 701;
+}
+
+/* The route's one commit, and the full width of the column it closes. At 220 it
+   sat left under a grid several times its width and read as one more control on
+   the page rather than as the thing the page is for; `width` rather than a
+   second pinned number so it tracks whatever the column's own share turns out
+   to be. */
+#Create #create {
+  autoresizing-mask: width;
+  background-color: #173d57;
+  border-color: #4f91b8;
+  height: 44;
+  max-height: 44;
+  max-width: 701;
+  min-height: 44;
+  min-width: 0;
+  width: 701;
+}
+
+#Create #create:hover,
+#Create #create:focused {
+  background-color: #215778;
+  border-color: #73c7f2;
+}
+
+#Create #create:highlighted {
+  background-color: #17415d;
+}
+
+#Create #create:disabled {
+  background-color: #0b1721aa;
+  border-color: #293b4a88;
+}

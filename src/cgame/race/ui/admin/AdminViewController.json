@@ -1,0 +1,126 @@
+{
+  "class": "Panel",
+  "identifier": "raceAdminRoot",
+  "classNames": [
+    "menu",
+    "adminMenu",
+    "masterPage"
+  ],
+  "contentView": {
+    "classNames": [
+      "adminContent"
+    ],
+    "subviews": [
+      {
+        "class": "StackView",
+        "identifier": "adminDocument",
+        "classNames": [
+          "container",
+          "adminBody",
+          "esc-page-scroll-content"
+        ],
+        "subviews": [
+          {
+            "class": "StackView",
+            "classNames": [
+              "adminUtilityBar"
+            ],
+            "subviews": [
+              {
+                "class": "Label",
+                "classNames": [
+                  "adminTitle"
+                ],
+                "text": {
+                  "text": "Race administration"
+                }
+              },
+              {
+                "class": "TextView",
+                "identifier": "adminFilter",
+                "classNames": [
+                  "adminFilter"
+                ],
+                "defaultText": "Filter admin controls"
+              }
+            ]
+          },
+          {
+            "class": "Label",
+            "identifier": "adminIntro",
+            "classNames": [
+              "adminIntro"
+            ],
+            "text": {
+              "text": "Admin actions apply immediately and are logged. The server revalidates your authority and every command before applying changes."
+            }
+          },
+          {
+            "class": "StackView",
+            "identifier": "adminColumns",
+            "classNames": [
+              "columns",
+              "container",
+              "adminColumns"
+            ]
+          },
+          {
+            "class": "StackView",
+            "identifier": "adminWideSections",
+            "classNames": [
+              "container",
+              "adminWideSections"
+            ]
+          },
+          {
+            "class": "Label",
+            "identifier": "adminEmptyState",
+            "classNames": [
+              "adminEmptyState"
+            ],
+            "text": {
+              "text": "Nothing matches that filter."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "accessoryView": {
+    "identifier": "adminFooter",
+    "hidden": false,
+    "classNames": [
+      "adminFooter"
+    ],
+    "subviews": [
+      {
+        "class": "StackView",
+        "classNames": [
+          "adminFooterStatus"
+        ],
+        "subviews": [
+          {
+            "class": "Label",
+            "identifier": "adminHint",
+            "classNames": [
+              "adminHint"
+            ],
+            "text": {
+              "text": ""
+            }
+          },
+          {
+            "class": "Label",
+            "identifier": "adminProvenance",
+            "classNames": [
+              "adminProvenance"
+            ],
+            "text": {
+              "text": ""
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,489 @@
+/* Race Credits route.
+
+   Ported from "Menu v2 - Credits"; see MainView.css for the token mapping.
+   The route is a page strip - Race, Quetoo, Licenses - over one flow of
+   sections, the same grammar Settings and the Controls roster use: every
+   section from every page lives in the same flow and the C side shows or hides
+   them, so a page change is one pass.
+
+   Two containers rather than one. `creditsColumns` is a ColumnsView, this
+   dialect's `repeat(auto-fit, minmax(N, 1fr))`; `creditsWideColumn` is a plain
+   stack below it holding the sections the mock spans across the grid with
+   `grid-column: 1 / -1` - the Race tab's cards and Special thanks. A
+   ColumnsView column cannot span its siblings, and stacking the wide sections
+   under the narrow ones is the closest the dialect gets.
+
+   Two things the mock does that this route deliberately does not:
+
+   - The mock's page strip underlines the open tab (`box-shadow: inset 0 -2px 0`).
+     The dialect has no box-shadow, and every other ported route already draws
+     its strip as a filled tab, so this one matches those rather than inventing
+     a third appearance for the same control.
+   - The mock's cards carry an SVG icon in each head. There are no vector icons
+     in this dialect and shipping three PNGs for decoration is not worth the
+     assets, so the heads are text only.
+
+   There is no filter field: the design turns search off route-wide, and with it
+   off there is nothing to tag an off-page section with either, so a section on
+   another page is simply hidden rather than dragged in and chipped. */
+
+Panel.creditsMenu {
+  alignment: top-left;
+  autoresizing-mask: width | height;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel.creditsMenu > StackView {
+  autoresizing-mask: width | height;
+  axis: vertical;
+  distribution: default;
+  spacing: 10;
+}
+
+Panel.creditsMenu > StackView > .contentView {
+  alignment: top-left;
+  autoresizing-mask: width;
+  padding: 0;
+}
+
+/* The right inset is the shell's 12px scrollbar gutter: the document is laid
+   out at the full viewport width, so a section that ran edge to edge would sit
+   under the ScrollBar. */
+Panel.creditsMenu .creditsBody {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  min-width: 0;
+  padding: 0 14 12 0;
+  spacing: 12;
+}
+
+/* Page strip -------------------------------------------------------------- */
+
+/* `distribution: default` deliberately: StackViewDistributionFill scales every
+   subview by availableSize/requestedSize rather than handing the slack to one
+   flexible child, which shrinks a tab strip below its content width. */
+Panel.creditsMenu .creditsUtilityBar {
+  alignment: middle-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  padding: 4 0 4 0;
+  spacing: 16;
+}
+
+Panel.creditsMenu .creditsPageTabs {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  distribution: default;
+  spacing: 2;
+}
+
+#main Panel.creditsMenu .creditsPageTab {
+  background-color: transparent;
+  border-width: 0;
+  bevel: none;
+  min-height: 34;
+  min-width: 0;
+  padding: 8 14 8 14;
+}
+
+#main Panel.creditsMenu .creditsPageTab > Text {
+  color: #93aec1;
+  font-size: 14;
+}
+
+#main Panel.creditsMenu .creditsPageTab:hover {
+  background-color: #22557f57;
+}
+
+#main Panel.creditsMenu .creditsPageTab:hover > Text,
+#main Panel.creditsMenu .creditsPageTab:selected > Text {
+  color: #f4f8fb;
+}
+
+#main Panel.creditsMenu .creditsPageTab:selected {
+  background-color: #22557f;
+}
+
+/* Section containers ------------------------------------------------------ */
+
+/* 460 rather than the mock's 340: a credit is a name beside a role, and the
+   longest role - "Logos, level design, models, textures, game balance" - needs
+   the width that the mock's grid would have taken back by shrinking the name
+   column. The dialect has no minmax, so the floor has to hold both tracks. */
+Panel.creditsMenu .creditsColumns {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  min-column-width: 460;
+  min-width: 0;
+  spacing: 24;
+}
+
+Panel.creditsMenu .creditsWideColumn {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  min-width: 0;
+  spacing: 24;
+}
+
+/* Sections ---------------------------------------------------------------- */
+
+/* Unframed: hierarchy is the eyebrow, its rule, and the row hairlines. The one
+   exception on this route is the Race tab, which frames each card - see
+   `.creditCard`. */
+Panel.creditsMenu .creditSection {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0;
+  spacing: 0;
+}
+
+Panel.creditsMenu .sectionEyebrow {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  height: 20;
+  max-height: 20;
+  min-height: 20;
+  padding: 0;
+}
+
+Panel.creditsMenu .sectionEyebrow > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 12;
+}
+
+Panel.creditsMenu .sectionRule {
+  autoresizing-mask: width;
+  background-color: #2f4a5e73;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+Panel.creditsMenu .creditRows {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  min-width: 0;
+  padding: 12 0 0 0;
+  spacing: 0;
+}
+
+/* Rows -------------------------------------------------------------------- */
+
+/* Rows are plain Views, not StackViews: the name pins left and the detail pins
+   right, so the detail column stays flush however long a handle runs. Clipped
+   rather than wrapped - a name and its role overlapping is worse than a role
+   losing its last word at an awkward width. */
+Panel.creditsMenu .creditRow {
+  autoresizing-mask: width;
+  clips-subviews: true;
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+}
+
+Panel.creditsMenu .creditRowRule {
+  autoresizing-mask: width;
+  background-color: #24333f57;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+Panel.creditsMenu .creditName {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 5;
+}
+
+/* The handle carries the accent and the real name does not. Upstream says the
+   same thing with a colour escape run - `^2jdolan^7 (Jay Dolan)` - which is
+   why a contributor with no handle at all (Roland Shaw, Anthony Webb) renders
+   in the plain colour rather than the accent: there were never any escapes on
+   those names to begin with. */
+Panel.creditsMenu .creditHandle,
+Panel.creditsMenu .creditRealName,
+Panel.creditsMenu .creditPlainName {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel.creditsMenu .creditHandle > Text {
+  alignment: middle-left;
+  color: #5c8fb5;
+  font-size: 14;
+  font-style: bold;
+}
+
+Panel.creditsMenu .creditRealName > Text,
+Panel.creditsMenu .creditPlainName > Text {
+  alignment: middle-left;
+  color: #dde8f1;
+  font-size: 14;
+}
+
+Panel.creditsMenu .creditDetail {
+  alignment: middle-right;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  padding: 0;
+}
+
+Panel.creditsMenu .creditDetail > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 13;
+}
+
+/* Special thanks ---------------------------------------------------------- */
+
+/* The mock reflows this to however many columns fit at >= 220px each. 260 is
+   the same intent measured against this dialect's own type: the widest entry,
+   "Preacher (Mattias Konradsson)", has to sit on one line because a name pair
+   here is two Labels in a row and neither of them wraps. */
+Panel.creditsMenu .creditThanks {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  min-column-width: 260;
+  min-width: 0;
+  padding: 12 0 0 0;
+  spacing: 10;
+}
+
+/* A thanks cell is a ColumnsView slot rather than a line in a row, so it takes
+   the slot's width and lets its two Labels sit at the left of it. */
+Panel.creditsMenu .creditThanksName {
+  autoresizing-mask: contain | width;
+  clips-subviews: true;
+  min-height: 22;
+}
+
+/* Race tab: cards --------------------------------------------------------- */
+
+/* The one grid in the menu whose cells are drawn boxes rather than transparent
+   sections, so it is the one that has to square its row: a card's frame comes
+   from the column's own height, and two cards of different content ended at
+   different heights with two mismatched bottom edges side by side. */
+Panel.creditsMenu .creditCards {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  equal-row-heights: true;
+  min-column-width: 300;
+  min-width: 0;
+  spacing: 20;
+}
+
+/* The one bordered container in this design system. Every other section on
+   every other route is unframed and separated by hairlines; the Race tab's
+   three blocks are discrete enough - a roster, a tools list, a pointer at
+   Quetoo - that the frame is carrying real structure rather than decoration. */
+Panel.creditsMenu .creditCard {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  background-color: transparent;
+  border-color: #2f4a5e;
+  border-width: 1;
+  distribution: default;
+  min-width: 0;
+  padding: 20;
+  spacing: 4;
+}
+
+Panel.creditsMenu .creditCardHead {
+  alignment: middle-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  padding: 0 0 6 0;
+  spacing: 12;
+}
+
+Panel.creditsMenu .creditCardTitle {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel.creditsMenu .creditCardTitle > Text {
+  alignment: middle-left;
+  color: #f4f8fb;
+  font-size: 19;
+}
+
+/* The one place the copy voice is allowed to loosen, and it is deliberately
+   set as an aside rather than as body copy. */
+Panel.creditsMenu .creditCardTag {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-color: #2f4a5e;
+  border-width: 1;
+  clips-subviews: true;
+  padding: 6 10 6 10;
+}
+
+Panel.creditsMenu .creditCardTag > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 12;
+}
+
+Panel.creditsMenu .creditCardLead {
+  alignment: middle-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  padding: 4 0 8 0;
+  spacing: 7;
+}
+
+Panel.creditsMenu .creditCardLeadPrefix,
+Panel.creditsMenu .creditCardLeadName {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel.creditsMenu .creditCardLeadPrefix > Text {
+  alignment: middle-left;
+  color: #f4f8fb;
+  font-size: 22;
+}
+
+Panel.creditsMenu .creditCardLeadName > Text {
+  alignment: middle-left;
+  color: #5c8fb5;
+  font-size: 22;
+}
+
+/* Wrapped copy has to be measured by hand. Text::render wraps to the Text's own
+   frame width and nothing back-propagates the wrapped height, so the Label
+   cannot `contain` it - a contained Label would size to the unwrapped natural
+   width instead, run off the card, and leave its siblings stacked on top of
+   each other. So: the Text follows the Label's width, and the Label declares a
+   height with room for one more line than the canvas needs. */
+Panel.creditsMenu .creditCardCopy,
+Panel.creditsMenu .creditCardNote {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0 0 8 0;
+}
+
+Panel.creditsMenu .creditCardCopy {
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+}
+
+Panel.creditsMenu .creditCardNote {
+  height: 48;
+  max-height: 48;
+  min-height: 48;
+}
+
+Panel.creditsMenu .creditCardCopy > Text {
+  alignment: top-left;
+  autoresizing-mask: width;
+  color: #93aec1;
+  font-size: 13;
+}
+
+Panel.creditsMenu .creditCardNote > Text {
+  alignment: top-left;
+  autoresizing-mask: width;
+  color: #74899b;
+  font-size: 12;
+}
+
+Panel.creditsMenu .creditCardRowLabel {
+  alignment: middle-left;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  padding: 0;
+}
+
+Panel.creditsMenu .creditCardRowLabel > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 14;
+}
+
+Panel.creditsMenu .creditCardRowName,
+Panel.creditsMenu .creditCardRowValue {
+  alignment: middle-right;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  padding: 0;
+}
+
+Panel.creditsMenu .creditCardRowName > Text {
+  alignment: middle-right;
+  color: #5c8fb5;
+  font-size: 14;
+  font-style: bold;
+}
+
+Panel.creditsMenu .creditCardRowValue > Text {
+  alignment: middle-right;
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+/* Changes page rather than opening a URL: the "original Quetoo credits" the
+   mock links out to are the route's own second tab. */
+#main Panel.creditsMenu .creditCardLink {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-color: #2f4a5e;
+  border-width: 1;
+  bevel: none;
+  min-height: 40;
+  min-width: 0;
+  padding: 11 14 11 14;
+}
+
+#main Panel.creditsMenu .creditCardLink > Text {
+  alignment: middle-left;
+  color: #5c8fb5;
+  font-size: 14;
+  font-style: bold;
+}
+
+#main Panel.creditsMenu .creditCardLink:hover {
+  background-color: #22557f4d;
+  border-color: #5c8fb5;
+}
+
+#main Panel.creditsMenu .creditCardLink:hover > Text {
+  color: #73c7f2;
+}

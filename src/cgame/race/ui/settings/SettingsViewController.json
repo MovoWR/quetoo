@@ -1,0 +1,167 @@
+{
+  "class": "Panel",
+  "identifier": "raceSettingsRoot",
+  "classNames": [
+    "menu",
+    "settingsMenu",
+    "masterPage"
+  ],
+  "contentView": {
+    "classNames": [
+      "settingsContent"
+    ],
+    "subviews": [
+      {
+        "class": "StackView",
+        "classNames": [
+          "settingsUtilityBar"
+        ],
+        "subviews": [
+          {
+            "class": "StackView",
+            "identifier": "settingsPageTabs",
+            "classNames": [
+              "settingsPageTabs"
+            ]
+          },
+          {
+            "class": "TextView",
+            "identifier": "settingsFilter",
+            "classNames": [
+              "settingsFilter"
+            ],
+            "defaultText": "Filter settings"
+          }
+        ]
+      },
+      {
+        "class": "StackView",
+        "identifier": "settingsDocument",
+        "classNames": [
+          "container",
+          "settingsBody",
+          "esc-page-scroll-content"
+        ],
+        "subviews": [
+          {
+            "class": "Label",
+            "identifier": "settingsIntro",
+            "classNames": [
+              "settingsIntro"
+            ],
+            "text": {
+              "text": "Settings take effect as you change them. Apply restarts the renderer or sound for the changes that need it."
+            }
+          },
+          {
+            "class": "StackView",
+            "identifier": "settingsStrafePreview",
+            "classNames": [
+              "settingsStrafePreview"
+            ],
+            "hidden": true
+          },
+          {
+            "class": "StackView",
+            "identifier": "settingsStrafeTabs",
+            "classNames": [
+              "settingsStrafeTabs"
+            ],
+            "hidden": true
+          },
+          {
+            "class": "StackView",
+            "identifier": "settingsColumns",
+            "classNames": [
+              "columns",
+              "container",
+              "settingsColumns"
+            ]
+          },
+          {
+            "class": "Label",
+            "identifier": "settingsEmptyState",
+            "classNames": [
+              "settingsEmptyState"
+            ],
+            "text": {
+              "text": "Nothing matches that filter."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "accessoryView": {
+    "identifier": "settingsFooter",
+    "hidden": false,
+    "classNames": [
+      "settingsFooter"
+    ],
+    "subviews": [
+      {
+        "class": "View",
+        "identifier": "settingsFooterBar",
+        "classNames": [
+          "settingsFooterBar"
+        ],
+        "subviews": [
+          {
+            "class": "Label",
+            "identifier": "settingsHint",
+            "classNames": [
+              "settingsHint"
+            ],
+            "text": {
+              "text": ""
+            }
+          },
+          {
+            "class": "StackView",
+            "classNames": [
+              "settingsFooterCommit"
+            ],
+            "subviews": [
+              {
+                "class": "Label",
+                "identifier": "settingsDirtyStatus",
+                "classNames": [
+                  "settingsStatus",
+                  "settingsDirtyStatus"
+                ],
+                "text": {
+                  "text": ""
+                }
+              },
+              {
+                "class": "StackView",
+                "classNames": [
+                  "settingsFooterActions"
+                ],
+                "subviews": [
+                  {
+                    "class": "Button",
+                    "identifier": "revertChanges",
+                    "title": {
+                      "text": "Revert changes"
+                    }
+                  },
+                  {
+                    "class": "Button",
+                    "identifier": "applyChanges",
+                    "classNames": [
+                      "primaryButton"
+                    ],
+                    "title": {
+                      "text": "Apply"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+#loading {
+  autoresizing-mask: fill;
+  background-color: #020914;
+}
+
+#loading #mapShot {
+  autoresizing-mask: fill;
+}
+
+#loading #logo {
+  alignment: middle-center;
+  height: 315;
+  width: 420;
+}
+
+#loading #progress {
+  alignment: bottom-center;
+  autoresizing-mask: width;
+  background-color: #06111fe8;
+  border-color: #315a7c;
+  border-width: 1;
+  height: 64;
+  max-width: 1080;
+  min-width: 0;
+  padding: 12 18 12 18;
+}
+
+#loading #progress > .background {
+  background-color: #102536;
+}
+
+#loading #progress > .foreground {
+  background-color: #5ab7e3;
+}
+
+#loading #progress > Text {
+  alignment: middle-left;
+  color: #eef6fb;
+  font-size: 13;
+  font-style: bold;
+}

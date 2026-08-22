@@ -1,0 +1,48 @@
+#dialog {
+  alignment: middle-center;
+  autoresizing-mask: contain | width;
+  background-color: #020914d6;
+  padding: 20;
+}
+
+#dialog > Panel {
+  alignment: middle-center;
+  background-color: #081a28;
+  border-color: #5c89ab;
+  border-width: 1;
+  draggable: false;
+  padding: 20;
+  resizable: false;
+}
+
+#dialog > Panel #message {
+  min-height: 74;
+}
+
+#dialog > Panel #message > Text {
+  color: #e7eef4;
+  font-size: 15;
+  font-style: bold;
+}
+
+#dialog > Panel .accessoryView {
+  axis: horizontal;
+  distribution: fill-equally;
+  hidden: false;
+  spacing: 10;
+}
+
+#dialog > Panel .accessoryView Button {
+  min-height: 46;
+}
+
+#dialog > Panel .accessoryView Button.dangerButton {
+  background-color: #6f3038;
+  border-color: #b55560;
+}
+
+#dialog > Panel .accessoryView Button.dangerButton:hover,
+#dialog > Panel .accessoryView Button.dangerButton:focused {
+  background-color: #8a3b45;
+  border-color: #e07b86;
+}

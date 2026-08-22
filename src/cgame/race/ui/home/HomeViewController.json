@@ -1,0 +1,145 @@
+{
+  "class": "Panel",
+  "identifier": "Home",
+  "classNames": [ "menu", "masterPage" ],
+  "contentView": {
+    "subviews": [
+      {
+        "class": "StackView",
+        "identifier": "dashboardRoot",
+        "classNames": [ "dashboardRoot" ],
+        "subviews": [
+          {
+            "class": "StackView",
+            "identifier": "sessionDashboard",
+            "classNames": [ "sessionDashboard" ],
+            "subviews": [
+              {
+                "class": "View",
+                "identifier": "sessionColumn",
+                "classNames": [ "sessionColumn" ],
+                "subviews": [
+                  {
+                    "class": "View",
+                    "identifier": "routeFilter",
+                    "classNames": [ "routeFilter" ],
+                    "subviews": [
+                      { "class": "TextView", "identifier": "rosterFilter", "defaultText": "Filter runners" },
+                      { "class": "Label", "identifier": "routeHint", "classNames": [ "routeHint" ], "text": { "text": "Choose Play to join a server or create a private local session." } }
+                    ]
+                  },
+                  {
+                    "class": "View",
+                    "identifier": "mapSummary",
+                    "classNames": [ "mapSummary" ],
+                    "subviews": [
+                      { "class": "Label", "identifier": "mapSectionTitle", "classNames": [ "sectionEyebrow" ], "text": { "text": "Current map" } },
+                      { "class": "View", "identifier": "mapRule", "classNames": [ "sectionRule" ] },
+                      {
+                        "class": "StackView",
+                        "identifier": "mapHeadingRow",
+                        "classNames": [ "mapHeadingRow" ],
+                        "subviews": [
+                          {
+                            "class": "StackView",
+                            "identifier": "mapCopy",
+                            "classNames": [ "mapCopy" ],
+                            "subviews": [
+                              { "class": "Label", "identifier": "mapTitle", "classNames": [ "mapTitle" ], "text": { "text": "Unknown map" } },
+                              { "class": "Label", "identifier": "mapIdentifier", "classNames": [ "mapIdentifier" ], "text": { "text": "unknown_map" } }
+                            ]
+                          },
+                          {
+                            "class": "StackView",
+                            "identifier": "modePanel",
+                            "classNames": [ "modePanel" ],
+                            "subviews": [
+                              { "class": "Label", "identifier": "modeStatus", "classNames": [ "sectionStatus" ], "text": { "text": "Race Mode" } },
+                              {
+                                "class": "StackView",
+                                "classNames": [ "homeActionRow", "modeActions" ],
+                                "subviews": [
+                                  { "class": "Button", "identifier": "mode_race", "title": { "text": "Race Mode" } },
+                                  { "class": "Button", "identifier": "mode_practice", "title": { "text": "Practice" } },
+                                  { "class": "Button", "identifier": "mode_spectator", "title": { "text": "Spectate" } }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "class": "View",
+                    "identifier": "overviewRow",
+                    "classNames": [ "overviewRow" ],
+                    "subviews": [
+                      {
+                        "class": "View",
+                        "identifier": "recordsSummaryPanel",
+                        "classNames": [ "recordsSummaryPanel" ],
+                        "subviews": [
+                          {
+                            "class": "View",
+                            "identifier": "recordsSummaryHeader",
+                            "classNames": [ "summaryHeader", "recordsSummaryHeader" ],
+                            "subviews": [
+                              { "class": "Label", "identifier": "recordsSummaryTitle", "classNames": [ "summaryTitle" ], "text": { "text": "Top times" } },
+                              { "class": "Label", "identifier": "worldRecord", "classNames": [ "worldRecord" ], "text": { "text": "WR --:--.---" } },
+                              { "class": "View", "identifier": "recordsSummaryRule", "classNames": [ "sectionRule" ] }
+                            ]
+                          },
+                          { "class": "View", "identifier": "summaryRecordsHeaderBand", "classNames": [ "tableHeaderBand" ] },
+                          { "class": "TableView", "identifier": "summaryRecordsTable" }
+                        ]
+                      },
+                      {
+                        "class": "View",
+                        "identifier": "rosterPanel",
+                        "classNames": [ "rosterPanel" ],
+                        "subviews": [
+                          {
+                            "class": "View",
+                            "identifier": "rosterHeader",
+                            "classNames": [ "summaryHeader", "rosterHeader" ],
+                            "subviews": [
+                              { "class": "Label", "identifier": "rosterTitle", "classNames": [ "summaryTitle", "rosterTitle" ], "text": { "text": "Runners" } },
+                              { "class": "Label", "identifier": "rosterCount", "classNames": [ "rosterCount" ], "text": { "text": "0 / 0" } },
+                              { "class": "View", "identifier": "rosterRule", "classNames": [ "sectionRule" ] }
+                            ]
+                          },
+                          { "class": "View", "identifier": "rosterHeaderBand", "classNames": [ "tableHeaderBand" ] },
+                          { "class": "TableView", "identifier": "rosterTable" },
+                          { "class": "Label", "identifier": "rosterEmpty", "classNames": [ "emptyState" ], "text": { "text": "No runners match that filter." } },
+                          {
+                            "class": "StackView",
+                            "identifier": "rosterFooter",
+                            "classNames": [ "rosterFooter" ],
+                            "subviews": [
+                              { "class": "Label", "identifier": "rosterPracticeSummary", "classNames": [ "rosterSummary" ], "text": { "text": "Practice Mode · No players" } },
+                              { "class": "Label", "identifier": "rosterSpectatorSummary", "classNames": [ "rosterSummary" ], "text": { "text": "Spectate · No players" } }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "class": "StackView",
+        "identifier": "disconnectedPanel",
+        "classNames": [ "disconnectedPanel" ],
+        "subviews": [
+          { "class": "Label", "classNames": [ "disconnectedTitle" ], "text": { "text": "Ready to race" } },
+          { "class": "Label", "classNames": [ "disconnectedCopy" ], "text": { "lineWrap": true, "text": "Choose Play to join a server or create a private local session. Records shown after connecting are server-local; global accounts and leaderboards are not available in this build." } }
+        ]
+      }
+    ]
+  }
+}

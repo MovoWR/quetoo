@@ -1,0 +1,71 @@
+{
+  "identifier": "Controls",
+  "classNames": [
+    "movementCombat",
+    "controlsPage",
+    "esc-page-scroll-content"
+  ],
+  "subviews": [
+    {
+      "class": "StackView",
+      "classNames": [
+        "container",
+        "controlsBody"
+      ],
+      "subviews": [
+        {
+          "class": "StackView",
+          "classNames": [
+            "controlsUtilityBar"
+          ],
+          "subviews": [
+            {
+              "class": "StackView",
+              "identifier": "controlsPageTabs",
+              "classNames": [
+                "controlsPageTabs"
+              ]
+            },
+            {
+              "class": "TextView",
+              "identifier": "controlsFilter",
+              "classNames": [
+                "controlsFilter"
+              ],
+              "defaultText": "Filter all bindings"
+            }
+          ]
+        },
+        {
+          "class": "Label",
+          "identifier": "controlsCaptureHint",
+          "classNames": [
+            "controlsIntro"
+          ],
+          "text": {
+            "text": "Select a slot, then press a key or mouse button. Backspace unbinds."
+          }
+        },
+        {
+          "class": "StackView",
+          "identifier": "controlsColumns",
+          "classNames": [
+            "columns",
+            "container",
+            "controlsColumns"
+          ]
+        },
+        {
+          "class": "Label",
+          "identifier": "controlsEmptyState",
+          "classNames": [
+            "controlsEmptyState"
+          ],
+          "text": {
+            "text": "Nothing matches that filter."
+          }
+        }
+      ]
+    }
+  ]
+}

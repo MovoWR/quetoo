@@ -1,0 +1,240 @@
+{
+  "class": "Panel",
+  "classNames": [ "menu", "votingMenu", "masterPage" ],
+  "contentView": {
+    "subviews": [
+      {
+        "class": "StackView",
+        "classNames": [ "voting", "esc-page-scroll-content" ],
+        "subviews": [
+          {
+            "class": "StackView",
+            "classNames": [ "votingCard", "liveVoteCard" ],
+            "subviews": [
+              {
+                "class": "StackView",
+                "classNames": [ "liveSummary" ],
+                "subviews": [
+                  { "class": "Label", "identifier": "liveStatus", "classNames": [ "eyebrow" ], "text": { "text": "BALLOT READY" } },
+                  { "class": "Label", "identifier": "liveHeadline", "classNames": [ "liveHeadline" ], "text": { "text": "No vote is active" } },
+                  { "class": "Label", "identifier": "liveDetail", "classNames": [ "liveDetail" ], "text": { "text": "Call a vote below or wait for another runner." } },
+                  { "class": "Label", "identifier": "liveHint", "classNames": [ "liveHint" ], "text": { "text": "The server validates eligibility, cooldowns and vote limits." } }
+                ]
+              },
+              {
+                "class": "StackView",
+                "classNames": [ "liveMetrics" ],
+                "subviews": [
+                  {
+                    "class": "StackView",
+                    "classNames": [ "voteMetric", "yesMetric" ],
+                    "subviews": [
+                      { "class": "Label", "identifier": "liveYes", "classNames": [ "metricValue" ], "text": { "text": "0" } },
+                      { "class": "Label", "classNames": [ "metricLabel" ], "text": { "text": "YES" } }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "voteMetric", "noMetric" ],
+                    "subviews": [
+                      { "class": "Label", "identifier": "liveNo", "classNames": [ "metricValue" ], "text": { "text": "0" } },
+                      { "class": "Label", "classNames": [ "metricLabel" ], "text": { "text": "NO" } }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "voteMetric" ],
+                    "subviews": [
+                      { "class": "Label", "identifier": "liveNeeded", "classNames": [ "metricValue" ], "text": { "text": "-" } },
+                      { "class": "Label", "classNames": [ "metricLabel" ], "text": { "text": "NEED" } }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "voteMetric", "timeMetric" ],
+                    "subviews": [
+                      { "class": "Label", "identifier": "liveRemaining", "classNames": [ "metricValue" ], "text": { "text": "-" } },
+                      { "class": "Label", "classNames": [ "metricLabel" ], "text": { "text": "TIME" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "class": "StackView",
+                "classNames": [ "liveActions" ],
+                "subviews": [
+                  { "class": "Button", "identifier": "vote_yes", "classNames": [ "primaryButton" ], "title": { "text": "Vote yes" } },
+                  { "class": "Button", "identifier": "vote_no", "classNames": [ "dangerButton" ], "title": { "text": "Vote no" } },
+                  { "class": "Label", "identifier": "ballotActionCaption", "classNames": [ "actionCaption" ], "text": { "text": "Ballot controls unlock when an eligible vote is live." } }
+                ]
+              }
+            ]
+          },
+          {
+            "class": "StackView",
+            "classNames": [ "voteWorkspace" ],
+            "subviews": [
+              {
+                "class": "StackView",
+                "classNames": [ "votingCard", "proposalPanel" ],
+                "subviews": [
+                  {
+                    "class": "StackView",
+                    "classNames": [ "panelHeader" ],
+                    "subviews": [
+                      { "class": "Label", "classNames": [ "eyebrow" ], "text": { "text": "PROPOSALS" } },
+                      { "class": "Label", "classNames": [ "panelTitle" ], "text": { "text": "Call a server vote" } },
+                      { "class": "Label", "classNames": [ "panelIntro" ], "text": { "text": "One authoritative ballot at a time. Every action is validated by the Race server." } }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "proposalSection" ],
+                    "subviews": [
+                      {
+                        "class": "StackView",
+                        "classNames": [ "sectionHeading" ],
+                        "subviews": [
+                          { "class": "Label", "classNames": [ "sectionTitle" ], "text": { "text": "PHYSICS MODE" } },
+                          { "class": "Label", "identifier": "currentPhysics", "classNames": [ "currentBadge" ], "text": { "text": "CURRENT · Q2" } }
+                        ]
+                      },
+                      { "class": "Label", "classNames": [ "sectionHint" ], "text": { "text": "A successful physics vote reloads the current map under the selected fixed ruleset." } },
+                      {
+                        "class": "StackView",
+                        "classNames": [ "physicsButtons" ],
+                        "subviews": [
+                          { "class": "Button", "identifier": "vote_physics_quetoo", "title": { "text": "Quetoo" } },
+                          { "class": "Button", "identifier": "vote_physics_quetoo_fix", "title": { "text": "Quetoo Fix" } },
+                          { "class": "Button", "identifier": "vote_physics_q2", "title": { "text": "Q2" } }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "proposalSection" ],
+                    "subviews": [
+                      { "class": "Label", "classNames": [ "sectionTitle" ], "text": { "text": "CHANGE MAP" } },
+                      { "class": "Label", "classNames": [ "sectionHint" ], "text": { "text": "Use a canonical map ID from Maps. Only maps in the server catalog can be proposed." } },
+                      {
+                        "class": "StackView",
+                        "classNames": [ "proposalActionRow" ],
+                        "subviews": [
+                          {
+                            "class": "Input",
+                            "classNames": [ "proposalInput" ],
+                            "label": { "text": { "text": "MAP ID" } },
+                            "control": { "class": "TextView", "identifier": "vote_map_target" }
+                          },
+                          { "class": "Button", "identifier": "vote_map_start", "classNames": [ "primaryButton", "proposalButton" ], "title": { "text": "Call map vote" } }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "proposalSection" ],
+                    "subviews": [
+                      { "class": "Label", "classNames": [ "sectionTitle" ], "text": { "text": "REMOVE PLAYER" } },
+                      { "class": "Label", "classNames": [ "sectionHint" ], "text": { "text": "Scroll or use arrow keys to reach the full roster. Slot and identity are snapshotted at vote start." } },
+                      {
+                        "class": "StackView",
+                        "classNames": [ "proposalActionRow" ],
+                        "subviews": [
+                          {
+                            "class": "Input",
+                            "classNames": [ "proposalInput" ],
+                            "label": { "text": { "text": "PLAYER" } },
+                            "control": { "class": "RosterSelect", "identifier": "vote_kick_target" }
+                          },
+                          { "class": "Button", "identifier": "vote_kick_start", "classNames": [ "dangerButton", "proposalButton" ], "title": { "text": "Call kick vote" } }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "proposalFooter" ],
+                    "subviews": [
+                      { "class": "Label", "identifier": "proposalStatus", "classNames": [ "proposalStatus" ], "text": { "text": "Ready · server cooldown and per-map call limits apply" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "class": "StackView",
+                "classNames": [ "votingCard", "nextMapPanel" ],
+                "subviews": [
+                  {
+                    "class": "StackView",
+                    "classNames": [ "panelHeader", "nextMapHeader" ],
+                    "subviews": [
+                      {
+                        "class": "StackView",
+                        "classNames": [ "nextMapHeaderRow" ],
+                        "subviews": [
+                          { "class": "Label", "identifier": "nextMapStatus", "classNames": [ "eyebrow", "nextMapStatus" ], "text": { "text": "NEXT MAP · NOMINATIONS" } },
+                          { "class": "Label", "identifier": "nextMapRemaining", "classNames": [ "countdownBadge" ], "text": { "text": "WAITING" } }
+                        ]
+                      },
+                      { "class": "Label", "classNames": [ "panelTitle" ], "text": { "text": "Intermission ballot" } },
+                      { "class": "Label", "identifier": "nextMapDetail", "classNames": [ "panelIntro" ], "text": { "text": "The ballot opens automatically when the run session ends." } }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "ballotStage" ],
+                    "subviews": [
+                      {
+                        "class": "StackView",
+                        "identifier": "nextMapEmpty",
+                        "classNames": [ "nextMapEmpty" ],
+                        "subviews": [
+                          { "class": "Label", "classNames": [ "emptyGlyph" ], "text": { "text": "01" } },
+                          { "class": "Label", "classNames": [ "emptyTitle" ], "text": { "text": "Awaiting intermission" } },
+                          { "class": "Label", "classNames": [ "emptyCopy" ], "text": { "text": "Nominate a map now. Live choices, tallies and time remaining will appear here." } }
+                        ]
+                      },
+                      {
+                        "class": "StackView",
+                        "identifier": "nextMapChoices",
+                        "classNames": [ "nextMapChoices" ],
+                        "subviews": [
+                          { "class": "Button", "identifier": "vote_choice_1", "title": { "text": "1" } },
+                          { "class": "Button", "identifier": "vote_choice_2", "title": { "text": "2" } },
+                          { "class": "Button", "identifier": "vote_choice_3", "title": { "text": "3" } },
+                          { "class": "Button", "identifier": "vote_choice_4", "title": { "text": "4" } },
+                          { "class": "Button", "identifier": "vote_choice_5", "title": { "text": "5" } },
+                          { "class": "Button", "identifier": "vote_choice_6", "title": { "text": "6" } },
+                          { "class": "Button", "identifier": "vote_choice_7", "title": { "text": "7" } },
+                          { "class": "Button", "identifier": "vote_choice_8", "title": { "text": "8" } }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "nominationSection" ],
+                    "subviews": [
+                      { "class": "Label", "classNames": [ "sectionTitle" ], "text": { "text": "NOMINATE A MAP" } },
+                      { "class": "Label", "identifier": "nominationHint", "classNames": [ "sectionHint" ], "text": { "text": "Nominations are considered first when the server builds the ballot." } },
+                      {
+                        "class": "StackView",
+                        "classNames": [ "nominationRow" ],
+                        "subviews": [
+                          { "class": "TextView", "identifier": "nomination_target" },
+                          { "class": "Button", "identifier": "nominate_map", "classNames": [ "secondaryButton" ], "title": { "text": "Nominate" } }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

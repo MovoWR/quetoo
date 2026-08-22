@@ -1,0 +1,335 @@
+{
+  "identifier": "Create",
+  "subviews": [
+    {
+      "class": "StackView",
+      "classNames": [ "createColumns", "esc-page-scroll-content" ],
+      "subviews": [
+        {
+          "class": "StackView",
+          "classNames": [ "createFormPane" ],
+          "subviews": [
+            {
+              "class": "StackView",
+              "classNames": [ "createSection" ],
+              "subviews": [
+                {
+                  "class": "View",
+                  "classNames": [ "sectionHead" ],
+                  "subviews": [
+                    { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Server" } },
+                    { "class": "Label", "classNames": [ "sectionMeta" ], "text": { "text": "Read when the server starts" } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "sectionRule" ] },
+                {
+                  "class": "StackView",
+                  "classNames": [ "createRows" ],
+                  "subviews": [
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Server name" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarTextView", "classNames": [ "rowField" ], "var": "sv_hostname" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Player slots" } },
+                            { "class": "Label", "classNames": [ "rowCaption" ], "hidden": true, "identifier": "maxClientsCaption", "text": { "text": "" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarSelect", "classNames": [ "rowSelect" ], "identifier": "maxClients", "var": "sv_max_clients" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Password" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarTextView", "classNames": [ "rowField" ], "var": "password", "defaultText": "None" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Message of the day" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarTextView", "classNames": [ "rowField" ], "var": "g_motd" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "List publicly" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarCheckbox", "classNames": [ "rowToggle" ], "var": "sv_public" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "class": "StackView",
+              "classNames": [ "createSection" ],
+              "subviews": [
+                {
+                  "class": "View",
+                  "classNames": [ "sectionHead" ],
+                  "subviews": [
+                    { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Race rules" } },
+                    { "class": "Label", "identifier": "rulesMeta", "classNames": [ "sectionMeta" ], "text": { "text": "" } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "sectionRule" ] },
+                {
+                  "class": "StackView",
+                  "classNames": [ "createRows" ],
+                  "subviews": [
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Gameplay" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarSelect", "classNames": [ "rowSelect" ], "expectsStringValue": true, "identifier": "gameplay", "var": "g_gameplay" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Physics" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarSelect", "classNames": [ "rowSelect" ], "expectsStringValue": true, "identifier": "physics", "var": "g_race_physics" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Teams" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "Select", "classNames": [ "rowSelect" ], "identifier": "teams" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Time limit" } },
+                            { "class": "Label", "classNames": [ "rowCaption" ], "hidden": true, "identifier": "timeLimitCaption", "text": { "text": "" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarSelect", "classNames": [ "rowSelect" ], "identifier": "timeLimit", "var": "g_time_limit" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Grapple hook" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarCheckbox", "classNames": [ "rowToggle" ], "var": "g_hook" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "createRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Weapons stay" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarCheckbox", "classNames": [ "rowToggle" ], "var": "g_weapon_stay" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "class": "Label",
+              "classNames": [ "createNote" ],
+              "text": {
+                "lineWrap": true,
+                "text": "Physics is the ruleset every run on this server is timed under. Records are kept per map and per ruleset, so changing it starts a separate set of times."
+              }
+            }
+          ]
+        },
+        {
+          "class": "StackView",
+          "classNames": [ "createMapsPane" ],
+          "subviews": [
+            {
+              "class": "View",
+              "classNames": [ "sectionHead" ],
+              "subviews": [
+                { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Map rotation" } },
+                { "class": "Label", "identifier": "mapsSelection", "classNames": [ "sectionMeta" ], "text": { "text": "No maps selected" } }
+              ]
+            },
+            { "class": "View", "classNames": [ "sectionRule" ] },
+            {
+              "class": "StackView",
+              "classNames": [ "createMapsBody" ],
+              "subviews": [
+                { "class": "MapListCollectionView", "identifier": "mapList", "selection": "multiple" }
+              ]
+            },
+            { "class": "View", "classNames": [ "sectionFootRule" ] },
+            {
+              "class": "View",
+              "classNames": [ "createMapsFooter" ],
+              "subviews": [
+                { "class": "Label", "identifier": "mapsHint", "classNames": [ "createFooterText" ], "text": { "text": "Click a map to host it on its own. Ctrl-click to add more and run them in rotation." } },
+                {
+                  "class": "StackView",
+                  "classNames": [ "createActions" ],
+                  "subviews": [
+                    { "class": "Button", "identifier": "create", "title": { "text": "Start race server" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

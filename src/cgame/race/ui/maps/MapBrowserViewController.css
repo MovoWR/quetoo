@@ -1,0 +1,892 @@
+/* The Maps route keeps its 1642-wide desktop composition as a preferred maximum.
+   MapBrowser_WrapPage supplies vertical overflow, while MainView promotes the
+   list/detail split to ColumnsView and stacks it on compact viewports.
+
+   Ported from "Maps Menu - FINAL" (Quetoo Race Design System,
+   `_ds/quetoo-race-design-system-3b6491be`). The pane chrome is deliberately
+   absent: the design separates the list from its details with hairlines and
+   whitespace, not with filled, bordered boxes, so nothing here paints a panel.
+   The token-to-hex mapping lives in the header of ui/main/MainView.css. */
+
+#Maps {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  background-color: transparent;
+}
+
+/* Measured, not stated. The composition is 60 toolbar + 12 + 726 content, but
+   the content is only that tall with a full list in it: with two maps the route
+   drew 798 points of canvas over about 500 of content and offered a scroll into
+   the difference. `contain` measures it downward as well as up -
+   MainView::collapsePageHeights releases the height every pass, so this shrinks
+   as well as grows. */
+#Maps .maps {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  max-width: 1642;
+  min-height: 0;
+  min-width: 1642;
+  padding: 0;
+  spacing: 12;
+  width: 1642;
+}
+
+/* ---- Route header ------------------------------------------------------
+   There is none. The shell's header already carries this route's eyebrow, its
+   title and the session metrics every other route shows, and the list states
+   its own count in its footer and its pager. The band that used to sit here
+   held one more copy of that count, right-aligned under the metrics rather
+   than beside them - a stat box floating below the stats line - and its 46
+   points plus the stack's spacing were most of the dead canvas between the
+   title and the search field on a route that has no tab strip to fill it. */
+
+/* ---- Search: one row, the field flexing, both buttons at natural width ---
+   The field's placeholder carries the label, so there is no separate caption
+   and the pager no longer shares this band - it belongs to the list. */
+
+#Maps .mapToolbar {
+  autoresizing-mask: none;
+  height: 60;
+  max-height: 60;
+  max-width: 1642;
+  min-height: 60;
+  min-width: 1642;
+  width: 1642;
+}
+
+#Maps .mapToolbarPrimary {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 44;
+  max-height: 44;
+  max-width: 664;
+  min-height: 44;
+  min-width: 664;
+  spacing: 8;
+  width: 664;
+}
+
+#Maps #filter {
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  max-width: 440;
+  min-height: 44;
+  min-width: 440;
+  width: 440;
+}
+
+#Maps .mapToolbarPrimary Button {
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  max-width: 104;
+  min-height: 44;
+  min-width: 104;
+  width: 104;
+}
+
+/* ---- Content: the list and its details, separated by whitespace ---------- */
+
+#Maps .mapContent {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  max-width: 1642;
+  min-column-width: 700;
+  min-height: 0;
+  min-width: 1642;
+  spacing: 40;
+  width: 1642;
+}
+
+#Maps .mapListPane,
+#Maps .mapDetailsPane {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  min-height: 0;
+  padding: 0;
+  spacing: 0;
+}
+
+#Maps .mapListPane {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Maps .mapDetailsPane {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+#Maps .mapPaneHeader {
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+  padding: 0;
+}
+
+#Maps .mapListPane .mapPaneHeader {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Maps .mapDetailsPane .mapPaneHeader {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+#Maps .mapPaneTitle {
+  alignment: bottom-left;
+  autoresizing-mask: none;
+  height: 36;
+  max-height: 36;
+  max-width: 300;
+  min-height: 36;
+  min-width: 300;
+  width: 300;
+}
+
+#Maps .mapPaneTitle > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 12;
+  font-style: bold;
+}
+
+/* Pane rules are the route's only chrome: 1px hairlines at ~45% alpha under a
+   section header, and a softer ~40% one closing the list. */
+#Maps .mapPaneRule,
+#Maps .mapPaneFootRule {
+  autoresizing-mask: none;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+#Maps .mapPaneRule {
+  background-color: #2f4a5e73;
+}
+
+#Maps .mapPaneFootRule {
+  background-color: #24333f66;
+}
+
+#Maps .mapListPane .mapPaneRule,
+#Maps .mapListPane .mapPaneFootRule {
+  max-width: 901;
+  min-width: 901;
+  width: 901;
+}
+
+#Maps .mapDetailsPane .mapPaneRule {
+  max-width: 701;
+  min-width: 701;
+  width: 701;
+}
+
+/* ---- Scope: every map, or the ones you have already run ------------------ */
+
+#Maps .mapScopeTabs {
+  alignment: bottom-right;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 34;
+  max-height: 34;
+  max-width: 214;
+  min-height: 34;
+  min-width: 214;
+  spacing: 6;
+  width: 214;
+}
+
+#Maps .mapScopeTabs Button,
+#Maps .mapDetailsTabs Button {
+  autoresizing-mask: none;
+  height: 34;
+  max-height: 34;
+  max-width: 104;
+  min-height: 34;
+  min-width: 104;
+  width: 104;
+}
+
+#Maps .mapDetailsTabs {
+  alignment: bottom-right;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 34;
+  max-height: 34;
+  max-width: 214;
+  min-height: 34;
+  min-width: 214;
+  spacing: 6;
+  width: 214;
+}
+
+/* ---- Map list ------------------------------------------------------------ */
+
+/* The height here is a ceiling, not a measure: MapBrowserViewController sizes
+   the table to the rows it actually holds and this body to that, so two maps
+   draw two rows and the footer sits under them. A full page still stops at 398
+   and scrolls inside the table. */
+#Maps .mapListBody {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  distribution: default;
+  height: 398;
+  max-height: 398;
+  max-width: 901;
+  min-height: 0;
+  min-width: 901;
+  padding: 12 0 12 0;
+  spacing: 8;
+  width: 901;
+}
+
+/* Ten rows and a header at 34 apiece: the pane sizes to its rows so the list
+   never scrolls internally and the pager below does the paging.
+
+   No `height` on purpose. MapBrowserViewController counts the rows the page
+   actually holds and pins the table to them; `bindInlets` only writes
+   attributes a computed style carries, so a height stated here would be a
+   restyle away from putting the full ten rows' canvas back under a short list.
+   The ceiling stays, and it is the one the controller clamps to. */
+#Maps #maps {
+  autoresizing-mask: none;
+  max-height: 374;
+  max-width: 901;
+  min-height: 0;
+  min-width: 901;
+  width: 901;
+}
+
+#Maps .mapListPane TableCellView,
+#Maps .mapDetailsPane TableCellView {
+  height: 34;
+  max-height: 34;
+  min-height: 34;
+}
+
+#Maps .mapEmptyState {
+  alignment: middle-center;
+  autoresizing-mask: none;
+  height: 40;
+  max-height: 40;
+  max-width: 901;
+  min-height: 40;
+  min-width: 901;
+  width: 901;
+}
+
+#Maps .mapEmptyState > Text {
+  alignment: middle-center;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Maps .mapListFooter {
+  autoresizing-mask: none;
+  height: 36;
+  max-height: 36;
+  max-width: 901;
+  min-height: 36;
+  min-width: 901;
+  padding: 0;
+  width: 901;
+}
+
+#Maps .mapListFooterText,
+#Maps .mapListFooterCount {
+  autoresizing-mask: none;
+  height: 36;
+  max-height: 36;
+  max-width: 440;
+  min-height: 36;
+  min-width: 440;
+  width: 440;
+}
+
+#Maps .mapListFooterText {
+  alignment: middle-left;
+}
+
+#Maps .mapListFooterCount {
+  alignment: middle-right;
+}
+
+#Maps .mapListFooterText > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Maps .mapListFooterCount > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+/* The pager belongs to the list it pages, centred beneath it. */
+#Maps .mapPager {
+  alignment: top-center;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 52;
+  max-height: 52;
+  max-width: 372;
+  min-height: 52;
+  min-width: 372;
+  padding: 7 0 7 0;
+  spacing: 12;
+  width: 372;
+}
+
+#Maps #maps_previous,
+#Maps #maps_next {
+  autoresizing-mask: none;
+  height: 38;
+  max-height: 38;
+  max-width: 100;
+  min-height: 38;
+  min-width: 100;
+  width: 100;
+}
+
+#Maps .mapPagerLabel {
+  autoresizing-mask: none;
+  height: 38;
+  max-height: 38;
+  max-width: 148;
+  min-height: 38;
+  min-width: 148;
+  width: 148;
+}
+
+#Maps .mapPagerLabel > Text {
+  alignment: middle-center;
+  color: #93aec1;
+  font-size: 13;
+}
+
+#Maps #maps #Map {
+  min-width: 190;
+  width: 190;
+}
+
+#Maps #maps #Title {
+  min-width: 220;
+  width: 250;
+}
+
+#Maps #maps #Author {
+  min-width: 150;
+  width: 172;
+}
+
+#Maps #maps #WR {
+  min-width: 118;
+  width: 128;
+}
+
+#Maps #maps #PB {
+  min-width: 128;
+  width: 138;
+}
+
+#Maps #maps #WR > Text,
+#Maps #maps #PB > Text {
+  alignment: middle-right;
+}
+
+/* The row's own fill as well as its cells'. The framework sheet paints a
+   selected TableRowView `darkgray`, and the cells only cover the sum of the
+   column widths - so wherever the row is a point or two wider than its columns,
+   that grey showed through as a bright vertical tick at the table's right edge,
+   reading as a border fragment on an otherwise clean wash. */
+#Maps #maps TableRowView:selected,
+#Maps #maps TableRowView:selected TableCellView,
+#Maps #maps_times_table TableRowView:selected,
+#Maps #maps_times_table TableRowView:selected TableCellView {
+  background-color: #1e496b;
+}
+
+#Maps #maps TableRowView:hover TableCellView {
+  background-color: #ffffff12;
+}
+
+/* ---- Map details --------------------------------------------------------- */
+
+#Maps .mapDetailsBody {
+  alignment: top-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  distribution: default;
+  min-height: 0;
+  max-height: 623;
+  max-width: 701;
+  min-height: 623;
+  min-width: 701;
+  padding: 14 0 14 0;
+  spacing: 12;
+  width: 701;
+}
+
+/* A plain View, not a stack: the title pins left and the path pins right, so
+   the path's right edge is the column's however long the name before it runs.
+   A horizontal StackView lays the two end to end instead, which is what left
+   the caption stopping 68 short of every other edge in the column. */
+#Maps .mapDetailTitleRow {
+  alignment: top-left;
+  autoresizing-mask: width;
+  height: 42;
+  max-height: 42;
+  max-width: 701;
+  min-height: 42;
+  min-width: 0;
+  padding: 0;
+}
+
+#Maps .mapDetailTitle {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  height: 42;
+  max-height: 42;
+  max-width: 460;
+  min-height: 42;
+  min-width: 460;
+  width: 460;
+}
+
+#Maps .mapDetailTitle > Text {
+  alignment: middle-left;
+  color: #f4f8fb;
+  font-size: 32;
+}
+
+#Maps .mapDetailPath {
+  alignment: bottom-right;
+  autoresizing-mask: none;
+  clips-subviews: true;
+  height: 42;
+  max-height: 42;
+  max-width: 229;
+  min-height: 42;
+  min-width: 229;
+  width: 229;
+}
+
+#Maps .mapDetailPath > Text {
+  alignment: bottom-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+/* The whole of the details pane while nothing is selected. Everything below it
+   - the path, the preview and both detail pages - is hidden in that state, so
+   this line stands where a skeleton of dashes used to. */
+#Maps .mapDetailHint {
+  autoresizing-mask: none;
+  height: 44;
+  max-height: 44;
+  max-width: 701;
+  min-height: 44;
+  min-width: 701;
+  width: 701;
+}
+
+/* `lineWrap` wraps a Text at its own frame, and a Text sizes itself to the
+   unwrapped string - so a paragraph that is not told to take its width from the
+   Label around it renders as one long line and gets clipped at the column edge
+   instead of wrapping. `autoresizing-mask: width` is what hands it the Label's
+   width; Credits and Home already read this way. */
+#Maps .mapDetailHint > Text {
+  alignment: top-left;
+  autoresizing-mask: width;
+  color: #74899b;
+  font-size: 13;
+}
+
+/* The column's width at 16:9. It was 360 on its own fill, which read as a panel
+   that had failed to load beside 270 points of empty column - the same dead band
+   the Create server grid had. The height is not stated here because it is
+   derived from the width: MapBrowserViewController pins it every layout, and a
+   height in this rule would only be a second answer for `resize` to clamp
+   against. */
+#Maps .mapPreview {
+  alignment: top-left;
+  autoresizing-mask: width;
+  axis: vertical;
+  background-color: #0a141e;
+  border-width: 0;
+  distribution: default;
+  max-width: 701;
+  min-width: 0;
+  padding: 0;
+  spacing: 0;
+}
+
+#Maps #maps_preview,
+#Maps #maps_preview_placeholder {
+  autoresizing-mask: width | height;
+  max-width: 701;
+  min-width: 0;
+}
+
+#Maps #maps_preview_placeholder {
+  alignment: middle-center;
+}
+
+#Maps #maps_preview_placeholder > Text {
+  alignment: middle-center;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Maps .mapDetailsPages {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  max-height: 326;
+  max-width: 701;
+  min-height: 0;
+  min-width: 0;
+}
+
+#Maps .mapDetailsPage {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  max-height: 326;
+  max-width: 701;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  spacing: 12;
+}
+
+/* Info is a two-column label/value grid and nothing else. */
+#Maps .mapDetailRow {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 30;
+  max-height: 30;
+  max-width: 701;
+  min-height: 30;
+  min-width: 701;
+  spacing: 20;
+  width: 701;
+}
+
+#Maps .mapDetailsPane .mapDetailRow > Label:first-child {
+  max-width: 120;
+  min-width: 120;
+  width: 120;
+}
+
+#Maps .mapDetailCaption {
+  autoresizing-mask: none;
+  height: 30;
+  max-height: 30;
+  min-height: 30;
+}
+
+#Maps .mapDetailCaption > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+#Maps .mapDetailValue {
+  autoresizing-mask: none;
+  height: 30;
+  max-height: 30;
+  max-width: 561;
+  min-height: 30;
+  min-width: 561;
+  width: 561;
+}
+
+#Maps .mapDetailValue > Text {
+  alignment: middle-left;
+  color: #dde8f1;
+  font-size: 13;
+}
+
+/* ---- Times: two record chips, a top four, then who holds it -------------- */
+
+/* `fill-equally`, which is the one distribution that divides rather than
+   scales: it hands each subview availableSize/count outright, where `fill`
+   would multiply each by availableSize/requestedSize and leave two 210s at
+   whatever ratio they started. The chips are a pair of equal readouts, so an
+   equal division is also what they mean. */
+#Maps .mapRecordChips {
+  alignment: top-left;
+  autoresizing-mask: width;
+  axis: horizontal;
+  distribution: fill-equally;
+  height: 50;
+  max-height: 50;
+  max-width: 701;
+  min-height: 50;
+  min-width: 0;
+  spacing: 12;
+}
+
+#Maps .mapRecordChip {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  background-color: #0b141d;
+  border-width: 1;
+  distribution: default;
+  height: 50;
+  max-height: 50;
+  max-width: 701;
+  min-height: 50;
+  min-width: 0;
+  padding: 5 12 5 12;
+  spacing: 2;
+  width: 210;
+}
+
+#Maps .mapRecordChipWorld {
+  border-color: #e7c36866;
+}
+
+#Maps .mapRecordChipLocal {
+  border-color: #8fd5f566;
+}
+
+#Maps .mapRecordChipCaption {
+  autoresizing-mask: none;
+  height: 16;
+  max-height: 16;
+  max-width: 186;
+  min-height: 16;
+  min-width: 186;
+  width: 186;
+}
+
+#Maps .mapRecordChipCaption > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 11;
+}
+
+#Maps .mapRecordChipValue {
+  autoresizing-mask: none;
+  height: 22;
+  max-height: 22;
+  max-width: 186;
+  min-height: 22;
+  min-width: 186;
+  width: 186;
+}
+
+#Maps .mapRecordChipValue > Text {
+  alignment: middle-left;
+  font-size: 17;
+}
+
+/* The menu's world-record gold is --gold-500; --hud-gold #ffcc33 is reserved
+   for the in-world HUD, where it has a 3D scene to hold contrast against. */
+#Maps .mapRecordChipWorld .mapRecordChipValue > Text {
+  color: #e7c368;
+}
+
+#Maps .mapRecordChipLocal .mapRecordChipValue > Text {
+  color: #8fd5f5;
+}
+
+/* Four times and a header, and no `height` for the same reason the map list
+   states none: the controller sizes this table to the times it was sent. */
+#Maps #maps_times_table {
+  autoresizing-mask: none;
+  max-height: 170;
+  max-width: 701;
+  min-height: 0;
+  min-width: 701;
+  width: 701;
+}
+
+#Maps #maps_times_table #Rank {
+  min-width: 90;
+  width: 100;
+}
+
+#Maps #maps_times_table #Player {
+  min-width: 320;
+  width: 420;
+}
+
+#Maps #maps_times_table #Time {
+  min-width: 140;
+  width: 160;
+}
+
+#Maps #maps_times_table #Time > Text {
+  alignment: middle-right;
+}
+
+#Maps .mapTimesMeta {
+  autoresizing-mask: none;
+  height: 22;
+  max-height: 22;
+  max-width: 701;
+  min-height: 22;
+  min-width: 701;
+  padding: 0;
+  width: 701;
+}
+
+#Maps .mapTimesMetaHolder,
+#Maps .mapTimesMetaRuns {
+  autoresizing-mask: none;
+  height: 22;
+  max-height: 22;
+  max-width: 340;
+  min-height: 22;
+  min-width: 340;
+  width: 340;
+}
+
+#Maps .mapTimesMetaHolder {
+  alignment: middle-left;
+}
+
+#Maps .mapTimesMetaRuns {
+  alignment: middle-right;
+}
+
+#Maps .mapTimesMetaHolder > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Maps .mapTimesMetaRuns > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+#Maps #maps_times {
+  autoresizing-mask: none;
+  height: 38;
+  max-height: 38;
+  max-width: 160;
+  min-height: 38;
+  min-width: 160;
+  width: 160;
+}
+
+/* ---- Footer actions ------------------------------------------------------ */
+
+#Maps .mapSelectionButtons {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  height: 57;
+  max-height: 57;
+  max-width: 701;
+  min-height: 57;
+  min-width: 701;
+  padding: 14 0 5 0;
+  spacing: 10;
+  width: 701;
+}
+
+#Maps .mapSelectionButtons Button {
+  autoresizing-mask: none;
+  height: 38;
+  max-height: 38;
+  min-height: 38;
+}
+
+#Maps #maps_vote {
+  background-color: #1e5375;
+  max-width: 128;
+  min-width: 128;
+  width: 128;
+}
+
+#Maps #maps_vote:hover,
+#Maps #maps_vote:focused {
+  background-color: #28688f;
+}
+
+#Maps #maps_nominate {
+  background-color: transparent;
+  border-color: #365163;
+  border-width: 1;
+  max-width: 212;
+  min-width: 212;
+  width: 212;
+}
+
+/* ---- Controls: flat fills, no hairline, no bevel ------------------------- */
+
+Panel#Maps Button {
+  background-color: #12212e;
+  bevel: none;
+  border-width: 0;
+  padding: 9 18 9 18;
+}
+
+Panel#Maps Button:selected {
+  background-color: #22557f;
+}
+
+#Maps Button > Text {
+  alignment: middle-center;
+  color: #dde8f1;
+  font-size: 13;
+}
+
+#Maps Button:hover {
+  background-color: #1c3a52;
+}
+
+#Maps Button:focused {
+  background-color: #1b405c;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+#Maps Button:disabled {
+  background-color: #0b1721;
+}
+
+#Maps Button:disabled > Text {
+  color: #6d8291;
+}
+
+/* The two footer actions carry their own fills, so they need their own
+   disabled state - the generic one is less specific and would not land. */
+#Maps #maps_vote:disabled,
+#Maps #maps_nominate:disabled {
+  background-color: #0b1721;
+  border-color: #263b49;
+}

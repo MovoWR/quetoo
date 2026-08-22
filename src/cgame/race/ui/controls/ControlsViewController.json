@@ -1,0 +1,100 @@
+{
+  "class": "Panel",
+  "classNames": [
+    "menu",
+    "controlsMenu",
+    "masterPage"
+  ],
+  "contentView": {
+    "classNames": [
+      "controlsContent"
+    ]
+  },
+  "accessoryView": {
+    "identifier": "controlsFooter",
+    "hidden": false,
+    "classNames": [
+      "controlsFooter"
+    ],
+    "subviews": [
+      {
+        "class": "StackView",
+        "classNames": [
+          "controlsFooterReset"
+        ],
+        "subviews": [
+          {
+            "class": "Button",
+            "identifier": "restoreDefaults",
+            "title": {
+              "text": "Reset to factory bindings"
+            }
+          }
+        ]
+      },
+      {
+        "class": "StackView",
+        "classNames": [
+          "controlsFooterStatus"
+        ],
+        "subviews": [
+          {
+            "class": "Label",
+            "identifier": "controlsHint",
+            "classNames": [
+              "controlsHint"
+            ],
+            "text": {
+              "text": ""
+            }
+          },
+          {
+            "class": "Label",
+            "identifier": "controlsDirtyStatus",
+            "classNames": [
+              "controlsDirtyStatus"
+            ],
+            "text": {
+              "text": ""
+            }
+          }
+        ]
+      },
+      {
+        "class": "StackView",
+        "classNames": [
+          "controlsFooterActions"
+        ],
+        "subviews": [
+          {
+            "class": "Button",
+            "identifier": "revertChanges",
+            "title": {
+              "text": "Revert changes"
+            }
+          },
+          {
+            "class": "Button",
+            "identifier": "applyChanges",
+            "classNames": [
+              "primaryButton"
+            ],
+            "title": {
+              "text": "Apply"
+            }
+          },
+          {
+            "class": "Button",
+            "identifier": "quit",
+            "classNames": [
+              "dangerButton"
+            ],
+            "title": {
+              "text": "Quit"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

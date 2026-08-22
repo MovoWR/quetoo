@@ -1,0 +1,217 @@
+{
+  "class": "Panel",
+  "identifier": "Maps",
+  "classNames": [ "menu", "masterPage", "esc-page-scroll-content" ],
+  "contentView": {
+    "subviews": [
+      {
+        "class": "StackView",
+        "classNames": [ "maps" ],
+        "subviews": [
+          {
+            "class": "View",
+            "classNames": [ "mapToolbar" ],
+            "subviews": [
+              {
+                "class": "StackView",
+                "classNames": [ "mapToolbarPrimary" ],
+                "subviews": [
+                  { "class": "TextView", "identifier": "filter", "defaultText": "Search maps" },
+                  { "class": "Button", "identifier": "maps_filter", "title": { "text": "Search" } },
+                  { "class": "Button", "identifier": "maps_refresh", "title": { "text": "Refresh" } }
+                ]
+              }
+            ]
+          },
+          {
+            "class": "StackView",
+            "classNames": [ "mapContent" ],
+            "subviews": [
+              {
+                "class": "StackView",
+                "classNames": [ "mapListPane" ],
+                "subviews": [
+                  {
+                    "class": "View",
+                    "classNames": [ "mapPaneHeader" ],
+                    "subviews": [
+                      { "class": "Label", "classNames": [ "mapPaneTitle" ], "text": { "text": "Map list" } },
+                      {
+                        "class": "StackView",
+                        "classNames": [ "mapScopeTabs" ],
+                        "subviews": [
+                          { "class": "Button", "identifier": "maps_scope_all", "title": { "text": "All maps" } },
+                          { "class": "Button", "identifier": "maps_scope_pb", "title": { "text": "My PBs" } }
+                        ]
+                      }
+                    ]
+                  },
+                  { "class": "View", "classNames": [ "mapPaneRule" ] },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "mapListBody" ],
+                    "subviews": [
+                      { "class": "TableView", "identifier": "maps" },
+                      { "class": "Label", "identifier": "maps_empty", "classNames": [ "mapEmptyState" ], "text": { "text": "No maps match the current filter" } }
+                    ]
+                  },
+                  { "class": "View", "classNames": [ "mapPaneFootRule" ] },
+                  {
+                    "class": "View",
+                    "classNames": [ "mapListFooter" ],
+                    "subviews": [
+                      { "class": "Label", "identifier": "maps_footer", "classNames": [ "mapListFooterText" ], "text": { "text": "End of list" } },
+                      { "class": "Label", "identifier": "maps_count", "classNames": [ "mapListFooterCount" ], "text": { "text": "0 maps" } }
+                    ]
+                  },
+                  {
+                    "class": "StackView",
+                    "identifier": "maps_pager",
+                    "classNames": [ "mapPager" ],
+                    "subviews": [
+                      { "class": "Button", "identifier": "maps_previous", "title": { "text": "Previous" } },
+                      { "class": "Label", "identifier": "page", "classNames": [ "mapPagerLabel" ], "text": { "text": "Page 1 of 1" } },
+                      { "class": "Button", "identifier": "maps_next", "title": { "text": "Next" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "class": "StackView",
+                "classNames": [ "mapDetailsPane" ],
+                "subviews": [
+                  {
+                    "class": "View",
+                    "classNames": [ "mapPaneHeader" ],
+                    "subviews": [
+                      { "class": "Label", "classNames": [ "mapPaneTitle" ], "text": { "text": "Map details" } },
+                      {
+                        "class": "StackView",
+                        "classNames": [ "mapDetailsTabs" ],
+                        "subviews": [
+                          { "class": "Button", "identifier": "maps_info_tab", "title": { "text": "Info" } },
+                          { "class": "Button", "identifier": "maps_times_tab", "title": { "text": "Times" } }
+                        ]
+                      }
+                    ]
+                  },
+                  { "class": "View", "classNames": [ "mapPaneRule" ] },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "mapDetailsBody" ],
+                    "subviews": [
+                      {
+                        "class": "View",
+                        "classNames": [ "mapDetailTitleRow" ],
+                        "subviews": [
+                          { "class": "Label", "identifier": "maps_detail_title", "classNames": [ "mapDetailTitle" ], "text": { "text": "Select a map" } },
+                          { "class": "Label", "identifier": "maps_detail_path", "classNames": [ "mapDetailPath" ], "text": { "text": "maps/" } }
+                        ]
+                      },
+                      { "class": "Label", "identifier": "maps_detail_hint", "classNames": [ "mapDetailHint" ], "text": { "lineWrap": true, "text": "Choose a map from the list to see its record, its author and its preview." } },
+                      {
+                        "class": "StackView",
+                        "identifier": "maps_preview_frame",
+                        "classNames": [ "mapPreview", "esc-aspect-16-9" ],
+                        "subviews": [
+                          { "class": "ImageView", "identifier": "maps_preview" },
+                          { "class": "Label", "identifier": "maps_preview_placeholder", "text": { "text": "Preview unavailable" } }
+                        ]
+                      },
+                      {
+                        "class": "PageView",
+                        "identifier": "maps_details_pages",
+                        "classNames": [ "mapDetailsPages" ],
+                        "subviews": [
+                          {
+                            "class": "StackView",
+                            "identifier": "maps_info_page",
+                            "classNames": [ "mapDetailsPage" ],
+                            "subviews": [
+                              {
+                                "class": "StackView",
+                                "classNames": [ "mapDetailRow" ],
+                                "subviews": [
+                                  { "class": "Label", "classNames": [ "mapDetailCaption" ], "text": { "text": "Author" } },
+                                  { "class": "Label", "identifier": "maps_detail_author", "classNames": [ "mapDetailValue" ], "text": { "text": "-" } }
+                                ]
+                              },
+                              {
+                                "class": "StackView",
+                                "classNames": [ "mapDetailRow" ],
+                                "subviews": [
+                                  { "class": "Label", "classNames": [ "mapDetailCaption" ], "text": { "text": "Your best" } },
+                                  { "class": "Label", "identifier": "maps_detail_pb", "classNames": [ "mapDetailValue" ], "text": { "text": "-" } }
+                                ]
+                              },
+                              {
+                                "class": "StackView",
+                                "classNames": [ "mapDetailRow" ],
+                                "subviews": [
+                                  { "class": "Label", "classNames": [ "mapDetailCaption" ], "text": { "text": "Runs" } },
+                                  { "class": "Label", "identifier": "maps_detail_runs", "classNames": [ "mapDetailValue" ], "text": { "text": "-" } }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "class": "StackView",
+                            "identifier": "maps_times_page",
+                            "classNames": [ "mapDetailsPage" ],
+                            "subviews": [
+                              {
+                                "class": "StackView",
+                                "classNames": [ "mapRecordChips" ],
+                                "subviews": [
+                                  {
+                                    "class": "StackView",
+                                    "classNames": [ "mapRecordChip", "mapRecordChipWorld" ],
+                                    "subviews": [
+                                      { "class": "Label", "classNames": [ "mapRecordChipCaption" ], "text": { "text": "World record" } },
+                                      { "class": "Label", "identifier": "maps_record_world", "classNames": [ "mapRecordChipValue" ], "text": { "text": "-" } }
+                                    ]
+                                  },
+                                  {
+                                    "class": "StackView",
+                                    "classNames": [ "mapRecordChip", "mapRecordChipLocal" ],
+                                    "subviews": [
+                                      { "class": "Label", "classNames": [ "mapRecordChipCaption" ], "text": { "text": "Your best" } },
+                                      { "class": "Label", "identifier": "maps_record_local", "classNames": [ "mapRecordChipValue" ], "text": { "text": "-" } }
+                                    ]
+                                  }
+                                ]
+                              },
+                              { "class": "TableView", "identifier": "maps_times_table" },
+                              {
+                                "class": "View",
+                                "classNames": [ "mapTimesMeta" ],
+                                "subviews": [
+                                  { "class": "Label", "identifier": "maps_detail_times", "classNames": [ "mapTimesMetaHolder" ], "text": { "text": "Select a map to view its record holder." } },
+                                  { "class": "Label", "identifier": "maps_detail_stats", "classNames": [ "mapTimesMetaRuns" ], "text": { "text": "-" } }
+                                ]
+                              },
+                              { "class": "Button", "identifier": "maps_times", "title": { "text": "Open full times" } }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  { "class": "View", "classNames": [ "mapPaneRule" ] },
+                  {
+                    "class": "StackView",
+                    "classNames": [ "mapSelectionButtons" ],
+                    "subviews": [
+                      { "class": "Button", "identifier": "maps_vote", "title": { "text": "Vote now" } },
+                      { "class": "Button", "identifier": "maps_nominate", "title": { "text": "Nominate for next map" } }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

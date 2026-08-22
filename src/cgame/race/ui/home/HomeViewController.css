@@ -1,0 +1,505 @@
+/* Home route.
+
+   Ported from the "Menu v2 - Home" design; see MainView.css for the token
+   mapping and for the shared `.sectionEyebrow` / `.sectionRule` section
+   language this route heads every block with.
+
+   v2 heads the route with `menu-shell.css`'s one filter slot (`.r-filter`):
+   a 260x34 field on the left, the route hint on the right. It is route-owned
+   here rather than shell-owned, following the Maps browser's `#filter`.
+
+   HomeViewController::layoutConnectedDashboard owns the geometry — panel
+   frames, the two overview columns and their gaps, the table and header
+   heights are all set from C against the live viewport. What stays here is
+   paint, type, and the intrinsic metrics C does not set: stack spacings,
+   paddings, and table column widths. */
+
+Panel#Home {
+  autoresizing-mask: width | height;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel#Home > .contentView {
+  padding: 0;
+}
+
+Panel#Home > StackView,
+Panel#Home > StackView > .contentView {
+  autoresizing-mask: width | height;
+}
+
+/* Session dashboard ------------------------------------------------------- */
+
+.dashboardRoot,
+.sessionDashboard,
+.sessionColumn {
+  alignment: top-left;
+  autoresizing-mask: width | height;
+  background-color: transparent;
+  height: 512;
+  min-height: 0;
+  min-width: 0;
+}
+
+.dashboardRoot {
+  spacing: 0;
+}
+
+.sessionDashboard {
+  axis: horizontal;
+  distribution: fill;
+  spacing: 0;
+}
+
+.sessionColumn {
+  clips-subviews: true;
+}
+
+/* Filter slot ------------------------------------------------------------- */
+
+/* Both children are placed from C, so both restate their metrics here: a
+   stylesheet pass resets anything it does not mention, which would collapse
+   the frames layoutConnectedDashboard set. */
+.routeFilter {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-width: 0;
+  height: 34;
+  min-height: 34;
+}
+
+#rosterFilter {
+  alignment: none;
+  background-color: #0c1721;
+  border-color: #31516a;
+  border-width: 1;
+  height: 34;
+  min-height: 34;
+  min-width: 0;
+  padding: 0 11 0 11;
+  width: 260;
+}
+
+#rosterFilter > Text {
+  alignment: middle-left;
+  color: #dde8f1;
+  font-size: 13;
+  font-style: regular;
+}
+
+#rosterFilter:focused {
+  background-color: #0c1721;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+.routeHint {
+  alignment: none;
+  height: 34;
+  min-height: 34;
+  min-width: 0;
+}
+
+.routeHint > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+  font-style: regular;
+}
+
+/* Current map ------------------------------------------------------------- */
+
+/* The eyebrow, its rule and the heading row are placed from C; the section
+   itself is unframed, in keeping with the design's hairline-only hierarchy. */
+.mapSummary {
+  background-color: transparent;
+  border-width: 0;
+}
+
+.mapHeadingRow {
+  alignment: bottom-left;
+  autoresizing-mask: width;
+  axis: horizontal;
+  distribution: fill;
+  padding: 0;
+  spacing: 24;
+}
+
+.mapCopy {
+  alignment: bottom-left;
+  autoresizing-mask: width;
+  padding: 0;
+  spacing: 3;
+}
+
+.sectionEyebrow {
+  height: 20;
+}
+
+.mapTitle {
+  clips-subviews: true;
+  height: 41;
+}
+
+.mapTitle > Text {
+  color: #f4f8fb;
+  font-size: 40;
+  font-style: regular;
+}
+
+.mapIdentifier {
+  clips-subviews: true;
+  height: 20;
+}
+
+.mapIdentifier > Text {
+  color: #74899b;
+  font-size: 12;
+}
+
+/* Mode selector ----------------------------------------------------------- */
+
+/* The three mode buttons are the design's SegmentedControl
+   (components/navigation/SegmentedControl.jsx): a filled blue active segment
+   with a brighter border, idle segments on the flat interactive fill. The
+   status line the buttons replaced is kept in the tree but renders to nothing,
+   and HomeViewController collapses its frame. */
+.modePanel {
+  alignment: bottom-right;
+  background-color: transparent;
+  border-width: 0;
+  min-height: 0;
+  padding: 5 0 0 0;
+  spacing: 6;
+}
+
+.sectionStatus {
+  autoresizing-mask: width;
+  height: 0;
+  min-height: 0;
+}
+
+.sectionStatus > Text {
+  color: transparent;
+  font-size: 0;
+}
+
+.homeActionRow {
+  autoresizing-mask: width;
+  axis: horizontal;
+  distribution: fill-equally;
+  height: 36;
+  min-height: 36;
+  padding: 0;
+  spacing: 8;
+}
+
+.homeActionRow > Button,
+.modeActions > Button {
+  height: 36;
+  min-height: 36;
+  min-width: 0;
+  padding: 5 8 5 8;
+}
+
+.modeActions {
+  background-color: transparent;
+  height: 36;
+  min-height: 36;
+}
+
+.modeActions {
+  distribution: default;
+}
+
+.modeActions > #mode_race {
+  max-width: 104;
+  min-width: 104;
+  width: 104;
+}
+
+.modeActions > #mode_practice {
+  max-width: 86;
+  min-width: 86;
+  width: 86;
+}
+
+.modeActions > #mode_spectator {
+  max-width: 94;
+  min-width: 94;
+  width: 94;
+}
+
+.modeActions > #mode_race:selected,
+.modeActions > #mode_practice:selected,
+.modeActions > #mode_spectator:selected {
+  background-color: #173d57;
+  border-color: #5c8fb5;
+}
+
+.modeActions > #mode_race:selected > Text,
+.modeActions > #mode_practice:selected > Text,
+.modeActions > #mode_spectator:selected > Text {
+  color: #f4f8fb;
+}
+
+.modeActions > #mode_race:focused,
+.modeActions > #mode_practice:focused,
+.modeActions > #mode_spectator:focused {
+  background-color: #1b405c;
+  border-color: #73c7f2;
+}
+
+/* Top times and Runners --------------------------------------------------- */
+
+.overviewRow {
+  autoresizing-mask: none;
+  background-color: transparent;
+  min-height: 0;
+  min-width: 0;
+}
+
+.recordsSummaryPanel,
+.rosterPanel {
+  background-color: transparent;
+  border-width: 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.rosterPanel {
+  autoresizing-mask: width;
+}
+
+.summaryHeader {
+  autoresizing-mask: none;
+  background-color: transparent;
+  height: 52;
+  min-height: 52;
+}
+
+/* Both section titles read as eyebrows, and each carries a right-aligned
+   status on the same line: the world record in gold, the roster count muted. */
+.summaryTitle,
+.rosterTitle {
+  height: 36;
+  padding: 0;
+}
+
+.summaryTitle > Text,
+.rosterTitle > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 12;
+  font-style: regular;
+}
+
+.worldRecord {
+  height: 36;
+  padding: 0 10 0 0;
+}
+
+.worldRecord > Text {
+  alignment: middle-right;
+  color: #e7c368;
+  font-size: 12;
+  font-style: regular;
+}
+
+.rosterCount {
+  alignment: none;
+  height: 36;
+  min-width: 100;
+  padding: 0;
+  width: 100;
+}
+
+.rosterCount > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+  font-style: regular;
+}
+
+#rosterHeader > #rosterTitle,
+#rosterHeader > #rosterCount {
+  alignment: none;
+  autoresizing-mask: none;
+}
+
+/* Tables ------------------------------------------------------------------ */
+
+/* Header fill, rule, zebra striping and the 14px cell type all come from the
+   shared Table rules in MainView.css. Column widths and the two reserved row
+   tints are per-table and live here. */
+#summaryRecordsTable,
+#rosterTable {
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+}
+
+.tableHeaderBand {
+  autoresizing-mask: none;
+  background-color: #1b2c3a;
+}
+
+#summaryRecordsTable TableHeaderView,
+#rosterTable TableHeaderView {
+  autoresizing-mask: width;
+  background-color: #1b2c3a;
+}
+
+#summaryRecordsTable TableCellView,
+#rosterTable TableCellView {
+  min-height: 37;
+  padding: 0 12 0 12;
+}
+
+#summaryRecordsTable TableHeaderView TableCellView,
+#rosterTable TableHeaderView TableCellView {
+  background-color: #1b2c3a;
+  min-height: 44;
+}
+
+#summaryRecordsTable #Rank {
+  min-width: 54;
+  width: 54;
+}
+
+#summaryRecordsTable #Player {
+  min-width: 190;
+  width: 360;
+}
+
+#summaryRecordsTable #Time {
+  min-width: 118;
+  width: 160;
+}
+
+#summaryRecordsTable #Time > Text {
+  alignment: middle-right;
+}
+
+#rosterTable #Runner {
+  min-width: 200;
+  width: 300;
+}
+
+#rosterTable #Status {
+  min-width: 230;
+  width: 360;
+}
+
+#rosterTable #Status > Text {
+  alignment: middle-right;
+}
+
+/* Numeric and status cells share their column's alignment; the classes are set
+   in HomeViewController because a TableColumn identifier only reaches the
+   header cell. */
+#summaryRecordsTable TableCellView.recordNumeric > Text,
+#rosterTable TableCellView.rosterStatus > Text {
+  alignment: middle-right;
+}
+
+#summaryRecordsTable TableCellView.recordWorld {
+  background-color: #7f672d45;
+}
+
+#summaryRecordsTable TableCellView.recordWorld > Text {
+  color: #e7c368;
+  font-style: bold;
+}
+
+#summaryRecordsTable TableCellView.recordLocal,
+#rosterTable TableCellView.rosterLocal {
+  background-color: #1d507345;
+}
+
+#summaryRecordsTable TableCellView.recordLocal > Text,
+#rosterTable TableCellView.rosterLocal > Text {
+  color: #8fd5f5;
+  font-style: bold;
+}
+
+/* Stands in for the roster table when the filter admits nothing. */
+.emptyState {
+  alignment: none;
+  autoresizing-mask: none;
+  height: 36;
+  min-height: 36;
+  min-width: 0;
+}
+
+.emptyState > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+/* The roster summary lines the design replaced with the header count. */
+.rosterFooter {
+  autoresizing-mask: width;
+  axis: horizontal;
+  background-color: transparent;
+  height: 0;
+  max-height: 0;
+  min-height: 0;
+  padding: 0;
+  spacing: 0;
+}
+
+.rosterSummary {
+  height: 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.rosterSummary > Text {
+  color: transparent;
+  font-size: 0;
+}
+
+/* Disconnected ------------------------------------------------------------ */
+
+.disconnectedPanel {
+  alignment: middle-center;
+  autoresizing-mask: width | height;
+  background-color: transparent;
+  border-width: 0;
+  height: 512;
+  min-height: 400;
+  min-width: 0;
+  padding: 120 48 120 48;
+  spacing: 12;
+}
+
+.disconnectedTitle {
+  autoresizing-mask: width;
+  height: 44;
+}
+
+.disconnectedTitle > Text {
+  alignment: middle-center;
+  color: #f4f8fb;
+  font-size: 26;
+  font-style: regular;
+}
+
+.disconnectedCopy {
+  autoresizing-mask: none;
+  height: 74;
+  max-width: 720;
+  min-width: 720;
+  width: 720;
+}
+
+.disconnectedCopy > Text {
+  alignment: top-center;
+  autoresizing-mask: width | height;
+  color: #93aec1;
+  font-size: 13;
+}

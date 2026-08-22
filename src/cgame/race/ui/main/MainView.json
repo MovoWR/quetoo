@@ -1,0 +1,152 @@
+{
+  "identifier": "main",
+  "subviews": [
+    {
+      "class": "ImageView",
+      "identifier": "background"
+    },
+    {
+      "class": "View",
+      "identifier": "overlayShade"
+    },
+    {
+      "class": "ImageView",
+      "identifier": "logo"
+    },
+    {
+      "class": "Label",
+      "identifier": "version"
+    },
+    {
+      "class": "View",
+      "identifier": "topBar",
+      "subviews": [
+        {
+          "class": "StackView",
+          "identifier": "brand",
+          "subviews": [
+            {
+              "class": "StackView",
+              "identifier": "brandLockup",
+              "subviews": [
+                {
+                  "class": "Label",
+                  "identifier": "brandTitle",
+                  "text": { "text": "QUETOO" }
+                },
+                {
+                  "class": "Label",
+                  "identifier": "brandSlash",
+                  "text": { "text": "//" }
+                },
+                {
+                  "class": "Label",
+                  "identifier": "brandSuffix",
+                  "text": { "text": "RACE" }
+                }
+              ]
+            },
+            {
+              "class": "Label",
+              "identifier": "menuHeading",
+              "text": { "text": "ESC MENU" }
+            }
+          ]
+        },
+        {
+          "class": "StackView",
+          "identifier": "primaryMenu"
+        },
+        {
+          "class": "StackView",
+          "identifier": "topActions"
+        }
+      ]
+    },
+    {
+      "class": "View",
+      "identifier": "menuWindow",
+      "subviews": [
+        {
+          "class": "View",
+          "identifier": "windowHeader",
+          "subviews": [
+            {
+              "class": "StackView",
+              "identifier": "routeSummary",
+              "subviews": [
+                {
+                  "class": "Label",
+                  "identifier": "connectionLabel",
+                  "text": { "text": "CONNECTED SESSION" }
+                },
+                {
+                  "class": "Label",
+                  "identifier": "windowTitle",
+                  "text": { "text": "Home" }
+                }
+              ]
+            },
+            {
+              "class": "StackView",
+              "identifier": "sessionMetrics",
+              "subviews": [
+                {
+                  "class": "StackView",
+                  "classNames": [ "sessionMetric" ],
+                  "subviews": [
+                    { "class": "Label", "identifier": "topPlayers" },
+                    { "class": "Label", "classNames": [ "metricCaption" ], "text": { "text": "Players" } }
+                  ]
+                },
+                {
+                  "class": "StackView",
+                  "classNames": [ "sessionMetric" ],
+                  "subviews": [
+                    { "class": "Label", "identifier": "topTime" },
+                    { "class": "Label", "classNames": [ "metricCaption" ], "text": { "text": "Map time" } }
+                  ]
+                },
+                {
+                  "class": "StackView",
+                  "classNames": [ "sessionMetric" ],
+                  "subviews": [
+                    { "class": "Label", "identifier": "topPhysics" },
+                    { "class": "Label", "classNames": [ "metricCaption" ], "text": { "text": "Physics" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "View",
+      "identifier": "bottomBar",
+      "subviews": [
+        {
+          "class": "StackView",
+          "identifier": "serverInfo",
+          "classNames": [ "serverInfo" ],
+          "subviews": [
+            { "class": "Label", "identifier": "serverName" },
+            { "class": "Label", "classNames": [ "serverSeparator" ], "text": { "text": "·" } },
+            { "class": "Label", "identifier": "serverMap" },
+            { "class": "Label", "classNames": [ "serverSeparator" ], "text": { "text": "·" } },
+            { "class": "Label", "identifier": "serverPing" }
+          ]
+        },
+        {
+          "class": "Label",
+          "identifier": "contextHint",
+          "text": { "text": "TAB moves focus | Mouse wheel or PAGE scrolls | ESC returns" }
+        },
+        {
+          "class": "StackView",
+          "identifier": "secondaryMenu"
+        }
+      ]
+    }
+  ]
+}

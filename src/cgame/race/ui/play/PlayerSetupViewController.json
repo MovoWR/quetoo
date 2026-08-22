@@ -1,0 +1,284 @@
+{
+  "identifier": "Player",
+  "subviews": [
+    {
+      "class": "StackView",
+      "classNames": [ "playerColumns", "esc-page-scroll-content" ],
+      "subviews": [
+        {
+          "class": "StackView",
+          "classNames": [ "playerFormPane" ],
+          "subviews": [
+            {
+              "class": "StackView",
+              "classNames": [ "playerSection" ],
+              "subviews": [
+                {
+                  "class": "View",
+                  "classNames": [ "sectionHead" ],
+                  "subviews": [
+                    { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Runner" } },
+                    { "class": "Label", "classNames": [ "sectionMeta" ], "text": { "text": "How you appear to other runners" } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "sectionRule" ] },
+                {
+                  "class": "StackView",
+                  "classNames": [ "playerRows" ],
+                  "subviews": [
+                    {
+                      "class": "View",
+                      "classNames": [ "playerRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Name" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarTextView", "classNames": [ "rowField" ], "var": "name" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "playerRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Player model" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "Select", "classNames": [ "rowSelect" ], "identifier": "skin" }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "playerRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowLeft" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Weapon hand" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "rowRight" ],
+                          "subviews": [
+                            { "class": "CvarSelect", "classNames": [ "rowSelect" ], "identifier": "hand", "var": "hand" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "class": "Label",
+              "classNames": [ "playerNote" ],
+              "text": {
+                "lineWrap": true,
+                "text": "Your name is also edited in Settings; it is one setting either way."
+              }
+            },
+            {
+              "class": "StackView",
+              "classNames": [ "playerSection" ],
+              "subviews": [
+                {
+                  "class": "View",
+                  "classNames": [ "sectionHead" ],
+                  "subviews": [
+                    { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Appearance" } },
+                    { "class": "Label", "classNames": [ "sectionMeta" ], "text": { "text": "Hue, saturation, value" } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "sectionRule" ] },
+                {
+                  "class": "StackView",
+                  "classNames": [ "playerRows" ],
+                  "subviews": [
+                    {
+                      "class": "View",
+                      "classNames": [ "playerRow", "colorRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "colorGroup" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "colorLabel" ], "text": { "text": "Helmet" } },
+                            {
+                              "class": "HSVColorPicker",
+                              "classNames": [ "rowPicker" ],
+                              "identifier": "helmet",
+                              "hueSlider": { "min": -1 },
+                              "valueSlider": { "min": 0.3 }
+                            }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "playerRow", "colorRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "colorGroup" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "colorLabel" ], "text": { "text": "Shirt" } },
+                            {
+                              "class": "HSVColorPicker",
+                              "classNames": [ "rowPicker" ],
+                              "identifier": "shirt",
+                              "hueSlider": { "min": -1 },
+                              "valueSlider": { "min": 0.3 }
+                            }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "playerRow", "colorRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "colorGroup" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "colorLabel" ], "text": { "text": "Pants" } },
+                            {
+                              "class": "HSVColorPicker",
+                              "classNames": [ "rowPicker" ],
+                              "identifier": "pants",
+                              "hueSlider": { "min": -1 },
+                              "valueSlider": { "min": 0.3 }
+                            }
+                          ]
+                        },
+                        { "class": "View", "classNames": [ "rowRule" ] }
+                      ]
+                    },
+                    {
+                      "class": "View",
+                      "classNames": [ "playerRow", "hueRow" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "colorGroup" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "colorLabel" ], "text": { "text": "Effects" } },
+                            {
+                              "class": "HueColorPicker",
+                              "classNames": [ "rowPicker" ],
+                              "identifier": "effects",
+                              "hueSlider": { "min": -1 }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "class": "Label",
+              "classNames": [ "playerNote" ],
+              "text": {
+                "lineWrap": true,
+                "text": "Shirt is the colour your ghosts and replays render in. A hue dragged to its far left is no colour at all, and leaves that part on the model default."
+              }
+            }
+          ]
+        },
+        {
+          "class": "StackView",
+          "classNames": [ "playerPreviewPane" ],
+          "subviews": [
+            {
+              "class": "StackView",
+              "classNames": [ "playerSection", "playerPreviewSection" ],
+              "subviews": [
+                {
+                  "class": "View",
+                  "classNames": [ "sectionHead" ],
+                  "subviews": [
+                    { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Preview" } },
+                    { "class": "Label", "classNames": [ "sectionMeta" ], "text": { "text": "Drag to turn, scroll to zoom" } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "sectionRule" ] },
+                {
+                  "class": "StackView",
+                  "classNames": [ "playerPreviewBody" ],
+                  "subviews": [
+                    { "class": "PlayerModelView", "identifier": "player" }
+                  ]
+                }
+              ]
+            },
+            {
+              "class": "StackView",
+              "classNames": [ "playerSection", "playerRecordSection" ],
+              "subviews": [
+                {
+                  "class": "View",
+                  "classNames": [ "sectionHead" ],
+                  "subviews": [
+                    { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Your record" } },
+                    { "class": "Label", "classNames": [ "sectionMeta" ], "text": { "text": "Held by the server" } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "sectionRule" ] },
+                {
+                  "class": "StackView",
+                  "classNames": [ "playerRecordBody" ],
+                  "subviews": [
+                    {
+                      "class": "Label",
+                      "classNames": [ "playerRecordCopy" ],
+                      "text": {
+                        "lineWrap": true,
+                        "text": "Ranked runs, personal bests and finishes are kept by the server you race on, not by this client, so there is nothing to show here while you are in the menu."
+                      }
+                    },
+                    {
+                      "class": "Label",
+                      "classNames": [ "playerRecordHint" ],
+                      "text": {
+                        "lineWrap": true,
+                        "text": "Once connected, Maps lists your best time for every map on that server, and the Play roster shows what the runners beside you have set."
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

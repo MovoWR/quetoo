@@ -1,0 +1,812 @@
+/* Race ESC menu shell.
+
+   Ported from the "Main Race Menu" design (Quetoo Race Design System,
+   `_ds/quetoo-race-design-system-3b6491be`). Token values are inlined because
+   the ObjectivelyMVC dialect has no custom properties; the mapping is:
+
+     --ink-950   #060d15  app canvas          --sky-100  #dde8f1  secondary text
+     --ink-900   #0b141d  panel header fill   --sky-300  #93aec1  tertiary text
+     --ink-800   #101c27  interactive fill    --sky-500  #74899b  muted text
+     --ink-400   #1b2c3a  table header fill   --sky-600  #6d8291  disabled text
+     --line-200  #24333f  soft border / rule  --white-ish #f4f8fb primary text
+     --line-300  #2f4a5e  chrome hairline     --blue-400 #5c8fb5  accent
+     --line-400  #2a3f4f  default border      --blue-300 #73c7f2  focus border
+     --line-500  #365163  control border      --gold-500 #e7c368  world record
+
+   Two design properties are deliberately dropped: the 3px corner radius (the
+   dialect has no radius property) and CSS transitions (no easing properties).
+   Alpha is written as an 8-digit hex suffix where the design used color-mix. */
+
+/* The canvas the chrome bars and the content plane are laid over. Nothing
+   should ever see it in the connected menu - the bars cover the top and bottom
+   bands, `activeBackground` covers everything between - but it is the design's
+   own frame colour so that a frame where one of them has not been placed yet
+   is dark rather than blue. */
+#main {
+  autoresizing-mask: fill;
+  background-color: #02070d;
+}
+
+#background,
+#overlayShade {
+  autoresizing-mask: fill;
+}
+
+#overlayShade {
+  background-color: transparent;
+}
+
+#logo {
+  alignment: bottom-right;
+  height: 112;
+  width: 240;
+}
+
+#version {
+  alignment: bottom-left;
+}
+
+/* Shared Race controls ---------------------------------------------------- */
+
+/* Manrope carries display and body throughout; Coda is reserved for the
+   wordmark (see #brandLockup below). */
+#main Text {
+  font-family: Manrope;
+}
+
+/* The design system's Button: 1px hairline, flat fill, no bevel. `primary` is
+   the default variant, `.ghostAction` is the transparent one, `.dangerAction`
+   is reserved strictly for destructive actions. */
+#main Button {
+  background-color: #101c27;
+  border-color: #365163;
+  border-width: 1;
+  bevel: none;
+  min-height: 40;
+  padding: 10 16 10 16;
+}
+
+#main Button > Text {
+  alignment: middle-center;
+  color: #dde8f1;
+  font-size: 14;
+  font-style: regular;
+}
+
+#main Button:hover {
+  background-color: #1c3a52;
+  border-color: #6395bd;
+}
+
+#main Button:focused {
+  background-color: #1b405c;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+#main Button:highlighted {
+  background-color: #265877;
+  border-color: #6395bd;
+}
+
+#main Button:selected {
+  background-color: #22557f;
+  border-color: #63bce9;
+}
+
+#main Button.ghostAction {
+  background-color: transparent;
+  border-color: #24333f;
+}
+
+#main Button.dangerButton,
+#main Button.dangerAction {
+  background-color: #351b25;
+  border-color: #934858;
+}
+
+#main Button.dangerButton:hover,
+#main Button.dangerButton:focused,
+#main Button.dangerAction:hover,
+#main Button.dangerAction:focused {
+  background-color: #512331;
+  border-color: #dc7488;
+}
+
+/* Disabled desaturates to near-canvas gray rather than lowering opacity. */
+#main Control:disabled Text {
+  color: #6d8291;
+}
+
+#main Button:disabled {
+  background-color: #0b1721;
+  border-color: #24333f;
+}
+
+#main Button:disabled > Text {
+  color: #6d8291;
+}
+
+#main Input {
+  min-height: 42;
+}
+
+#main Input > Label {
+  min-width: 180;
+}
+
+#main Input > Label > Text {
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+#main TextView,
+#main Select {
+  background-color: #16232e;
+  border-color: #2a3f4f;
+  border-width: 1;
+  min-height: 36;
+  min-width: 180;
+}
+
+#main TextView:focused,
+#main Select:focused {
+  background-color: #122a3a;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+#main Checkbox > Control {
+  background-color: #16232e;
+  border-color: #2a3f4f;
+  border-width: 1;
+}
+
+#main Checkbox:focused > Control {
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+#main Slider > .bar {
+  background-color: #16232e;
+}
+
+/* The filled portion of the track, which is what reads as "current value" at a
+   glance. The stock Slider has no such thing - it draws one hardcoded white
+   line across the whole bar - so every Race slider is a RaceSlider, which adds
+   this `.fill` ahead of the handle and suppresses the line. Stated here rather
+   than per route: a slider that fills on Settings and does not on Play is the
+   same control telling the player two different stories. */
+#main Slider > .bar > .fill {
+  autoresizing-mask: none;
+  background-color: #3e6b9d;
+}
+
+#main Slider > .bar > .handle {
+  background-color: #5c8fb5;
+  border-color: #a5dcf7;
+  border-width: 1;
+}
+
+#main Box {
+  background-color: #101c27;
+  border-color: #2a3f4f;
+  border-width: 1;
+}
+
+#main Box > Label {
+  background-color: #0b141d;
+}
+
+#main Box > Label > Text {
+  color: #93aec1;
+  font-size: 12;
+  font-style: bold;
+}
+
+/* Tables: flat header on a lighter fill over a hairline rule, 4% white zebra
+   striping, and two reserved row tints — gold for a world record, cyan for the
+   local player. Mirrors components/data/Table.jsx. */
+#main TableHeaderView {
+  background-color: #1b2c3a;
+  border-color: #2a3f4f;
+}
+
+#main TableHeaderView Text {
+  color: #dde8f1;
+  font-size: 17;
+  font-style: bold;
+}
+
+#main TableCellView > Text {
+  color: #dde8f1;
+  font-size: 14;
+}
+
+#main TableRowView:nth-child(even) TableCellView {
+  background-color: #ffffff0a;
+}
+
+#main TableRowView:hover TableCellView {
+  background-color: #ffffff14;
+}
+
+/* The row's own fill as well as its cells'. The framework sheet paints a
+   selected TableRowView `darkgray`, and a row's cells only cover the sum of its
+   column widths - so wherever the row is a point or two wider than its columns,
+   that grey shows through at the table's right edge as a bright vertical tick
+   and reads as a stray border fragment on an otherwise clean wash. */
+#main TableRowView:selected,
+#main TableRowView:selected TableCellView {
+  background-color: #1d5073;
+}
+
+/* The two reserved row tints, named here rather than in any one route so a
+   record table reads the same wherever it appears. Gold is --gold-500 washed
+   to 10%; the local player's row is brand blue --brand-primary at 27%, the
+   same two strengths the HUD leaderboard uses for its own record rows. */
+#main .tableRowWorld {
+  background-color: #e7c3681a;
+}
+
+#main .tableRowLocal {
+  background-color: #3e6b9d45;
+}
+
+#main .esc-page-scroll {
+  background-color: transparent;
+  border-width: 0;
+  scrollbar: auto;
+}
+
+#main .esc-page-scroll > .contentView {
+  alignment: top-left;
+  padding: 0 0 8 0;
+}
+
+/* A route document fills the live viewport. Its desktop-sized child remains
+   centred while there is surplus width; MainView releases that child's exact
+   width into a finite maximum when the viewport is smaller, so it reflows
+   instead of creating a horizontal page canvas. Alignment only writes the
+   origin and therefore does not feed back into containment measurement.
+
+   The `*` in the middle is the Panel's own unnamed StackView: a Panel holds
+   Panel > StackView > .contentView, so `Panel.menu > .contentView` matches
+   nothing, and plain `Panel.menu .contentView > *` would also catch every Box
+   on the Create and Runner tabs. */
+#main Panel.menu > * > .contentView > * {
+  alignment: top-center;
+}
+
+#main ScrollBar {
+  background-color: #060d15bb;
+  border-color: #24333f;
+  border-width: 1;
+  width: 12;
+}
+
+#main ScrollBar > .handle {
+  background-color: #365163;
+  border-color: #6ca9cd;
+  border-width: 1;
+  min-height: 30;
+}
+
+/* Route pages are transparent, undraggable and silent.
+
+   `Panel` extends `Control`, so every route's page Panel matches both stock
+   sound rules in cgame/common/ui/common.css: `Control` (click, change, mouse
+   enter) and `Panel` (mouse enter). That is right for the default menu, where
+   a Panel is a small floating dialog, and wrong here, where each route's Panel
+   fills the whole content viewport — hovering into the empty area below a
+   route's content clacked, and clicking anywhere in it clicked.
+
+   Specificity settles it without touching common.css: this selector scores 111
+   (id 100 + type 1 + class 10) against 1 for the bare `Panel` and `Control`
+   rules. A `*` prefix is the sound system's own placeholder form — see
+   S_LoadSampleBuffer in client/sound/s_sample.c, which returns before any file
+   lookup — so these resolve to silence with no "Failed to load" warning. This
+   applies to the page Panel only; Buttons, TableViews and the rest of the
+   Controls inside a page keep their own sounds. */
+#main Panel.menu {
+  background-color: transparent;
+  border-width: 0;
+  draggable: false;
+  padding: 0;
+  resizable: false;
+  -sound-on-click: *silent;
+  -sound-on-mouse-enter: *silent;
+}
+
+#main Panel.menu > .contentView {
+  padding: 0;
+}
+
+/* Global frame ----------------------------------------------------------- */
+
+/* Half of the design's background treatment, and the half that does most of
+   the work: the bars are a genuinely darker surface than the plane between
+   them, so the window reads as a lit panel held between two recessed rails
+   rather than as one flat sheet. Pure value separation - no gradient, no
+   imagery - which is why it ports to the dialect as-is while the plane itself
+   (see MainView::createActiveBackgroundSurface) has to be rendered.
+
+   The hairline is the design's `inset 0 1px 0 rgba(115,199,242,.10)`, an edge
+   catching the light rather than a border drawn on. The dialect's border-width
+   is uniform, but both bars span the full viewport, so only the inboard edge is
+   ever meaningfully on screen: the footer's outboard edge is pushed past the
+   bottom of the window by `bottomPaintHeight`, and the header's rides the very
+   top row at a tenth of an already dim blue. */
+#topBar,
+#bottomBar {
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-color: #2f4a5e99;
+  border-width: 1;
+}
+
+/* Connected only, because the disconnected menu is a full-bleed screenshot
+   with the logo and the version string in its bottom corners; MainView marks
+   the state. Equal specificity does not break a tie here - Stylesheet sorts
+   its selectors with qsort, which is not stable - so this rule earns its win
+   on the class rather than on being written second. */
+#topBar.connectedChrome,
+#bottomBar.connectedChrome {
+  background-color: #010408;
+  border-color: #73c7f21a;
+}
+
+#brand {
+  autoresizing-mask: none;
+  padding: 0;
+  spacing: 0;
+}
+
+/* The wordmark is three Labels so the double slash can carry the accent color;
+   a Label owns exactly one Text, which cannot be colored per-run. */
+/* Each word hugs its own Text and is floored to the bar height, so the three
+   Labels read as one line — `contain` plus a min-height, which View::resize
+   clamps up to, is the same trick the Controls sections use. */
+#brandLockup {
+  autoresizing-mask: contain;
+  axis: horizontal;
+  distribution: default;
+  min-height: 58;
+  padding: 0;
+  spacing: 6;
+}
+
+#brandLockup > Label {
+  autoresizing-mask: contain;
+  min-height: 58;
+  min-width: 0;
+}
+
+#brandLockup > Label > Text {
+  alignment: middle-left;
+  color: #f4f8fb;
+  font-family: Coda;
+  font-size: 17;
+  font-style: regular;
+}
+
+#brandSlash > Text {
+  color: #5c8fb5;
+}
+
+#menuHeading {
+  height: 0;
+  min-height: 0;
+}
+
+#menuHeading > Text {
+  color: transparent;
+  font-size: 0;
+}
+
+#primaryMenu,
+#topActions,
+#secondaryMenu {
+  autoresizing-mask: none;
+  axis: horizontal;
+  background-color: transparent;
+  padding: 10 0 10 0;
+}
+
+#primaryMenu {
+  distribution: default;
+  spacing: 2;
+}
+
+#topActions {
+  distribution: default;
+  spacing: 6;
+}
+
+#secondaryMenu {
+  distribution: default;
+  spacing: 8;
+}
+
+/* The tab strip and the bar actions are chromeless until interacted with. */
+#primaryMenu Button,
+#topActions Button,
+#secondaryMenu Button {
+  background-color: transparent;
+  border-color: transparent;
+  min-height: 36;
+  min-width: 0;
+  padding: 5 9 5 9;
+}
+
+#primaryMenu Button {
+  padding: 5 16 5 16;
+}
+
+#topActions Button.ghostAction {
+  max-width: 110;
+  min-width: 110;
+  width: 110;
+}
+
+#topActions Button.primaryAction {
+  max-width: 80;
+  min-width: 80;
+  width: 80;
+}
+
+#secondaryMenu Button.ghostAction {
+  max-width: 96;
+  min-width: 96;
+  width: 96;
+}
+
+#secondaryMenu Button.dangerAction {
+  max-width: 60;
+  min-width: 60;
+  width: 60;
+}
+
+#primaryMenu Button > Text,
+#topActions Button > Text,
+#secondaryMenu Button > Text {
+  color: #93aec1;
+  font-size: 14;
+}
+
+#primaryMenu Button:hover,
+#topActions Button:hover,
+#secondaryMenu Button:hover {
+  background-color: #1c3a52;
+  border-color: #24333f;
+}
+
+#primaryMenu Button:focused,
+#topActions Button:focused,
+#secondaryMenu Button:focused {
+  background-color: #1b405c;
+  border-color: #73c7f2;
+}
+
+#primaryMenu Button:selected,
+#primaryMenu Button.activeRoute {
+  background-color: #22557f;
+  border-color: #3e6b9d;
+  border-width: 1;
+}
+
+#primaryMenu Button:selected > Text,
+#primaryMenu Button.activeRoute > Text {
+  color: #f4f8fb;
+}
+
+/* Resume is the one filled action in the bars; Quick settings and Disconnect
+   are ghosts and Quit is danger, all set from MainViewController. */
+#topActions Button.primaryAction {
+  background-color: #22557f;
+  border-color: #3e6b9d;
+}
+
+#topActions Button.primaryAction > Text {
+  color: #f4f8fb;
+}
+
+#topActions Button.ghostAction,
+#secondaryMenu Button.ghostAction {
+  background-color: transparent;
+  border-color: #24333f;
+}
+
+#secondaryMenu Button.dangerAction {
+  background-color: #351b25;
+  border-color: #934858;
+}
+
+#secondaryMenu Button.dangerAction > Text {
+  color: #dde8f1;
+}
+
+/* The content stage is unframed — hierarchy comes from the bars and from the
+   hairline section rules inside each route, never from a window chrome. */
+#menuWindow {
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+}
+
+#windowHeader {
+  autoresizing-mask: none;
+  background-color: transparent;
+  border-width: 0;
+}
+
+#routeSummary {
+  autoresizing-mask: none;
+  padding: 15 0 7 0;
+  spacing: 1;
+}
+
+/* Pinned, not merely authored. A `Label` is `autoresizing-mask: contain` in the
+   framework's own sheet, so a bare `height` is advisory: `sizeToContain` grows
+   the Label to whatever its Text measures and `resize` only clamps against
+   min/max, which a bare `height` does not set. The title is the one that
+   matters - a 44pt face measures well over its authored 44 - and the eyebrow,
+   its spacing and that overrun together ask #routeSummary for more than the
+   MAIN_WINDOW_HEADER_HEIGHT of 95 the shell reserves for the whole block. The
+   stack lays its children out from the top either way, so what is pushed out is
+   the bottom of the title and whatever the block cannot fit. */
+#connectionLabel {
+  height: 18;
+  max-height: 18;
+  min-height: 18;
+}
+
+#connectionLabel > Text {
+  color: #5c8fb5;
+  font-size: 12;
+  font-style: regular;
+}
+
+#windowTitle {
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+}
+
+#windowTitle > Text {
+  color: #f4f8fb;
+  font-size: 44;
+  font-style: regular;
+}
+
+/* Players / Map time / Physics sit flush against the right edge, each column
+   sized to its own content by MainView::layoutSubviews. */
+#sessionMetrics {
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: default;
+  padding: 12 0 10 0;
+  spacing: 0;
+}
+
+#sessionMetrics > .sessionMetric {
+  border-width: 0;
+  padding: 3 0 3 0;
+  spacing: 0;
+}
+
+#sessionMetrics Label {
+  autoresizing-mask: width;
+  height: 30;
+  min-width: 0;
+}
+
+#sessionMetrics Label > Text {
+  alignment: middle-right;
+  color: #dde8f1;
+  font-size: 17;
+  font-style: regular;
+}
+
+#sessionMetrics .metricCaption {
+  height: 18;
+}
+
+#sessionMetrics .metricCaption > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 11;
+  font-style: regular;
+}
+
+#contentViewport,
+#activeVoteHost,
+#quickSettingsHost {
+  autoresizing-mask: none;
+}
+
+#contentViewport {
+  clips-subviews: true;
+}
+
+#contentViewport > View > * {
+  alignment: top-left;
+}
+
+/* Controls is one flowed document rather than a tabbed one, so it sizes like
+   every other route; see MovementCombatViewController.css. */
+Panel.controlsMenu {
+  autoresizing-mask: contain | width;
+}
+
+#activeVoteHost,
+#quickSettingsHost {
+  background-color: #060d15f5;
+  clips-subviews: true;
+}
+
+/* The same hairline as every other pane; the drawer's own border matches it,
+   so the two stacked fills read as one edge rather than two brighter ones. */
+#quickSettingsHost {
+  border-color: #2a3f4f;
+  border-width: 1;
+}
+
+/* Shared section language ------------------------------------------------- */
+
+/* Every route heads its sections the same way: a sentence-case eyebrow over a
+   hairline rule, with an optional right-aligned status on the same line. */
+#main .sectionEyebrow > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 12;
+  font-style: regular;
+}
+
+#main .sectionRule {
+  background-color: #2f4a5e73;
+  height: 1;
+  min-height: 1;
+}
+
+/* Play route shell, Credits, and dialogs ---------------------------------- */
+
+/* The Play route is the one tabbed route, and its strip sits on its own row at
+   the top of the content area - the route title row above it already carries
+   the eyebrow, the h1 and the Players / Map time / Physics trio, the same as
+   every other route. The strip reads as the page subtabs of the design rather
+   than as the framework's default chips: sentence case, a 2px focus underline
+   under the selected tab, and no fill on the rest. */
+#main TabView {
+  autoresizing-mask: contain | width;
+  spacing: 0;
+}
+
+#main TabView > .tabSelectionView {
+  autoresizing-mask: width;
+  axis: horizontal;
+  distribution: default;
+  min-height: 44;
+  spacing: 2;
+  -sound-on-click: #ui/click;
+}
+
+#main TabView > .tabSelectionView > Label {
+  height: 40;
+  min-height: 40;
+  padding: 9 14 9 14;
+}
+
+#main TabView > .tabSelectionView > Label > Text {
+  alignment: middle-center;
+  color: #93aec1;
+  font-size: 14;
+}
+
+#main TabView > .tabSelectionView > Label.selected {
+  background-color: #22557f;
+}
+
+#main TabView > .tabSelectionView > Label.selected > Text {
+  color: #f4f8fb;
+}
+
+/* common.css pins this class to 1440. CSS cannot unset that inherited width,
+   so MainView::collapsePageWidths resets the live frame to the route viewport
+   on every reflow; these constraints make the Race intent explicit. */
+#main TabView > .tabPageView {
+  autoresizing-mask: contain | width;
+  border-width: 0;
+  min-width: 0;
+  padding: 14 0 0 0;
+}
+
+#main #Credits {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  background-color: #101c27;
+  border-color: #2a3f4f;
+}
+
+#main #Credits > .contentView {
+  padding: 18;
+  spacing: 16;
+}
+
+#main #Credits .credit {
+  min-height: 34;
+}
+
+#main #Credits .credit .name Text {
+  font-size: 14;
+}
+
+#main #dialog {
+  background-color: #060d15eb;
+  padding: 20;
+}
+
+#main #dialog > Panel {
+  background-color: #152532;
+  border-color: #5c89ab;
+  border-width: 1;
+  padding: 20;
+}
+
+#main #dialog > Panel #message {
+  min-height: 66;
+}
+
+#main #dialog > Panel #message > Text {
+  color: #dde8f1;
+  font-size: 15;
+}
+
+#main #dialog > Panel .accessoryView {
+  axis: horizontal;
+  distribution: fill-equally;
+  spacing: 10;
+}
+
+/* Footer ----------------------------------------------------------------- */
+
+.serverInfo {
+  autoresizing-mask: none;
+  axis: horizontal;
+  padding: 0;
+  spacing: 8;
+}
+
+.serverInfo Label {
+  height: 58;
+  min-width: 0;
+}
+
+.serverInfo Label > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+.serverInfo .serverSeparator {
+  min-width: 8;
+  width: 8;
+}
+
+.serverInfo .serverSeparator > Text {
+  alignment: middle-center;
+  color: #4f6678;
+}
+
+/* The design's footer carries only the server line and the two actions; the
+   keyboard hint it replaced is kept in the tree but rendered to nothing, and
+   MainView::layoutSubviews collapses its frame. */
+#contextHint {
+  padding: 0;
+}
+
+#contextHint > Text {
+  color: transparent;
+  font-size: 0;
+}

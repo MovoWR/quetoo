@@ -1,0 +1,196 @@
+{
+  "identifier": "Join",
+  "classNames": [ "joinMenu" ],
+  "subviews": [
+    {
+      "class": "StackView",
+      "classNames": [ "join", "esc-page-scroll-content" ],
+      "subviews": [
+        {
+          "class": "View",
+          "classNames": [ "joinToolbar" ],
+          "subviews": [
+            {
+              "class": "StackView",
+              "classNames": [ "joinFilters" ],
+              "subviews": [
+                {
+                  "class": "Input",
+                  "classNames": [ "joinFilter", "joinFilterCheck" ],
+                  "label": { "text": { "text": "Hide empty" } },
+                  "control": { "class": "CvarCheckbox", "identifier": "hideEmpty", "var": "cg_join_server_hide_empty" }
+                },
+                {
+                  "class": "Input",
+                  "classNames": [ "joinFilter", "joinFilterCheck" ],
+                  "label": { "text": { "text": "Hide bots" } },
+                  "control": { "class": "CvarCheckbox", "identifier": "hideBots", "var": "cg_join_server_hide_bots" }
+                },
+                {
+                  "class": "Input",
+                  "classNames": [ "joinFilter", "joinPingFilter" ],
+                  "label": { "text": { "text": "Quick join max ping" } },
+                  "control": { "class": "RaceSlider", "identifier": "maxPing", "var": "cg_quick_join_max_ping", "min": 30, "max": 300, "step": 10 }
+                }
+              ]
+            },
+            { "class": "Label", "classNames": [ "joinRouteHint" ], "text": { "text": "Select a server, then Connect. Double-click a row to connect." } }
+          ]
+        },
+        {
+          "class": "StackView",
+          "identifier": "joinContent",
+          "classNames": [ "joinColumns" ],
+          "subviews": [
+            {
+              "class": "StackView",
+              "classNames": [ "joinListPane" ],
+              "subviews": [
+                {
+                  "class": "View",
+                  "classNames": [ "joinPaneHeader" ],
+                  "subviews": [
+                    {
+                      "class": "StackView",
+                      "classNames": [ "joinPaneTitleGroup" ],
+                      "subviews": [
+                        { "class": "Label", "classNames": [ "joinPaneTitle" ], "text": { "text": "Servers" } },
+                        { "class": "Label", "identifier": "servers_total", "classNames": [ "joinPaneCount" ], "text": { "text": "0 of 0 listed" } }
+                      ]
+                    },
+                    { "class": "Label", "identifier": "servers_sort", "classNames": [ "joinPaneStatus" ], "text": { "text": "Sorted by ping ascending" } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "joinPaneRule" ] },
+                {
+                  "class": "StackView",
+                  "identifier": "servers_body",
+                  "classNames": [ "joinListBody" ],
+                  "subviews": [
+                    { "class": "TableView", "identifier": "servers" },
+                    { "class": "Label", "identifier": "servers_empty", "classNames": [ "joinEmptyState" ], "text": { "text": "No servers match the current filters." } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "joinPaneFootRule" ] },
+                {
+                  "class": "View",
+                  "classNames": [ "joinListFooter" ],
+                  "subviews": [
+                    { "class": "Label", "identifier": "servers_legend", "classNames": [ "joinListFooterText" ], "text": { "text": "Ping over 120 ms is out of quick-join range" } },
+                    { "class": "Button", "identifier": "refresh", "classNames": [ "ghostAction" ], "title": { "text": "Refresh" } }
+                  ]
+                }
+              ]
+            },
+            {
+              "class": "StackView",
+              "classNames": [ "joinDetailsPane" ],
+              "subviews": [
+                {
+                  "class": "View",
+                  "classNames": [ "joinPaneHeader" ],
+                  "subviews": [
+                    {
+                      "class": "StackView",
+                      "classNames": [ "joinPaneTitleGroup" ],
+                      "subviews": [
+                        { "class": "Label", "classNames": [ "joinPaneTitle" ], "text": { "text": "Server details" } }
+                      ]
+                    },
+                    { "class": "Label", "identifier": "server_source", "classNames": [ "joinPaneStatus" ], "text": { "text": "" } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "joinPaneRule" ] },
+                {
+                  "class": "StackView",
+                  "identifier": "server_body",
+                  "classNames": [ "joinDetailsBody" ],
+                  "subviews": [
+                    {
+                      "class": "StackView",
+                      "classNames": [ "joinDetailTitleRow" ],
+                      "subviews": [
+                        { "class": "Label", "identifier": "server_hostname", "classNames": [ "joinDetailTitle" ], "text": { "text": "Select a server" } },
+                        { "class": "Label", "identifier": "server_address", "classNames": [ "joinDetailAddress" ], "text": { "text": "" } }
+                      ]
+                    },
+                    { "class": "Label", "identifier": "server_hint", "classNames": [ "joinDetailHint" ], "text": { "text": "Choose a server from the list to see its map, rules and roster." } },
+                    { "class": "Label", "identifier": "server_motd", "classNames": [ "joinDetailMotd" ], "text": { "text": "" } },
+                    {
+                      "class": "StackView",
+                      "identifier": "server_grid",
+                      "classNames": [ "joinDetailGrid" ],
+                      "subviews": [
+                        {
+                          "class": "StackView",
+                          "classNames": [ "joinDetailRow" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "joinDetailCaption" ], "text": { "text": "Map" } },
+                            { "class": "Label", "identifier": "server_map", "classNames": [ "joinDetailValue" ], "text": { "text": "-" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "joinDetailRow" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "joinDetailCaption" ], "text": { "text": "Gameplay" } },
+                            { "class": "Label", "identifier": "server_gameplay", "classNames": [ "joinDetailValue" ], "text": { "text": "-" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "joinDetailRow" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "joinDetailCaption" ], "text": { "text": "Physics" } },
+                            { "class": "Label", "identifier": "server_physics", "classNames": [ "joinDetailValue" ], "text": { "text": "-" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "joinDetailRow" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "joinDetailCaption" ], "text": { "text": "Players" } },
+                            { "class": "Label", "identifier": "server_players", "classNames": [ "joinDetailValue" ], "text": { "text": "-" } }
+                          ]
+                        },
+                        {
+                          "class": "StackView",
+                          "classNames": [ "joinDetailRow" ],
+                          "subviews": [
+                            { "class": "Label", "classNames": [ "joinDetailCaption" ], "text": { "text": "Ping" } },
+                            { "class": "Label", "identifier": "server_ping", "classNames": [ "joinDetailValue" ], "text": { "text": "-" } }
+                          ]
+                        }
+                      ]
+                    },
+                    { "class": "View", "identifier": "roster_rule", "classNames": [ "joinPaneRule" ] },
+                    {
+                      "class": "View",
+                      "identifier": "roster_header",
+                      "classNames": [ "joinRosterHeader" ],
+                      "subviews": [
+                        { "class": "Label", "classNames": [ "joinRosterTitle" ], "text": { "text": "On the server" } },
+                        { "class": "Label", "identifier": "roster_count", "classNames": [ "joinRosterCount" ], "text": { "text": "" } }
+                      ]
+                    },
+                    { "class": "TableView", "identifier": "roster" },
+                    { "class": "Label", "identifier": "roster_empty", "classNames": [ "joinEmptyState" ], "text": { "text": "Nobody on this server right now." } }
+                  ]
+                },
+                { "class": "View", "classNames": [ "joinPaneFootRule" ] },
+                {
+                  "class": "StackView",
+                  "classNames": [ "joinActions" ],
+                  "subviews": [
+                    { "class": "Button", "identifier": "connect", "title": { "text": "Connect" } },
+                    { "class": "Button", "identifier": "quickJoin", "classNames": [ "ghostAction" ], "title": { "text": "Quick join" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

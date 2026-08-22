@@ -1,0 +1,826 @@
+Panel.votingMenu,
+Panel.votingMenu > .contentView,
+Panel.votingMenu .voting {
+  max-width: 1656;
+  min-width: 1656;
+  width: 1656;
+}
+
+Panel.votingMenu,
+Panel.votingMenu > .contentView {
+  padding: 0;
+}
+
+Panel.votingMenu .voting {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  distribution: default;
+  height: 876;
+  max-height: 876;
+  min-height: 876;
+  padding: 8;
+  spacing: 10;
+}
+
+Panel.votingMenu .votingCard {
+  background-color: #071826f4;
+  border-color: #315d78;
+  border-width: 1;
+}
+
+Panel.votingMenu .liveVoteCard {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: fill;
+  max-height: 170;
+  min-height: 170;
+  max-width: 1640;
+  min-width: 1640;
+  height: 170;
+  padding: 12;
+  spacing: 12;
+  width: 1640;
+}
+
+Panel.votingMenu .liveSummary {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  max-height: 146;
+  max-width: 780;
+  min-height: 146;
+  min-width: 780;
+  height: 146;
+  spacing: 4;
+  width: 780;
+}
+
+Panel.votingMenu .liveSummary > .eyebrow,
+Panel.votingMenu .liveSummary > .liveHeadline,
+Panel.votingMenu .liveSummary > .liveDetail,
+Panel.votingMenu .liveSummary > .liveHint {
+  max-width: 780;
+  min-width: 780;
+  width: 780;
+}
+
+Panel.votingMenu .eyebrow {
+  autoresizing-mask: width;
+  height: 16;
+}
+
+Panel.votingMenu .eyebrow > Text {
+  color: #63d7ef;
+  font-size: 10;
+  font-style: bold;
+}
+
+Panel.votingMenu .liveHeadline {
+  autoresizing-mask: width;
+  height: 36;
+}
+
+Panel.votingMenu .liveHeadline > Text {
+  color: #f1f7fb;
+  font-size: 23;
+  font-style: bold;
+}
+
+Panel.votingMenu .liveDetail {
+  autoresizing-mask: width;
+  height: 28;
+}
+
+Panel.votingMenu .liveDetail > Text {
+  color: #c0d4e1;
+  font-size: 12;
+}
+
+Panel.votingMenu .liveHint {
+  autoresizing-mask: width;
+  background-color: #0b2232;
+  border-color: #24485f;
+  border-width: 1;
+  height: 34;
+  padding: 6 9 6 9;
+}
+
+Panel.votingMenu .liveHint > Text {
+  color: #8ba9ba;
+  font-size: 10;
+}
+
+Panel.votingMenu .liveMetrics {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  axis: horizontal;
+  distribution: fill-equally;
+  max-height: 146;
+  max-width: 486;
+  min-height: 146;
+  min-width: 486;
+  height: 146;
+  spacing: 8;
+  width: 486;
+}
+
+Panel.votingMenu .voteMetric {
+  alignment: middle-center;
+  autoresizing-mask: height;
+  axis: vertical;
+  background-color: #0a2130;
+  border-color: #294d64;
+  border-width: 1;
+  max-height: 108;
+  min-height: 108;
+  height: 108;
+  padding: 10 6 8 6;
+  spacing: 2;
+}
+
+Panel.votingMenu .yesMetric {
+  border-color: #2d7b71;
+}
+
+Panel.votingMenu .noMetric {
+  border-color: #78434e;
+}
+
+Panel.votingMenu .timeMetric {
+  border-color: #7d6b39;
+}
+
+Panel.votingMenu .metricValue {
+  alignment: middle-center;
+  autoresizing-mask: width;
+  height: 48;
+}
+
+Panel.votingMenu .metricValue > Text {
+  alignment: middle-center;
+  color: #f0f7fb;
+  font-size: 22;
+  font-style: bold;
+}
+
+Panel.votingMenu .yesMetric .metricValue > Text {
+  color: #69e1c0;
+}
+
+Panel.votingMenu .noMetric .metricValue > Text {
+  color: #f08b98;
+}
+
+Panel.votingMenu .timeMetric .metricValue > Text {
+  color: #f0d278;
+}
+
+Panel.votingMenu .metricLabel {
+  alignment: middle-center;
+  autoresizing-mask: width;
+  height: 20;
+}
+
+Panel.votingMenu .metricLabel > Text {
+  alignment: middle-center;
+  color: #6f91a5;
+  font-size: 9;
+  font-style: bold;
+}
+
+Panel.votingMenu .liveActions {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  max-height: 146;
+  max-width: 326;
+  min-height: 146;
+  min-width: 326;
+  height: 146;
+  spacing: 8;
+  width: 326;
+}
+
+Panel.votingMenu .liveActions > Button,
+Panel.votingMenu .liveActions > .actionCaption {
+  max-width: 326;
+  min-width: 326;
+  width: 326;
+}
+
+Panel.votingMenu Button {
+  background-color: #102638;
+  border-color: #3a6480;
+  border-width: 1;
+  bevel: none;
+  max-height: 46;
+  min-height: 46;
+  height: 46;
+  padding: 8 12 8 12;
+}
+
+Panel.votingMenu Button > Text {
+  alignment: middle-center;
+  color: #e5f0f6;
+  font-size: 12;
+  font-style: bold;
+}
+
+Panel.votingMenu Button:hover {
+  background-color: #17364e;
+  border-color: #68a5ca;
+}
+
+Panel.votingMenu Button:focused {
+  background-color: #17405a;
+  border-color: #7ed9f5;
+  border-width: 2;
+}
+
+Panel.votingMenu Button:highlighted {
+  background-color: #245675;
+  border-color: #b2e8fb;
+  bevel: inset;
+}
+
+Panel.votingMenu Button:disabled {
+  background-color: #091823;
+  border-color: #273c49;
+}
+
+Panel.votingMenu Button:disabled > Text {
+  color: #627d8d;
+}
+
+Panel.votingMenu Button:selected {
+  background-color: #174866;
+  border-color: #5fcbed;
+}
+
+Panel.votingMenu Button:selected > Text {
+  color: #effbff;
+}
+
+Panel.votingMenu Button:selected:disabled {
+  background-color: #12374c;
+  border-color: #4f9fbb;
+}
+
+Panel.votingMenu Button:selected:disabled > Text {
+  color: #a9d9e8;
+}
+
+Panel.votingMenu .primaryButton {
+  background-color: #1b5677;
+  border-color: #58a5ce;
+}
+
+Panel.votingMenu .primaryButton:hover,
+Panel.votingMenu .primaryButton:focused {
+  background-color: #247298;
+  border-color: #94daf5;
+}
+
+Panel.votingMenu .dangerButton {
+  background-color: #592730;
+  border-color: #b65a67;
+}
+
+Panel.votingMenu .dangerButton:hover,
+Panel.votingMenu .dangerButton:focused {
+  background-color: #7a313c;
+  border-color: #ed8793;
+}
+
+Panel.votingMenu .actionCaption {
+  autoresizing-mask: width;
+  height: 34;
+  padding: 2 6 2 6;
+}
+
+Panel.votingMenu .actionCaption > Text {
+  alignment: middle-center;
+  color: #718fa1;
+  font-size: 9;
+}
+
+Panel.votingMenu .voteWorkspace {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: fill;
+  max-height: 680;
+  min-height: 680;
+  max-width: 1640;
+  min-column-width: 600;
+  min-width: 1640;
+  height: 680;
+  spacing: 10;
+  width: 1640;
+}
+
+Panel.votingMenu .proposalPanel,
+Panel.votingMenu .nextMapPanel {
+  alignment: top-left;
+  autoresizing-mask: none;
+  axis: vertical;
+  max-height: 680;
+  min-height: 680;
+  height: 680;
+  padding: 14;
+  spacing: 10;
+}
+
+Panel.votingMenu .proposalPanel {
+  max-width: 1010;
+  min-width: 1010;
+  width: 1010;
+}
+
+Panel.votingMenu .nextMapPanel {
+  max-width: 620;
+  min-width: 620;
+  width: 620;
+}
+
+Panel.votingMenu .proposalPanel > .panelHeader,
+Panel.votingMenu .proposalPanel > .proposalSection,
+Panel.votingMenu .proposalPanel > .proposalFooter {
+  max-width: 982;
+  min-width: 982;
+  width: 982;
+}
+
+Panel.votingMenu .nextMapPanel > .panelHeader,
+Panel.votingMenu .nextMapPanel > .ballotStage,
+Panel.votingMenu .nextMapPanel > .nominationSection {
+  max-width: 592;
+  min-width: 592;
+  width: 592;
+}
+
+Panel.votingMenu .panelHeader {
+  alignment: top-left;
+  autoresizing-mask: width;
+  axis: vertical;
+  max-height: 64;
+  min-height: 64;
+  height: 64;
+  spacing: 3;
+}
+
+Panel.votingMenu .panelTitle {
+  autoresizing-mask: width;
+  height: 24;
+}
+
+Panel.votingMenu .panelTitle > Text {
+  color: #ecf4f9;
+  font-size: 18;
+  font-style: bold;
+}
+
+Panel.votingMenu .panelIntro {
+  autoresizing-mask: width;
+  height: 18;
+}
+
+Panel.votingMenu .proposalPanel > .panelHeader > .eyebrow,
+Panel.votingMenu .proposalPanel > .panelHeader > .panelTitle,
+Panel.votingMenu .proposalPanel > .panelHeader > .panelIntro {
+  max-width: 982;
+  min-width: 982;
+  width: 982;
+}
+
+Panel.votingMenu .nextMapPanel > .panelHeader > .nextMapHeaderRow,
+Panel.votingMenu .nextMapPanel > .panelHeader > .panelTitle,
+Panel.votingMenu .nextMapPanel > .panelHeader > .panelIntro {
+  max-width: 592;
+  min-width: 592;
+  width: 592;
+}
+
+Panel.votingMenu .panelIntro > Text,
+Panel.votingMenu .sectionHint > Text {
+  color: #89a5b6;
+  font-size: 10;
+}
+
+Panel.votingMenu .proposalSection {
+  alignment: top-left;
+  autoresizing-mask: width;
+  axis: vertical;
+  background-color: #091e2c;
+  border-color: #28495e;
+  border-width: 1;
+  max-height: 162;
+  min-height: 162;
+  min-width: 0;
+  height: 162;
+  padding: 14;
+  spacing: 8;
+}
+
+Panel.votingMenu .sectionHeading,
+Panel.votingMenu .nextMapHeaderRow {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  axis: horizontal;
+  distribution: fill;
+  height: 22;
+}
+
+Panel.votingMenu .sectionHeading {
+  distribution: default;
+}
+
+Panel.votingMenu .sectionHeading > .sectionTitle {
+  max-width: 804;
+  min-width: 804;
+  width: 804;
+}
+
+Panel.votingMenu .sectionHeading > .currentBadge {
+  max-width: 150;
+  min-width: 150;
+  width: 150;
+}
+
+Panel.votingMenu .sectionTitle {
+  autoresizing-mask: width;
+  height: 20;
+}
+
+Panel.votingMenu .sectionTitle > Text {
+  color: #c9dde8;
+  font-size: 11;
+  font-style: bold;
+}
+
+Panel.votingMenu .sectionHint {
+  autoresizing-mask: width;
+  height: 30;
+}
+
+Panel.votingMenu .proposalSection > .sectionHeading,
+Panel.votingMenu .proposalSection > .sectionTitle,
+Panel.votingMenu .proposalSection > .sectionHint,
+Panel.votingMenu .proposalSection > .physicsButtons,
+Panel.votingMenu .proposalSection > .proposalActionRow {
+  max-width: 954;
+  min-width: 954;
+  width: 954;
+}
+
+Panel.votingMenu .currentBadge,
+Panel.votingMenu .countdownBadge {
+  alignment: middle-right;
+  background-color: #113b50;
+  border-color: #3a7592;
+  border-width: 1;
+  height: 22;
+  padding: 3 8 3 8;
+}
+
+Panel.votingMenu .currentBadge > Text,
+Panel.votingMenu .countdownBadge > Text {
+  alignment: middle-center;
+  color: #8bddf2;
+  font-size: 9;
+  font-style: bold;
+}
+
+Panel.votingMenu .physicsButtons,
+Panel.votingMenu .proposalActionRow,
+Panel.votingMenu .nominationRow {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  axis: horizontal;
+  distribution: fill;
+  height: 50;
+  min-width: 0;
+  spacing: 10;
+}
+
+Panel.votingMenu .physicsButtons {
+  distribution: fill-equally;
+}
+
+Panel.votingMenu .physicsButtons Button {
+  max-height: 50;
+  min-height: 50;
+  min-width: 0;
+  height: 50;
+}
+
+Panel.votingMenu .proposalInput {
+  autoresizing-mask: none;
+  max-height: 50;
+  min-height: 50;
+  max-width: 734;
+  min-width: 734;
+  height: 50;
+  width: 734;
+}
+
+Panel.votingMenu .proposalInput > Label {
+  max-width: 124;
+  min-width: 124;
+  width: 124;
+}
+
+Panel.votingMenu .proposalInput > Label > Text {
+  color: #8aa7b8;
+  font-size: 10;
+  font-style: bold;
+}
+
+Panel.votingMenu TextView,
+Panel.votingMenu Select {
+  background-color: #0b1c28;
+  border-color: #385d75;
+  border-width: 1;
+  bevel: none;
+  max-height: 46;
+  min-height: 46;
+  height: 46;
+  padding: 8 10 8 10;
+}
+
+Panel.votingMenu .proposalInput > TextView,
+Panel.votingMenu .proposalInput > Select {
+  max-width: 610;
+  min-width: 610;
+  width: 610;
+}
+
+Panel.votingMenu TextView > Text,
+Panel.votingMenu Select > Text {
+  color: #eef6fa;
+  font-size: 11;
+}
+
+Panel.votingMenu TextView:hover,
+Panel.votingMenu Select:hover {
+  background-color: #102c3e;
+  border-color: #669dbd;
+}
+
+Panel.votingMenu TextView:focused,
+Panel.votingMenu Select:focused {
+  background-color: #12344a;
+  border-color: #7ed9f5;
+  border-width: 2;
+}
+
+Panel.votingMenu .proposalButton {
+  max-height: 50;
+  max-width: 210;
+  min-height: 50;
+  min-width: 210;
+  height: 50;
+  width: 210;
+}
+
+Panel.votingMenu .proposalFooter {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  axis: vertical;
+  background-color: #0a2231;
+  border-color: #2c566d;
+  border-width: 1;
+  max-height: 62;
+  min-height: 62;
+  min-width: 0;
+  height: 62;
+  padding: 12;
+}
+
+Panel.votingMenu .proposalStatus {
+  autoresizing-mask: width;
+  height: 38;
+  max-width: 958;
+  min-width: 958;
+  width: 958;
+}
+
+Panel.votingMenu .proposalStatus > Text {
+  alignment: middle-left;
+  color: #9cc6d8;
+  font-size: 10;
+}
+
+Panel.votingMenu .nextMapHeaderRow {
+  height: 16;
+}
+
+Panel.votingMenu .nextMapHeaderRow > .countdownBadge {
+  height: 16;
+  padding: 1 8 1 8;
+}
+
+Panel.votingMenu .nextMapStatus {
+  max-width: 400;
+  min-width: 400;
+  width: 400;
+}
+
+Panel.votingMenu .countdownBadge {
+  max-width: 120;
+  min-width: 120;
+  width: 120;
+}
+
+Panel.votingMenu .ballotStage {
+  alignment: top-left;
+  autoresizing-mask: width;
+  axis: vertical;
+  background-color: #06141f;
+  border-color: #27485d;
+  border-width: 1;
+  max-height: 420;
+  min-height: 420;
+  min-width: 0;
+  height: 420;
+}
+
+Panel.votingMenu .nextMapEmpty {
+  alignment: middle-center;
+  autoresizing-mask: width;
+  axis: vertical;
+  max-height: 418;
+  min-height: 418;
+  max-width: 590;
+  min-width: 590;
+  height: 418;
+  padding: 92 54 82 54;
+  spacing: 12;
+  width: 590;
+}
+
+Panel.votingMenu .emptyGlyph {
+  alignment: middle-center;
+  background-color: #0d2a3c;
+  border-color: #35647d;
+  border-width: 1;
+  height: 58;
+  width: 74;
+}
+
+Panel.votingMenu .emptyGlyph > Text {
+  alignment: middle-center;
+  color: #4fc9e8;
+  font-size: 22;
+  font-style: bold;
+}
+
+Panel.votingMenu .emptyTitle {
+  alignment: middle-center;
+  autoresizing-mask: width;
+  height: 28;
+}
+
+Panel.votingMenu .emptyTitle > Text {
+  alignment: middle-center;
+  color: #d8e9f2;
+  font-size: 15;
+  font-style: bold;
+}
+
+Panel.votingMenu .emptyCopy {
+  alignment: middle-center;
+  autoresizing-mask: width;
+  height: 52;
+}
+
+Panel.votingMenu .emptyCopy > Text {
+  alignment: middle-center;
+  color: #7797a9;
+  font-size: 10;
+}
+
+Panel.votingMenu .nextMapChoices {
+  alignment: top-left;
+  autoresizing-mask: width;
+  axis: vertical;
+  max-height: 418;
+  min-height: 418;
+  max-width: 590;
+  min-width: 590;
+  height: 418;
+  padding: 8;
+  spacing: 6;
+  width: 590;
+}
+
+Panel.votingMenu .nextMapChoices Button {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  max-height: 45;
+  min-height: 45;
+  min-width: 0;
+  height: 45;
+  padding: 7 14 7 14;
+}
+
+Panel.votingMenu .nextMapChoices Button > Text {
+  alignment: middle-left;
+  font-size: 11;
+}
+
+Panel.votingMenu .nominationSection {
+  alignment: top-left;
+  autoresizing-mask: width;
+  axis: vertical;
+  background-color: #091e2c;
+  border-color: #28495e;
+  border-width: 1;
+  max-height: 148;
+  min-height: 148;
+  min-width: 0;
+  height: 148;
+  padding: 12;
+  spacing: 8;
+}
+
+Panel.votingMenu .nominationSection .sectionHint {
+  height: 30;
+}
+
+Panel.votingMenu .nominationSection > .sectionTitle,
+Panel.votingMenu .nominationSection > .sectionHint,
+Panel.votingMenu .nominationSection > .nominationRow {
+  max-width: 568;
+  min-width: 568;
+  width: 568;
+}
+
+Panel.votingMenu .nominationRow TextView {
+  max-height: 50;
+  min-height: 50;
+  max-width: 410;
+  min-width: 410;
+  height: 50;
+  width: 410;
+}
+
+Panel.votingMenu .nominationRow Button {
+  max-height: 50;
+  min-height: 50;
+  max-width: 148;
+  min-width: 148;
+  height: 50;
+  width: 148;
+}
+
+Panel.votingMenu .secondaryButton {
+  background-color: #102d40;
+  border-color: #45718b;
+}
+
+Panel.votingMenu .secondaryButton:hover,
+Panel.votingMenu .secondaryButton:focused {
+  background-color: #17445e;
+  border-color: #74b9d8;
+}
+
+.rosterOptions {
+  background-color: #06141f;
+  border-color: #5b8ba7;
+  border-width: 1;
+  padding: 4;
+  spacing: 2;
+}
+
+.rosterOptions > Option {
+  background-color: #091e2c;
+  border-color: #24495f;
+  border-width: 1;
+  height: 32;
+  max-height: 32;
+  min-height: 32;
+  min-width: 0;
+  padding: 6 10 6 10;
+}
+
+.rosterOptions > Option > Text {
+  color: #c8dce7;
+  font-size: 10;
+}
+
+.rosterOptions > Option:hover {
+  background-color: #163b52;
+  border-color: #68a5ca;
+}
+
+.rosterOptions > Option:selected {
+  background-color: #174866;
+  border-color: #7ed9f5;
+}
+
+.rosterOptions > Option:selected > Text {
+  color: #effbff;
+}

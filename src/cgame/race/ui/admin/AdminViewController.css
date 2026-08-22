@@ -1,0 +1,674 @@
+/* Race Admin route.
+
+   Ported from "Menu v2 - Admin"; see MainView.css for the token mapping. The
+   route is one flow of sections over one descriptor table, the same grammar
+   Settings uses (SettingsViewController.css) - the C side hides rows and then
+   the sections left with nothing, so running a filter query is a single pass.
+
+   Two sections leave the column flow and run full width, which is what the
+   design's `sec.wide` means: the roster table wants a real Player / Slot / Mode
+   / Ping span, and the raw command form reads as a form rather than as a stack
+   of narrow rows. ColumnsView has no column-span, so those two live in a
+   sibling container below it rather than inside it.
+
+   The one thing this route cannot reproduce from the design is a live value.
+   Race settings live on the server and reach a client only as console replies,
+   so a settings row opens at the shipped default and the footer's provenance
+   line says how many rows are still in that state. That line is deliberately
+   styled like the Settings route's restart warning rather than like its hint -
+   it is the thing on this page an admin has to hold in mind. */
+
+/* The footer is the Panel's accessoryView, which the Panel's vertical stack
+   places after the content - so the content must not claim the whole route.
+   MainView::pageScrollViewport subtracts each ancestor's bottom padding from
+   the scroll viewport, so reserving it here is what shortens the ScrollView and
+   leaves the accessory a visible strip. */
+Panel.adminMenu {
+  alignment: top-left;
+  autoresizing-mask: width | height;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0 0 70 0;
+}
+
+Panel.adminMenu > StackView {
+  autoresizing-mask: width | height;
+  axis: vertical;
+  distribution: default;
+  spacing: 10;
+}
+
+/* `width | height`, not `width` alone. The height is the whole of why the
+   footer was invisible: `Panel::layoutSubviews` sizes its contentView from
+   `Panel::contentSize`, which is `sizeThatContains(contentView)` minus the
+   accessory - and `sizeThatContains` is max(current, sizeThatFits), while a
+   contentView masked `width` alone is not a container, so its `sizeThatFits`
+   is just its own current height. The Panel therefore derives the content
+   height *from the content height*, subtracting the accessory's 58 and the
+   stack's 10 from it on every single layout pass. Nothing in that loop ever
+   refers to the viewport, so where the accessory lands is a function of
+   accumulated state rather than of the route's size, and the strip this
+   Panel's 70pt bottom padding reserves is not where it ends up.
+
+   With the height mask, `View::layoutSubviews` - which `StackView::layoutSubviews`
+   runs before its own pass - sizes the contentView to the stack's bounds, which
+   are the Panel's bounds, which are the viewport less that 70. The accessory
+   then flows to exactly `bounds.h + spacing`: inside the reserved strip, every
+   pass, from any starting state. */
+Panel.adminMenu > StackView > .contentView {
+  alignment: top-left;
+  autoresizing-mask: width | height;
+  padding: 0;
+}
+
+/* The right inset is the shell's 12px scrollbar gutter: the document is laid
+   out at the full viewport width, so a section that ran edge to edge would sit
+   under the ScrollBar. */
+Panel.adminMenu .adminBody {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  min-width: 0;
+  padding: 0 14 12 0;
+  spacing: 12;
+}
+
+/* Utility bar: the route title and the one filter slot ---------------------- */
+
+/* `distribution: default` deliberately: StackViewDistributionFill scales every
+   subview by availableSize/requestedSize rather than handing the slack to one
+   flexible child, which shrank the title and let the filter field overlap it. */
+Panel.adminMenu .adminUtilityBar {
+  alignment: middle-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  padding: 4 0 4 0;
+  spacing: 16;
+}
+
+Panel.adminMenu .adminTitle {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  height: 34;
+  max-height: 34;
+  min-height: 34;
+  padding: 0;
+}
+
+Panel.adminMenu .adminTitle > Text {
+  alignment: middle-left;
+  color: #f4f8fb;
+  font-size: 26;
+}
+
+Panel.adminMenu .adminFilter {
+  background-color: #0c1721;
+  border-color: #31516a;
+  border-width: 1;
+  bevel: none;
+  max-width: 260;
+  min-height: 34;
+  min-width: 260;
+  padding: 6 11 6 11;
+  width: 260;
+}
+
+Panel.adminMenu .adminFilter > Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+Panel.adminMenu .adminFilter:focused {
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+/* The intro carries the design's "Admin actions apply immediately and are
+   logged" hint, which is the whole difference between this route and Settings:
+   there is no staged commit here and no Apply to take one. */
+Panel.adminMenu .adminIntro,
+Panel.adminMenu .adminEmptyState {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-width: 0;
+  height: 22;
+  max-height: 22;
+  min-height: 22;
+  padding: 0;
+}
+
+Panel.adminMenu .adminIntro > Text,
+Panel.adminMenu .adminEmptyState > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+Panel.adminMenu .adminColumns {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  min-column-width: 460;
+  min-width: 0;
+  spacing: 24;
+}
+
+Panel.adminMenu .adminWideSections {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  min-width: 0;
+  spacing: 24;
+}
+
+/* Sections ---------------------------------------------------------------- */
+
+/* Unframed: hierarchy is the eyebrow, its rule, and the row hairlines. */
+Panel.adminMenu .adminSection {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 0;
+  spacing: 0;
+}
+
+Panel.adminMenu .sectionHead {
+  alignment: middle-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  distribution: default;
+  height: 20;
+  max-height: 20;
+  min-height: 20;
+  min-width: 0;
+  spacing: 8;
+}
+
+Panel.adminMenu .sectionEyebrow {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel.adminMenu .sectionEyebrow > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 12;
+}
+
+/* The section annotation: "applies on next map" for the settings the server
+   refuses at runtime scope, and the roster count for Players. */
+Panel.adminMenu .sectionMetric {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+Panel.adminMenu .sectionMetric > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+Panel.adminMenu .sectionRule {
+  autoresizing-mask: width;
+}
+
+Panel.adminMenu .adminRows {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  min-width: 0;
+  padding: 12 0 0 0;
+  spacing: 0;
+}
+
+Panel.adminMenu .rowRule {
+  autoresizing-mask: width;
+  background-color: #24333f57;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+/* Rows -------------------------------------------------------------------- */
+
+Panel.adminMenu .adminRow {
+  autoresizing-mask: width;
+  clips-subviews: true;
+  height: 44;
+  max-height: 44;
+  min-height: 44;
+}
+
+Panel.adminMenu .rowLeft,
+Panel.adminMenu .rowRight {
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 6;
+}
+
+/* The changed marker. Hidden until the row differs from the value the shipped
+   catalog defaults to, so a page nobody has touched carries no marks at all. */
+Panel.adminMenu .rowDot {
+  background-color: #73c7f2;
+  height: 5;
+  max-height: 5;
+  max-width: 5;
+  min-height: 5;
+  min-width: 5;
+  width: 5;
+}
+
+/* The label column is only as wide as the longest row name needs; anything
+   longer clips rather than widening the column and pushing every control
+   right. */
+Panel.adminMenu .rowLabel {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  max-width: 240;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.adminMenu .rowLabel > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+Panel.adminMenu .adminRow.modified .rowLabel > Text {
+  color: #f4f8fb;
+}
+
+#main Panel.adminMenu .rowRevert {
+  background-color: transparent;
+  border-width: 0;
+  bevel: none;
+  min-height: 22;
+  min-width: 0;
+  padding: 2 6 2 6;
+}
+
+#main Panel.adminMenu .rowRevert > Text {
+  color: #74899b;
+  font-size: 11;
+}
+
+#main Panel.adminMenu .rowRevert:hover > Text {
+  color: #dde8f1;
+}
+
+/* Controls ---------------------------------------------------------------- */
+
+/* One control track for the whole route. Fixed rather than flexed: `fill`
+   scales a subview by availableSize/requestedSize, which pushes the control to
+   the section's far right after a short label and then snaps it back the moment
+   hover re-runs View::applyStyle. */
+Panel.adminMenu Select,
+Panel.adminMenu Slider,
+Panel.adminMenu Checkbox,
+Panel.adminMenu .rowField,
+Panel.adminMenu .rowAction {
+  max-width: 200;
+  min-height: 34;
+  min-width: 200;
+  width: 200;
+}
+
+Panel.adminMenu Select {
+  background-color: #12212e;
+  border-width: 0;
+  bevel: none;
+  padding: 6 11 6 11;
+}
+
+Panel.adminMenu Select Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+Panel.adminMenu Select:hover {
+  background-color: #1c3a52;
+}
+
+Panel.adminMenu Select:focused {
+  background-color: #122a3a;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+Panel.adminMenu Select:disabled {
+  background-color: #0b1721;
+}
+
+Panel.adminMenu Select:disabled Text {
+  color: #6d8291;
+}
+
+/* The free-text fields carry the design's `.ctl.txt` field, not its `.field`
+   binding chip: these are typed into rather than clicked. */
+Panel.adminMenu .rowField {
+  background-color: #0c1721;
+  border-color: #31516a;
+  border-width: 1;
+  bevel: none;
+  padding: 6 11 6 11;
+}
+
+Panel.adminMenu .rowField > Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+Panel.adminMenu .rowField:focused {
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+Panel.adminMenu .rowField:disabled {
+  background-color: #0a1119;
+  border-color: #24333f;
+}
+
+Panel.adminMenu .rowField:disabled > Text {
+  color: #6d8291;
+}
+
+/* An action row's control is the command itself, so it is drawn as a button
+   rather than as the design's `.val` link - a link that fires a server command
+   reads as navigation, which this is not. */
+#main Panel.adminMenu .rowAction {
+  background-color: #12212e;
+  border-width: 0;
+  bevel: none;
+  padding: 7 12 7 12;
+}
+
+#main Panel.adminMenu .rowAction > Text {
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+#main Panel.adminMenu .rowAction:hover {
+  background-color: #1c3a52;
+}
+
+#main Panel.adminMenu .rowAction:hover > Text {
+  color: #f4f8fb;
+}
+
+#main Panel.adminMenu .rowAction.primaryButton {
+  background-color: #22557f;
+}
+
+#main Panel.adminMenu .rowAction.primaryButton > Text {
+  color: #f4f8fb;
+}
+
+/* Kick and Log out end something for somebody else, so they take the shell's
+   danger tint rather than the neutral one. */
+#main Panel.adminMenu .rowAction.dangerButton {
+  background-color: #3a1d24;
+}
+
+#main Panel.adminMenu .rowAction.dangerButton > Text {
+  color: #dc7488;
+}
+
+#main Panel.adminMenu .rowAction.dangerButton:hover {
+  background-color: #5a2d36;
+}
+
+#main Panel.adminMenu .rowAction.dangerButton:hover > Text {
+  color: #f4c6cb;
+}
+
+/* A row the client's admin role does not carry, or whose field is still empty,
+   is drawn dead rather than hidden: the page keeps its shape, and the footer
+   says which of the two it is. */
+#main Panel.adminMenu .rowAction:disabled {
+  background-color: #0b1721;
+}
+
+#main Panel.adminMenu .rowAction:disabled > Text {
+  color: #5f7488;
+}
+
+/* The mask, not just the height: ObjectivelyMVC's stylesheet fills the bar to
+   the Slider's full height, so `height` alone is overwritten every layout
+   pass. */
+Panel.adminMenu Slider > .bar {
+  alignment: middle-left;
+  autoresizing-mask: width;
+  background-color: #152532;
+  height: 4;
+  max-height: 4;
+  min-height: 4;
+}
+
+Panel.adminMenu Slider > .bar > .handle {
+  background-color: #73c7f2;
+  border-width: 0;
+  height: 20;
+  max-height: 20;
+  max-width: 11;
+  min-height: 20;
+  min-width: 11;
+  width: 11;
+}
+
+Panel.adminMenu Slider:hover > .bar > .handle,
+Panel.adminMenu Slider:focused > .bar > .handle {
+  background-color: #d3efff;
+}
+
+Panel.adminMenu Slider:focused > .bar {
+  background-color: #365163;
+}
+
+Panel.adminMenu Slider Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+Panel.adminMenu Slider:disabled > .bar {
+  background-color: #101c27;
+}
+
+Panel.adminMenu Slider:disabled > .bar > .handle {
+  background-color: #365163;
+}
+
+Panel.adminMenu Slider:disabled Text {
+  color: #6d8291;
+}
+
+Panel.adminMenu Checkbox {
+  alignment: middle-right;
+}
+
+Panel.adminMenu Checkbox > Control {
+  alignment: middle-right;
+  background-color: #16232e;
+  border-color: #2a3f4f;
+  border-width: 1;
+  bevel: none;
+  height: 24;
+  max-height: 24;
+  max-width: 24;
+  min-height: 24;
+  min-width: 24;
+  width: 24;
+}
+
+Panel.adminMenu Checkbox:hover > Control {
+  background-color: #1c3a52;
+  border-color: #6395bd;
+}
+
+Panel.adminMenu Checkbox:focused > Control {
+  background-color: #122a3a;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+/* Players roster ---------------------------------------------------------- */
+
+/* The design's Table, in the dialect's terms: a header line and one line per
+   connected client, name and slot pinned left, mode and ping pinned right. The
+   rows are plain Views for the same reason the setting rows are - a horizontal
+   StackView would lay the two groups end to end and the right columns would
+   step in and out with every name. */
+Panel.adminMenu .rosterTable {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  distribution: default;
+  min-width: 0;
+  padding: 12 0 0 0;
+  spacing: 0;
+}
+
+Panel.adminMenu .rosterHead,
+Panel.adminMenu .rosterRow {
+  autoresizing-mask: width;
+  clips-subviews: true;
+  height: 28;
+  max-height: 28;
+  min-height: 28;
+}
+
+Panel.adminMenu .rosterLeft,
+Panel.adminMenu .rosterRight {
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 16;
+}
+
+Panel.adminMenu .rosterName,
+Panel.adminMenu .rosterSlot,
+Panel.adminMenu .rosterMode,
+Panel.adminMenu .rosterPing {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.adminMenu .rosterName {
+  max-width: 240;
+}
+
+Panel.adminMenu .rosterName > Text,
+Panel.adminMenu .rosterSlot > Text {
+  alignment: middle-left;
+  color: #dde8f1;
+  font-size: 13;
+}
+
+Panel.adminMenu .rosterMode > Text,
+Panel.adminMenu .rosterPing > Text {
+  alignment: middle-right;
+  color: #93aec1;
+  font-size: 13;
+}
+
+/* The header line recedes to the eyebrow's weight - it labels the table, it is
+   not part of it. */
+Panel.adminMenu .rosterHead .rosterName > Text,
+Panel.adminMenu .rosterHead .rosterSlot > Text,
+Panel.adminMenu .rosterHead .rosterMode > Text,
+Panel.adminMenu .rosterHead .rosterPing > Text {
+  color: #5f7488;
+  font-size: 11;
+}
+
+Panel.adminMenu .rosterEmpty {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-width: 0;
+  height: 22;
+  max-height: 22;
+  min-height: 22;
+  padding: 0;
+}
+
+Panel.adminMenu .rosterEmpty > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 13;
+}
+
+/* Footer ------------------------------------------------------------------ */
+
+/* No commit pair: this route's writes are already live by the time the control
+   settles, so the footer carries only what the admin needs to read. */
+Panel.adminMenu .adminFooter {
+  alignment: middle-left;
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  background-color: transparent;
+  border-color: #2f4a5e99;
+  border-width: 1;
+  distribution: default;
+  height: 58;
+  max-height: 58;
+  min-height: 58;
+  padding: 0;
+  spacing: 24;
+}
+
+Panel.adminMenu .adminFooterStatus {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  distribution: default;
+  min-width: 0;
+  spacing: 24;
+}
+
+/* Each status line hugs its own text, so neither truncates. */
+Panel.adminMenu .adminFooterStatus > Label {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  height: 18;
+  max-height: 18;
+  min-height: 18;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.adminMenu .adminFooterStatus > Label > Text {
+  alignment: middle-left;
+  font-size: 12;
+}
+
+Panel.adminMenu .adminHint > Text {
+  color: #5c8fb5;
+}
+
+/* Gold is the shell's warning tint. On Settings it carries the restart
+   requirement; here it carries the one thing this route cannot know - how many
+   of these controls are showing a default rather than the server's value. */
+Panel.adminMenu .adminProvenance > Text {
+  color: #e7c368;
+}

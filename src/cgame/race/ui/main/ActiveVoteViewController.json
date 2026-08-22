@@ -1,0 +1,24 @@
+{
+  "class": "StackView",
+  "identifier": "activeVote",
+  "subviews": [
+    {
+      "class": "StackView",
+      "classNames": [ "voteCopy" ],
+      "subviews": [
+        { "class": "Label", "identifier": "voteTitle", "text": { "text": "Active vote" } },
+        { "class": "Label", "identifier": "voteDetail", "text": { "lineWrap": true } },
+        { "class": "Label", "identifier": "voteTally" }
+      ]
+    },
+    { "class": "Label", "identifier": "voteRemaining", "classNames": [ "voteCountdown" ] },
+    {
+      "class": "StackView",
+      "identifier": "voteActions",
+      "subviews": [
+        { "class": "Button", "identifier": "voteYes", "classNames": [ "voteAccept" ], "title": { "text": "Vote yes" } },
+        { "class": "Button", "identifier": "voteNo", "classNames": [ "voteReject" ], "title": { "text": "Vote no" } }
+      ]
+    }
+  ]
+}
