@@ -224,7 +224,6 @@ static const CreditsEntryDescriptor creditsEntries[] = {
   { CreditsSectionEngine, NULL, "ObjectivelyMVC", "zlib" },
   { CreditsSectionEngine, NULL, "Objectively", "zlib" },
 
-  { CreditsSectionFonts, NULL, "Manrope", "SIL Open Font License 1.1" },
   { CreditsSectionFonts, NULL, "Coda", "SIL Open Font License 1.1" }
 };
 

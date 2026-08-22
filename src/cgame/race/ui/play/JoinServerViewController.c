@@ -255,10 +255,9 @@ static void refreshSortColumnHeaders(JoinServerViewController *self) {
 
     if (column == self->serversTableView->sortColumn && column->order != OrderSame) {
 
-      // ASCII, not a triangle: the shipped Manrope has no U+25B2 / U+25BC and
-      // the dialect has no fallback chain, so a glyph outside the face renders
-      // as a filled box. The marker also has to lead a right-aligned column,
-      // or the header stops lining up with the numbers under it.
+      // ASCII markers avoid relying on optional Unicode glyph coverage. The
+      // marker also has to lead a right-aligned column, or the header stops
+      // lining up with the numbers under it.
       const char *marker = column->order == OrderAscending ? "^" : "v";
       const bool trailing = q_strcmp(column->identifier, _players) &&
                             q_strcmp(column->identifier, _ping);

@@ -48,10 +48,9 @@
 
 /* Shared Race controls ---------------------------------------------------- */
 
-/* Manrope carries display and body throughout; Coda is reserved for the
-   wordmark (see #brandLockup below). */
+/* Coda carries display, body, and wordmark text throughout. */
 #main Text {
-  font-family: Manrope;
+  font-family: Coda;
 }
 
 /* The design system's Button: 1px hairline, flat fill, no bevel. `primary` is

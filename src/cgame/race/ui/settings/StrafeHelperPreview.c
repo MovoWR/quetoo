@@ -511,7 +511,7 @@ static void previewBindReadout(StrafeHelperPreview *self, const StrafePreviewRea
 
   if (points != self->readoutPointSize[readout]) {
 
-    Font *font = $$(Font, cachedFont, "Manrope", points, FontStyleRegular);
+    Font *font = $$(Font, cachedFont, "Coda", points, FontStyleRegular);
     if (font) {
       $(label->text, setFont, font);
       self->readoutPointSize[readout] = points;

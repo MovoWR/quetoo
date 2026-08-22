@@ -301,12 +301,7 @@ static void cacheMenuFont(void) {
   static Once once;
   do_once(&once, {
     Resource *resource = $$(Resource, resourceWithName,
-      "ui/fonts/Manrope-Regular.ttf");
-    assert(resource);
-    $$(Font, cacheFont, resource->data, "Manrope");
-    release(resource);
-
-    resource = $$(Resource, resourceWithName, "ui/fonts/Coda-Regular.ttf");
+      "ui/fonts/Coda-Regular.ttf");
     assert(resource);
     $$(Font, cacheFont, resource->data, "Coda");
     release(resource);
