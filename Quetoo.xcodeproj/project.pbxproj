@@ -460,6 +460,14 @@
 		FA11C3F030224900C0DE0017 /* cg_score.c in Sources */ = {isa = PBXBuildFile; fileRef = FA44C0013024000000000005 /* cg_score.c */; };
 		FB21F1013035000000000001 /* cg_score_model.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21F0013035000000000001 /* cg_score_model.c */; };
 		FB21F1013035000000000002 /* cg_score_model.h in Headers */ = {isa = PBXBuildFile; fileRef = FB21F0013035000000000002 /* cg_score_model.h */; };
+		FB21E1013035000000000001 /* check_race_native.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21E0013035000000000001 /* check_race_native.c */; };
+		FB21E1013035000000000002 /* check_race_cgame_module.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21E0013035000000000002 /* check_race_cgame_module.c */; };
+		FB21E1013035000000000003 /* cg_module.c in Sources */ = {isa = PBXBuildFile; fileRef = FA11C3FC30224E3E0012870A /* cg_module.c */; };
+		FB21E1013035000000000004 /* cg_score_model.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21F0013035000000000001 /* cg_score_model.c */; };
+		FB21E1013035000000000005 /* cg_team_mode.c in Sources */ = {isa = PBXBuildFile; fileRef = FA11C3FC30224E3E0012862B /* cg_team_mode.c */; };
+		FB21E1013035000000000006 /* race_clip.c in Sources */ = {isa = PBXBuildFile; fileRef = FBC00001303400000000000D /* race_clip.c */; };
+		FB21E1013035000000000007 /* race_kick_broker.c in Sources */ = {isa = PBXBuildFile; fileRef = FBC00001303400000000000F /* race_kick_broker.c */; };
+		FB21E1013035000000000008 /* race_projectile_observer.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21D0013035000000000001 /* race_projectile_observer.c */; };
 		CE05B3F030224900C0DE0018 /* cg_sound.c in Sources */ = {isa = PBXBuildFile; fileRef = CEBDD1B525A0C2710055860E /* cg_sound.c */; };
 		FA11C3F030224900C0DE0018 /* cg_sound.c in Sources */ = {isa = PBXBuildFile; fileRef = CEBDD1B525A0C2710055860E /* cg_sound.c */; };
 		CE05B3F030224900C0DE0019 /* cg_sprite.c in Sources */ = {isa = PBXBuildFile; fileRef = CEAC32B7242124BB007E1253 /* cg_sprite.c */; };
@@ -2379,6 +2387,10 @@
 		CE12D6D31C5C58C300CD0B13 /* check_mem.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_mem.c; sourceTree = "<group>"; };
 		CE12D6D51C5C58C300CD0B13 /* check_r_media.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_r_media.c; sourceTree = "<group>"; };
 		CE12D6D71C5C58C300CD0B13 /* check_thread.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_thread.c; sourceTree = "<group>"; };
+		FA77000131E9000000000001 /* race_portability_fixture.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_portability_fixture.c; sourceTree = "<group>"; };
+		FB21E0013035000000000001 /* check_race_native.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_native.c; sourceTree = "<group>"; };
+		FB21E0013035000000000002 /* check_race_cgame_module.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_cgame_module.c; sourceTree = "<group>"; };
+		FB21E0013035000000000003 /* check-race-native */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "check-race-native"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE12D6DA1C5C58C300CD0B13 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
 		CE12D6DC1C5C58C300CD0B13 /* tests.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = tests.c; sourceTree = "<group>"; };
 		CE12D6DD1C5C58C300CD0B13 /* tests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tests.h; sourceTree = "<group>"; };
@@ -3083,6 +3095,13 @@
 			files = (
 				CE51FBB821481F2500ABE14F /* libcommon.a in Frameworks */,
 				CE2B084D23F9EEBC007C77B6 /* libshared.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB21E3013035000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4174,6 +4193,9 @@
 				CE948B0F223564E900D961FA /* check_shared.c */,
 				CE12D6D71C5C58C300CD0B13 /* check_thread.c */,
 				CE9CFC9C23EB3BF50009DA65 /* check_vector.c */,
+				FA77000131E9000000000001 /* race_portability_fixture.c */,
+				FB21E0013035000000000001 /* check_race_native.c */,
+				FB21E0013035000000000002 /* check_race_cgame_module.c */,
 				CE12D6DC1C5C58C300CD0B13 /* tests.c */,
 				CE12D6DD1C5C58C300CD0B13 /* tests.h */,
 				CE12D6DA1C5C58C300CD0B13 /* Makefile.am */,
@@ -4292,6 +4314,7 @@
 				CE51FB8A214819B000ABE14F /* check_r_media */,
 				CE51FBAF21481DD300ABE14F /* check_cmd */,
 				CE51FBC421481F2500ABE14F /* check_cvar */,
+				FB21E0013035000000000003 /* check-race-native */,
 				CE51FBDF21481FC100ABE14F /* check_filesystem */,
 				CE51FBF72148207700ABE14F /* check_master */,
 				CE052A6E214831FE003446C9 /* check_mem */,
@@ -5835,6 +5858,22 @@
 			productReference = CE51FBC421481F2500ABE14F /* check_cvar */;
 			productType = "com.apple.product-type.tool";
 		};
+		FB21E2013035000000000001 /* check-race-native */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FB21E5013035000000000001 /* Build configuration list for PBXNativeTarget "check-race-native" */;
+			buildPhases = (
+				FB21E3013035000000000001 /* Sources */,
+				FB21E3013035000000000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "check-race-native";
+			productName = "check-race-native";
+			productReference = FB21E0013035000000000003 /* check-race-native */;
+			productType = "com.apple.product-type.tool";
+		};
 		CE51FBCC21481FC100ABE14F /* check_filesystem */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = CE51FBDC21481FC100ABE14F /* Build configuration list for PBXNativeTarget "check_filesystem" */;
@@ -6327,6 +6366,7 @@
 				CE4DCF8C256F0DAD00FECAFC /* check_cm_test */,
 				CEB384DE29A3A73B006DEA13 /* check_color */,
 				CE51FBB321481F2500ABE14F /* check_cvar */,
+				FB21E2013035000000000001 /* check-race-native */,
 				CE51FBCC21481FC100ABE14F /* check_filesystem */,
 				CEAD8F8D2F8D765F0087A850 /* check_http */,
 				CE51FBE42148207700ABE14F /* check_master */,
@@ -6993,6 +7033,21 @@
 			files = (
 				CE51FBCB21481F6700ABE14F /* check_cvar.c in Sources */,
 				CE51FBB521481F2500ABE14F /* tests.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB21E3013035000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB21E1013035000000000001 /* check_race_native.c in Sources */,
+				FB21E1013035000000000002 /* check_race_cgame_module.c in Sources */,
+				FB21E1013035000000000003 /* cg_module.c in Sources */,
+				FB21E1013035000000000004 /* cg_score_model.c in Sources */,
+				FB21E1013035000000000005 /* cg_team_mode.c in Sources */,
+				FB21E1013035000000000006 /* race_clip.c in Sources */,
+				FB21E1013035000000000007 /* race_kick_broker.c in Sources */,
+				FB21E1013035000000000008 /* race_projectile_observer.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -8433,6 +8488,80 @@
 			};
 			name = Release;
 		};
+		FB21E4013035000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					G_HOOK,
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(HOMEBREW_PREFIX)/include",
+					"$(SRCROOT)/src",
+					"$(SRCROOT)/src/cgame/race",
+					"$(SRCROOT)/src/cgame/race/ui/admin",
+					"$(SRCROOT)/src/cgame/race/ui/controls",
+					"$(SRCROOT)/src/cgame/race/ui/credits",
+					"$(SRCROOT)/src/cgame/race/ui/home",
+					"$(SRCROOT)/src/cgame/race/ui/main",
+					"$(SRCROOT)/src/cgame/race/ui/maps",
+					"$(SRCROOT)/src/cgame/race/ui/play",
+					"$(SRCROOT)/src/cgame/race/ui/settings",
+					"$(SRCROOT)/src/cgame/race/ui/voting",
+					"$(SRCROOT)/src/cgame/common",
+					"$(SRCROOT)/src/cgame/common/ui",
+					"$(SRCROOT)/src/cgame/common/ui/**",
+					"$(SRCROOT)/src/game/race",
+					"$(SRCROOT)/src/game/common",
+				);
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-fms-extensions",
+					"-ffp-contract=off",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		FB21E4013035000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					G_HOOK,
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(HOMEBREW_PREFIX)/include",
+					"$(SRCROOT)/src",
+					"$(SRCROOT)/src/cgame/race",
+					"$(SRCROOT)/src/cgame/race/ui/admin",
+					"$(SRCROOT)/src/cgame/race/ui/controls",
+					"$(SRCROOT)/src/cgame/race/ui/credits",
+					"$(SRCROOT)/src/cgame/race/ui/home",
+					"$(SRCROOT)/src/cgame/race/ui/main",
+					"$(SRCROOT)/src/cgame/race/ui/maps",
+					"$(SRCROOT)/src/cgame/race/ui/play",
+					"$(SRCROOT)/src/cgame/race/ui/settings",
+					"$(SRCROOT)/src/cgame/race/ui/voting",
+					"$(SRCROOT)/src/cgame/common",
+					"$(SRCROOT)/src/cgame/common/ui",
+					"$(SRCROOT)/src/cgame/common/ui/**",
+					"$(SRCROOT)/src/game/race",
+					"$(SRCROOT)/src/game/common",
+				);
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-fms-extensions",
+					"-ffp-contract=off",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		CE51FBDD21481FC100ABE14F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -9213,6 +9342,15 @@
 			buildConfigurations = (
 				CE51FBC221481F2500ABE14F /* Debug */,
 				CE51FBC321481F2500ABE14F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FB21E5013035000000000001 /* Build configuration list for PBXNativeTarget "check-race-native" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB21E4013035000000000001 /* Debug */,
+				FB21E4013035000000000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

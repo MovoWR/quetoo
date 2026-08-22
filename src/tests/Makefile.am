@@ -7,12 +7,27 @@ TESTS_CFLAGS = \
 	@OBJECTIVELY_CFLAGS@ \
 	@SDL3_CFLAGS@
 	
+# Race movement and its synthetic collision fixtures are required to produce
+# the same float stream on x86-64 and arm64. Do not allow target FMA policy to
+# change intermediate rounding.
+RACE_TEST_CFLAGS = \
+	-ffp-contract=off \
+	$(TESTS_CFLAGS)
+
 TESTS_LIBS = \
 	libtests.la \
 	@BASE_LIBS@ \
 	@CHECK_LIBS@ \
 	@OBJECTIVELY_LIBS@ \
 	@SDL3_LIBS@
+
+if APPLE
+RACE_TEST_GC_FLAGS = \
+	-Wl,-dead_strip
+else
+RACE_TEST_GC_FLAGS = \
+	-Wl,--gc-sections
+endif
 
 noinst_LTLIBRARIES = \
 	libtests.la
@@ -45,12 +60,19 @@ TESTS = \
 	check_master \
 	check_mem \
 	check_net_message \
+	check_race \
+	check_race_native \
+	check_race_game_landing \
+	check_race_jump_viewer \
+	check_race_pmove \
 	check_r_media \
 	check_shared \
 	check_thread \
 	check_vector
 
-noinst_PROGRAMS = $(TESTS)
+noinst_PROGRAMS = \
+	$(TESTS) \
+	race_portability_fixture
 
 check_atlas_SOURCES = \
 	check_atlas.c
@@ -166,6 +188,142 @@ check_net_message_CFLAGS = \
 check_net_message_LDADD = \
 	$(TESTS_LIBS) \
 	$(top_builddir)/src/net/libnet.la
+
+check_race_SOURCES = \
+	check_race.c \
+	check_race_map_browser.c \
+	$(top_srcdir)/src/cgame/race/cg_race_presentation.c \
+	$(top_srcdir)/src/game/race/race_admin.c \
+	$(top_srcdir)/src/game/race/race_admin_store.c \
+	$(top_srcdir)/src/game/race/race_leaderboard.c \
+	$(top_srcdir)/src/game/race/race_leaderboard_wire.c \
+	$(top_srcdir)/src/game/race/race_finish_report.c \
+	$(top_srcdir)/src/game/race/race_logic.c \
+	$(top_srcdir)/src/game/race/race_map_browser_wire.c \
+	$(top_srcdir)/src/game/race/race_map_catalog.c \
+	$(top_srcdir)/src/game/race/race_map_state.c \
+	$(top_srcdir)/src/game/race/race_map_state_store.c \
+	$(top_srcdir)/src/game/race/race_persistence.c \
+	$(top_srcdir)/src/game/race/race_physics.c \
+	$(top_srcdir)/src/game/race/race_publication.c \
+	$(top_srcdir)/src/game/race/race_profile.c \
+	$(top_srcdir)/src/game/race/race_replay_format.c \
+	$(top_srcdir)/src/game/race/race_replay_playback.c \
+	$(top_srcdir)/src/game/race/race_replay_record.c \
+	$(top_srcdir)/src/game/race/race_replay_store.c \
+	$(top_srcdir)/src/game/race/race_replay_transport.c \
+	$(top_srcdir)/src/game/race/race_settings.c \
+	$(top_srcdir)/src/game/race/race_settings_store.c \
+	$(top_srcdir)/src/game/race/race_vote.c \
+	$(top_srcdir)/src/game/race/race_vote_menu.c
+check_race_CFLAGS = \
+	-fms-extensions \
+	-I$(top_srcdir)/deps/minizip \
+	-I$(top_srcdir)/src/cgame/race \
+	-I$(top_srcdir)/src/game/race \
+	-I$(top_srcdir)/src/game/common \
+	$(RACE_TEST_CFLAGS)
+check_race_LDADD = \
+	$(top_builddir)/deps/minizip/libminizip.la \
+	$(TESTS_LIBS)
+
+check_race_native_SOURCES = \
+	check_race_native.c \
+	check_race_cgame_module.c \
+	$(top_srcdir)/src/cgame/race/cg_module.c \
+	$(top_srcdir)/src/cgame/race/cg_score_model.c \
+	$(top_srcdir)/src/cgame/race/cg_team_mode.c \
+	$(top_srcdir)/src/game/race/race_clip.c \
+	$(top_srcdir)/src/game/race/race_kick_broker.c \
+	$(top_srcdir)/src/game/race/race_projectile_observer.c
+check_race_native_CFLAGS = \
+	-fms-extensions \
+	-ffunction-sections \
+	-fdata-sections \
+	-I$(top_srcdir)/src/cgame/race \
+	-I$(top_srcdir)/src/cgame/common \
+	-I$(top_srcdir)/src/game/race \
+	-I$(top_srcdir)/src/game/common \
+	$(RACE_TEST_CFLAGS)
+check_race_native_LDFLAGS = \
+	$(RACE_TEST_GC_FLAGS)
+check_race_native_LDADD = \
+	@BASE_LIBS@
+
+race_portability_fixture_SOURCES = \
+	race_portability_fixture.c \
+	$(top_srcdir)/src/game/race/race_finish_report.c \
+	$(top_srcdir)/src/game/race/race_leaderboard.c \
+	$(top_srcdir)/src/game/race/race_map_state.c \
+	$(top_srcdir)/src/game/race/race_physics.c \
+	$(top_srcdir)/src/game/race/race_profile.c \
+	$(top_srcdir)/src/game/race/race_replay_format.c \
+	$(top_srcdir)/src/game/race/race_replay_transport.c \
+	$(top_srcdir)/src/game/race/race_settings.c
+race_portability_fixture_CFLAGS = \
+	-fms-extensions \
+	-I$(top_srcdir)/deps/minizip \
+	-I$(top_srcdir)/src/game/race \
+	-I$(top_srcdir)/src/game/common \
+	$(RACE_TEST_CFLAGS)
+race_portability_fixture_LDADD = \
+	$(top_builddir)/deps/minizip/libminizip.la \
+	$(TESTS_LIBS)
+
+check_race_game_landing_SOURCES = \
+	check_race_game_landing.c \
+	$(top_srcdir)/src/game/race/g_ai_node.c \
+	$(top_srcdir)/src/game/race/bg_pmove.c \
+	$(top_srcdir)/src/game/race/race_physics.c \
+	$(top_srcdir)/src/shared/qstring.c
+check_race_game_landing_CFLAGS = \
+	-DRACE_PHYSICS_TEST \
+	-fms-extensions \
+	-ffunction-sections \
+	-fdata-sections \
+	-I$(top_srcdir)/src/game/race \
+	-I$(top_srcdir)/src/game/common \
+	$(RACE_TEST_CFLAGS)
+check_race_game_landing_LDFLAGS = \
+	$(RACE_TEST_GC_FLAGS)
+check_race_game_landing_LDADD = \
+	@CHECK_LIBS@
+
+check_race_jump_viewer_SOURCES = \
+	check_race_jump_viewer.c
+check_race_jump_viewer_CFLAGS = \
+	-I$(top_srcdir) \
+	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/src/game/common \
+	$(RACE_TEST_CFLAGS)
+check_race_jump_viewer_LDADD = \
+	$(TESTS_LIBS) \
+	$(top_builddir)/src/shared/libshared.la
+
+check_race_pmove_SOURCES = \
+	check_race_cgame_bounds.c \
+	check_race_physics_service.c \
+	check_race_pmove.c \
+	check_race_pmove_cgame.c \
+	check_race_pmove_common.c \
+	$(top_srcdir)/src/cgame/race/cg_entity.c \
+	$(top_srcdir)/src/game/race/bg_pmove.c \
+	$(top_srcdir)/src/game/race/race_physics.c \
+	$(top_srcdir)/src/game/race/race_physics_service.c \
+	$(top_srcdir)/src/shared/qstring.c
+check_race_pmove_CFLAGS = \
+	-DRACE_PHYSICS_TEST \
+	-fms-extensions \
+	-ffunction-sections \
+	-fdata-sections \
+	-I$(top_srcdir)/src/cgame/common \
+	-I$(top_srcdir)/src/game/race \
+	-I$(top_srcdir)/src/game/common \
+	$(RACE_TEST_CFLAGS)
+check_race_pmove_LDFLAGS = \
+	$(RACE_TEST_GC_FLAGS)
+check_race_pmove_LDADD = \
+	@CHECK_LIBS@
 
 check_r_media_SOURCES = \
 	check_r_media.c
