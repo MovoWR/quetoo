@@ -37,18 +37,13 @@ static JoinServerViewController *sortingJoinServerViewController;
 
 #define _Class _JoinServerViewController
 
-static const cl_server_info_t *serverAtIndex(const List *servers, size_t index) {
+static const cl_server_info_t *serverAtIndex(const PointerArray *servers, size_t index) {
 
-  if (servers == NULL) {
+  if (servers == NULL || index >= servers->count) {
     return NULL;
   }
 
-  const ListNode *node = servers->head;
-  while (node && index--) {
-    node = node->next;
-  }
-
-  return node ? node->element : NULL;
+  return $(servers, get, index);
 }
 
 #pragma mark - Delegates
@@ -93,10 +88,10 @@ static void didClickQuickJoin(Button *button) {
 
   uint32_t total_weight = 0;
 
-  const ListNode *node = this->servers ? this->servers->head : NULL;
+  const size_t count = this->servers ? this->servers->count : 0;
 
-  while (node != NULL) {
-    const cl_server_info_t *server = node->element;
+  for (size_t i = 0; i < count; i++) {
+    const cl_server_info_t *server = $(this->servers, get, i);
 
     int32_t weight = 1;
 
@@ -113,21 +108,17 @@ static void didClickQuickJoin(Button *button) {
     }
 
     total_weight += max(weight, 1);
-
-    node = node->next;
   }
 
   if (total_weight == 0) {
     return;
   }
 
-  node = this->servers ? this->servers->head : NULL;
-
   const uint32_t random_weight = RandomRangeu(0, total_weight);
   uint32_t current_weight = 0;
 
-  while (node != NULL) {
-    const cl_server_info_t *server = node->element;
+  for (size_t i = 0; i < count; i++) {
+    const cl_server_info_t *server = $(this->servers, get, i);
 
     int32_t weight = 1;
 
@@ -150,8 +141,6 @@ static void didClickQuickJoin(Button *button) {
       cgi.Connect(&server->addr);
       break;
     }
-
-    node = node->next;
   }
 }
 
@@ -401,11 +390,15 @@ static void viewWillAppear(ViewController *self) {
 
   JoinServerViewController *this = (JoinServerViewController *) self;
 
-  if (this->servers == NULL) {
-    cgi.GetServers();
-  } else {
+  // show what we already know at once, then ask the master again; querying only
+  // when nothing was cached meant the first answer of a session was the only one,
+  // so a list that was empty when the menu first opened stayed empty until the
+  // Refresh button was pressed
+  if (this->servers) {
     $(this, reloadServers);
   }
+
+  cgi.GetServers();
 }
 
 #pragma mark - JoinServerViewController
@@ -463,27 +456,33 @@ static void reloadServers(JoinServerViewController *self) {
 
   release(self->servers);
 
-  self->servers = $(alloc(List), init);
+  self->servers = $(alloc(PointerArray), init);
 
-  const List *servers = cgi.Servers();
-  for (const ListNode *node = servers ? servers->head : NULL; node; node = node->next) {
-    cl_server_info_t *server = node->element;
-    $(self->servers, append, server);
-  }
+  const PointerArray *servers = cgi.Servers();
+  const size_t count = servers ? servers->count : 0;
 
-  for (ListNode *node = self->servers->head; node; ) {
-    ListNode *next = node->next;
+  Cg_Debug("%d servers known to the client\n", (int32_t) count);
 
-    cl_server_info_t *server = node->element;
+  uint32_t hidden = 0;
+
+  for (size_t i = 0; i < count; i++) {
+    cl_server_info_t *server = $(servers, get, i);
 
     const int32_t clients = cg_join_server_hide_bots->value ? server->clients - server->bots : server->clients;
 
     if (clients == 0 && (cg_join_server_hide_empty->value || cg_join_server_hide_bots->value)) {
-      $(self->servers, removeNode, node);
+      Cg_Debug("Hiding %s: %d clients, %d bots, hide_empty %d, hide_bots %d\n",
+               server->hostname, server->clients, server->bots,
+               cg_join_server_hide_empty->integer, cg_join_server_hide_bots->integer);
+
+      hidden++;
+      continue;
     }
 
-    node = next;
+    $(self->servers, add, server);
   }
+
+  Cg_Debug("Showing %d servers, %u hidden by filters\n", (int32_t) self->servers->count, hidden);
 
   sortingJoinServerViewController = self;
   $(self->servers, sort, comparator);
