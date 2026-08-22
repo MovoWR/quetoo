@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="game.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\deps\minizip\miniz.h" />
+    <ClInclude Include="..\src\game\game.h" />
+    <ClInclude Include="..\src\game\race\bg_item.h" />
+    <ClInclude Include="..\src\game\race\g_types.h" />
+    <ClInclude Include="..\src\game\race\race_clip.h" />
+    <ClInclude Include="..\src\game\race\race_kick_broker.h" />
+    <ClInclude Include="..\src\game\race\race_module_compat.h" />
+    <ClInclude Include="..\src\game\race\race_projectile_compat.h" />
+    <ClInclude Include="..\src\game\race\race.h" />
+    <ClInclude Include="..\src\game\race\race_actions.h" />
+    <ClInclude Include="..\src\game\race\race_admin.h" />
+    <ClInclude Include="..\src\game\race\race_admin_actions.h" />
+    <ClInclude Include="..\src\game\race\race_admin_service.h" />
+    <ClInclude Include="..\src\game\race\race_admin_store.h" />
+    <ClInclude Include="..\src\game\race\race_admin_types.h" />
+    <ClInclude Include="..\src\game\race\race_cmds.h" />
+    <ClInclude Include="..\src\game\race\race_finish_report.h" />
+    <ClInclude Include="..\src\game\race\race_leaderboard.h" />
+    <ClInclude Include="..\src\game\race\race_leaderboard_wire.h" />
+    <ClInclude Include="..\src\game\race\race_logic.h" />
+    <ClInclude Include="..\src\game\race\race_map_browser_service.h" />
+    <ClInclude Include="..\src\game\race\race_map_browser_wire.h" />
+    <ClInclude Include="..\src\game\race\race_map_catalog.h" />
+    <ClInclude Include="..\src\game\race\race_map_state.h" />
+    <ClInclude Include="..\src\game\race\race_map_state_service.h" />
+    <ClInclude Include="..\src\game\race\race_map_state_store.h" />
+    <ClInclude Include="..\src\game\race\race_modes.h" />
+    <ClInclude Include="..\src\game\race\race_persistence.h" />
+    <ClInclude Include="..\src\game\race\race_physics.h" />
+    <ClInclude Include="..\src\game\race\race_physics_service.h" />
+    <ClInclude Include="..\src\game\race\race_publication.h" />
+    <ClInclude Include="..\src\game\race\race_profile.h" />
+    <ClInclude Include="..\src\game\race\race_profiles.h" />
+    <ClInclude Include="..\src\game\race\race_replay_format.h" />
+    <ClInclude Include="..\src\game\race\race_replay_playback.h" />
+    <ClInclude Include="..\src\game\race\race_replay_playback_service.h" />
+    <ClInclude Include="..\src\game\race\race_replay_record.h" />
+    <ClInclude Include="..\src\game\race\race_replay_service.h" />
+    <ClInclude Include="..\src\game\race\race_replay_store.h" />
+    <ClInclude Include="..\src\game\race\race_replay_transport.h" />
+    <ClInclude Include="..\src\game\race\race_settings.h" />
+    <ClInclude Include="..\src\game\race\race_settings_service.h" />
+    <ClInclude Include="..\src\game\race\race_settings_store.h" />
+    <ClInclude Include="..\src\game\race\race_trigger.h" />
+    <ClInclude Include="..\src\game\race\race_training.h" />
+    <ClInclude Include="..\src\game\race\race_training_service.h" />
+    <ClInclude Include="..\src\game\race\race_types.h" />
+    <ClInclude Include="..\src\game\race\race_wire.h" />
+    <ClInclude Include="..\src\game\race\race_vote.h" />
+    <ClInclude Include="..\src\game\race\race_vote_menu.h" />
+    <ClInclude Include="..\src\game\race\race_vote_menu_service.h" />
+    <ClInclude Include="..\src\game\race\race_vote_service.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\deps\minizip\miniz.c" />
+    <ClCompile Include="..\src\game\race\bg_item.c" />
+    <ClCompile Include="..\src\game\race\bg_pmove.c" />
+    <ClCompile Include="..\src\game\race\g_client.c" />
+    <ClCompile Include="..\src\game\race\g_entity.c" />
+    <ClCompile Include="..\src\game\race\g_combat.c" />
+    <ClCompile Include="..\src\game\race\g_client_stats.c" />
+    <ClCompile Include="..\src\game\race\g_cmd.c" />
+    <ClCompile Include="..\src\game\race\g_ballistics.c" />
+    <ClCompile Include="..\src\game\race\g_hook.c" />
+    <ClCompile Include="..\src\game\race\g_ai_main.c" />
+    <ClCompile Include="..\src\game\race\g_ai_node.c" />
+    <ClCompile Include="..\src\game\race\g_main.c" />
+    <ClCompile Include="..\src\game\race\g_client_view.c" />
+    <ClCompile Include="..\src\game\race\g_module.c" />
+    <ClCompile Include="..\src\game\race\race_clip.c" />
+    <ClCompile Include="..\src\game\race\race_kick_broker.c" />
+    <ClCompile Include="..\src\game\race\race_projectile_observer.c" />
+    <ClCompile Include="..\src\game\race\race.c" />
+    <ClCompile Include="..\src\game\race\race_actions.c" />
+    <ClCompile Include="..\src\game\race\race_admin.c" />
+    <ClCompile Include="..\src\game\race\race_admin_actions.c" />
+    <ClCompile Include="..\src\game\race\race_admin_service.c" />
+    <ClCompile Include="..\src\game\race\race_admin_store.c" />
+    <ClCompile Include="..\src\game\race\race_cmds.c" />
+    <ClCompile Include="..\src\game\race\race_finish_report.c" />
+    <ClCompile Include="..\src\game\race\race_leaderboard.c" />
+    <ClCompile Include="..\src\game\race\race_leaderboard_wire.c" />
+    <ClCompile Include="..\src\game\race\race_logic.c" />
+    <ClCompile Include="..\src\game\race\race_map_browser_service.c" />
+    <ClCompile Include="..\src\game\race\race_map_browser_wire.c" />
+    <ClCompile Include="..\src\game\race\race_map_catalog.c" />
+    <ClCompile Include="..\src\game\race\race_map_state.c" />
+    <ClCompile Include="..\src\game\race\race_map_state_service.c" />
+    <ClCompile Include="..\src\game\race\race_map_state_store.c" />
+    <ClCompile Include="..\src\game\race\race_modes.c" />
+    <ClCompile Include="..\src\game\race\race_persistence.c" />
+    <ClCompile Include="..\src\game\race\race_physics.c" />
+    <ClCompile Include="..\src\game\race\race_physics_service.c" />
+    <ClCompile Include="..\src\game\race\race_publication.c" />
+    <ClCompile Include="..\src\game\race\race_profile.c" />
+    <ClCompile Include="..\src\game\race\race_profiles.c" />
+    <ClCompile Include="..\src\game\race\race_replay_format.c" />
+    <ClCompile Include="..\src\game\race\race_replay_playback.c" />
+    <ClCompile Include="..\src\game\race\race_replay_playback_service.c" />
+    <ClCompile Include="..\src\game\race\race_replay_record.c" />
+    <ClCompile Include="..\src\game\race\race_replay_service.c" />
+    <ClCompile Include="..\src\game\race\race_replay_store.c" />
+    <ClCompile Include="..\src\game\race\race_replay_transport.c" />
+    <ClCompile Include="..\src\game\race\race_settings.c" />
+    <ClCompile Include="..\src\game\race\race_settings_service.c" />
+    <ClCompile Include="..\src\game\race\race_settings_store.c" />
+    <ClCompile Include="..\src\game\race\race_trigger.c" />
+    <ClCompile Include="..\src\game\race\race_training_service.c" />
+    <ClCompile Include="..\src\game\race\race_vote.c" />
+    <ClCompile Include="..\src\game\race\race_vote_menu.c" />
+    <ClCompile Include="..\src\game\race\race_vote_menu_service.c" />
+    <ClCompile Include="..\src\game\race\race_vote_service.c" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6A48A9C4-7D22-4CC3-A726-8B7686B7B971}</ProjectGuid>
+    <RootNamespace>game-race</RootNamespace>
+  </PropertyGroup>
+  <!-- Selects the common grapple implementation for Race. -->
+  <PropertyGroup>
+    <QuetooGameHook>true</QuetooGameHook>
+  </PropertyGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="build_settings.props" />
+    <Import Project="game_common.props" />
+  </ImportGroup>
+  <ItemGroup>
+    <ClCompile Remove="..\src\game\common\bg_pmove.c" />
+    <ClCompile Remove="..\src\game\common\g_client.c" />
+    <ClCompile Remove="..\src\game\common\g_entity.c" />
+    <ClCompile Remove="..\src\game\common\g_combat.c" />
+    <ClCompile Remove="..\src\game\common\g_client_stats.c" />
+    <ClCompile Remove="..\src\game\common\g_cmd.c" />
+    <ClCompile Remove="..\src\game\common\g_ballistics.c" />
+    <ClCompile Remove="..\src\game\common\g_hook.c" />
+    <ClCompile Remove="..\src\game\common\g_ai_main.c" />
+    <ClCompile Remove="..\src\game\common\g_ai_node.c" />
+    <ClCompile Remove="..\src\game\common\g_main.c" />
+    <ClCompile Remove="..\src\game\common\g_client_view.c" />
+  </ItemGroup>
+  <PropertyGroup>
+    <TargetName>game</TargetName>
+    <OutDir>$(QuetooOutDir)race\</OutDir>
+    <IntDir>$(QuetooIntDir)</IntDir>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup>
+    <IncludePath>$(QuetooFullIncludePath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(QuetooFullLibraryPath);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- This module's own directory comes first, then the common one. These
+           are per project rather than in QuetooFullIncludePath because every
+           module has a g_types.h: one global list would make it ambiguous. -->
+      <AdditionalIncludeDirectories>..\deps\minizip;..\src\game\race;..\src\game\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- g_client_s and g_entity_s embed the server's view of themselves as an
+           anonymous member, which needs this. clang-cl enables it by default; it
+           is spelled out so that a toolset change cannot take it away quietly. -->
+      <!-- Preserve the same intermediate movement rounding on x86-64 and arm64.
+           The narrow suppression covers the intentional override of /fp:precise. -->
+      <AdditionalOptions>%(AdditionalOptions) -fms-extensions -Wno-microsoft-anon-tag -Wno-overriding-option /clang:-ffp-contract=off</AdditionalOptions>
+      <PreprocessorDefinitions>G_HOOK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>Objectively.lib;SDL3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <AdditionalOptions>/Brepro %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <PostBuildEvent>
+      <Command>COPY_GAME_MODULE "$(QUETOO_HOME)" "$(Platform)$(Configuration)" "race"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="libs\libshared.vcxproj">
+      <Project>{2F1C792E-6243-462B-AF0D-E2554E77D5C5}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Objectively\Objectively.vs15\Objectively.vcxproj">
+      <Project>{3e6b97c6-1f51-4d72-bdfe-1d492f5eda6c}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

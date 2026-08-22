@@ -208,10 +208,10 @@ dnl ---------------------------------
 
 AC_MSG_CHECKING(which game modules to build)
 
-GAME_MODULES="default ctf lithium"
+GAME_MODULES="default ctf lithium race"
 
 AC_ARG_WITH(games,
-	AS_HELP_STRING([--with-games='default ...'],
+	AS_HELP_STRING([--with-games='default ctf lithium race'],
 		[build specified game modules]
 	)
 )
@@ -394,6 +394,7 @@ AC_CONFIG_FILES([
 	src/cgame/default/Makefile
 	src/cgame/ctf/Makefile
 	src/cgame/lithium/Makefile
+	src/cgame/race/Makefile
 	src/client/Makefile
 	src/client/renderer/Makefile
 	src/client/renderer/shaders/Makefile
@@ -404,6 +405,7 @@ AC_CONFIG_FILES([
 	src/game/default/Makefile
 	src/game/ctf/Makefile
 	src/game/lithium/Makefile
+	src/game/race/Makefile
 	src/main/Makefile
 	src/master/Makefile
 	src/net/Makefile

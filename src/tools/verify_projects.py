@@ -40,7 +40,7 @@ MSVS_ONLY = {
   "serialization.cpp",
 }
 
-MODULES = ("default", "ctf", "lithium")
+MODULES = ("default", "ctf", "lithium", "race")
 
 # The MSVS project is named for the module except for default, which predates
 # the others and is simply "game" / "cgame".
@@ -52,16 +52,47 @@ class Autotools:
   """A module's Makefile.am."""
 
   def __init__(self, root: Path, kind: str, module: str):
+    self.root = root
+    self.kind = kind
+    self.module = module
     self.path = root / "src" / kind / module / "Makefile.am"
     self.text = self.path.read_text()
 
-  def sources(self) -> set:
+  def _source_tokens(self) -> set:
     var = "cgame_la_SOURCES" if "cgame" in str(self.path) else "game_la_SOURCES"
     m = re.search(rf'^{var}\s*=\s*((?:.*\\\n)*.*)$', self.text, re.M)
     if not m:
       return set()
     body = m.group(1).replace("\\\n", " ")
-    return {os.path.basename(t) for t in body.split() if t.endswith((".c", ".cpp"))}
+    return {t for t in body.split() if t.endswith((".c", ".cpp"))}
+
+  def sources(self) -> set:
+    return {os.path.basename(t) for t in self._source_tokens()}
+
+  def source_paths(self) -> set:
+    """Resolve vpath-selected translation units to repository-relative paths."""
+
+    search_roots = [
+      self.root / "src" / self.kind / self.module,
+      self.root / "src" / self.kind / "common",
+    ]
+    if self.kind == "cgame":
+      search_roots += [
+        self.root / "src" / "game" / self.module,
+        self.root / "src" / "game" / "common",
+      ]
+
+    out = set()
+    for token in self._source_tokens():
+      if token.startswith("$(top_srcdir)/"):
+        candidate = self.root / token.removeprefix("$(top_srcdir)/")
+      else:
+        candidates = [base / token for base in search_roots if (base / token).is_file()]
+        assert candidates, f"{self.path}: cannot resolve source token {token}"
+        candidate = candidates[0]
+      assert candidate.is_file(), f"{self.path}: source does not exist: {candidate}"
+      out.add(candidate.relative_to(self.root).as_posix())
+    return out
 
   def defines(self) -> set:
     return set(re.findall(r'-D(G_[A-Z]+)', self.text))
@@ -80,6 +111,7 @@ class Msvs:
 
   def _items(self, tag: str) -> set:
     out = set()
+    removed = set()
     for text in (self.project, self.props):
       for group in re.finditer(r'<ItemGroup([^>]*)>(.*?)</ItemGroup>', text, re.S):
         condition = re.search(r"Condition=\"'\$\((\w+)\)'=='true'\"", group.group(1))
@@ -87,7 +119,9 @@ class Msvs:
           continue
         for include in re.findall(rf'<{tag} Include="([^"]+)"', group.group(2)):
           out.add(include.replace("\\", "/").removeprefix("../"))
-    return out
+        for remove in re.findall(rf'<{tag} Remove="([^"]+)"', group.group(2)):
+          removed.add(remove.replace("\\", "/").removeprefix("../"))
+    return out - removed
 
   def sources(self) -> set:
     return self._items("ClCompile")
@@ -211,6 +245,21 @@ def verify_module(root: Path, kind: str, module: str, xcode: Xcode, verbose: boo
     for basename, count in sorted(counted.items()):
       if count > 1:
         problems.append(f"{target}: {name} lists {basename} {count} times")
+
+  # Race deliberately shadows more common consumers than the five generic
+  # per-module manifests above. Compare exact paths so a project cannot build
+  # the stock same-basename file while still passing the basename check.
+  if module == "race":
+    expected_paths = am.source_paths()
+    actual_paths = {
+      "msvs": {p for p in msvs.sources() if os.path.basename(p) not in MSVS_ONLY},
+      "xcode": xcode.sources(target),
+    }
+    for name, paths in actual_paths.items():
+      for missing in sorted(expected_paths - paths):
+        problems.append(f"{target}: {name} is missing exact source {missing}")
+      for extra in sorted(paths - expected_paths):
+        problems.append(f"{target}: {name} builds wrong-owner source {extra}")
 
   # A module must build its own manifest, not a sibling's. Autotools gets this
   # from vpath; the project files have to name the right directory.
