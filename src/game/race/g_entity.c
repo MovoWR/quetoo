@@ -75,11 +75,9 @@ static const g_entity_class_t g_entity_classes[] = {
 
   { "path_corner", G_info_notnull },
 
-  { "target_ballistics", G_target_ballistics },
   { "target_light", G_target_light },
   { "target_speaker", G_target_speaker },
   { "target_string", G_target_string },
-  { "target_turret", G_target_turret },
 
   { "trigger_always", G_trigger_always },
   { "trigger_exec", G_trigger_exec },
@@ -168,6 +166,11 @@ static void G_SpawnEntity(cm_entity_t *def) {
   const g_item_t *it = G_FindItemByClassName(ent->classname);
   if (it) {
     G_SpawnItem(ent, it);
+    return;
+  }
+
+  // check the ballistics entities, which are one classname per weapon
+  if (G_ballistics(ent)) {
     return;
   }
 
@@ -410,6 +413,7 @@ static void G_InitMedia_Common(void) {
   g_media.sounds.quake_nail_hit = gi.SoundIndex("projectiles/quake_nail/hit");
   g_media.sounds.rocket_fly = gi.SoundIndex("projectiles/rocket/fly");
   g_media.sounds.lightning_fly = gi.SoundIndex("weapons/lightning/fly");
+  g_media.sounds.laser_fly = gi.SoundIndex("trigger/laser/fly");
   g_media.sounds.quad_attack = gi.SoundIndex("powerups/quad/attack");
   g_media.sounds.quad_expire = gi.SoundIndex("powerups/quad/expire");
   g_media.sounds.invulnerability_pickup = gi.SoundIndex("powerups/invulnerability/pickup");

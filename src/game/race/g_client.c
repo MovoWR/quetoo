@@ -57,12 +57,25 @@ static bool G_IsDeathCamMod(uint32_t mod) {
     case MOD_FIREBALL:
     case MOD_ACT_OF_GOD:
     case MOD_BOB:
-    case MOD_TRAP_BLASTER:
-    case MOD_TRAP_NAIL:
-    case MOD_TRAP_ROCKET:
-    case MOD_TRAP_GRENADE:
-    case MOD_TRAP_LASER:
-    case MOD_TRAP_GIBLETS:
+    case MOD_BALLISTICS_BLASTER:
+    case MOD_BALLISTICS_SHOTGUN:
+    case MOD_BALLISTICS_SUPER_SHOTGUN:
+    case MOD_BALLISTICS_MACHINEGUN:
+    case MOD_BALLISTICS_GRENADE:
+    case MOD_BALLISTICS_ROCKET:
+    case MOD_BALLISTICS_HYPERBLASTER:
+    case MOD_BALLISTICS_LIGHTNING:
+    case MOD_BALLISTICS_RAILGUN:
+    case MOD_BALLISTICS_BFG:
+    case MOD_BALLISTICS_QUAKE_SHOTGUN:
+    case MOD_BALLISTICS_QUAKE_SUPER_SHOTGUN:
+    case MOD_BALLISTICS_QUAKE_NAILGUN:
+    case MOD_BALLISTICS_QUAKE_SUPER_NAILGUN:
+    case MOD_BALLISTICS_QUAKE_GRENADE:
+    case MOD_BALLISTICS_QUAKE_ROCKET:
+    case MOD_BALLISTICS_QUAKE_THUNDERBOLT:
+    case MOD_BALLISTICS_LASER:
+    case MOD_BALLISTICS_GIBLETS:
       return true;
     default:
       return false;
@@ -173,17 +186,56 @@ static void G_ClientObituary(g_client_t *cl, g_entity_t *attacker, uint32_t mod)
       case MOD_TURRET_BLASTER:
         msg = "%s was lit up by %s's turret :blaster:";
         break;
-      case MOD_TURRET_NAIL:
-        msg = "%s was stapled down by %s's turret :nailgun:";
+      case MOD_TURRET_SHOTGUN:
+        msg = "%s was peppered by %s's turret :shotgun:";
         break;
-      case MOD_TURRET_ROCKET:
-        msg = "%s was shelled by %s's turret :rocket:";
+      case MOD_TURRET_SUPER_SHOTGUN:
+        msg = "%s was blown apart by %s's turret :sshotgun:";
+        break;
+      case MOD_TURRET_MACHINEGUN:
+        msg = "%s was mowed down by %s's turret :machinegun:";
         break;
       case MOD_TURRET_GRENADE:
         msg = "%s caught %s's care package :grenade:";
         break;
-      case MOD_TURRET_LASER:
+      case MOD_TURRET_ROCKET:
+        msg = "%s was shelled by %s's turret :rocket:";
+        break;
+      case MOD_TURRET_HYPERBLASTER:
+        msg = "%s was melted by %s's turret :hyperblaster:";
+        break;
+      case MOD_TURRET_LIGHTNING:
+        msg = "%s was electrified by %s's turret :lightning:";
+        break;
+      case MOD_TURRET_RAILGUN:
         msg = "%s was traced by %s's turret :railgun:";
+        break;
+      case MOD_TURRET_BFG:
+        msg = "%s was annihilated by %s's turret :bfg:";
+        break;
+      case MOD_TURRET_QUAKE_SHOTGUN:
+        msg = "%s ate buckshot from %s's turret :shotgun:";
+        break;
+      case MOD_TURRET_QUAKE_SUPER_SHOTGUN:
+        msg = "%s was torn open by %s's turret :sshotgun:";
+        break;
+      case MOD_TURRET_QUAKE_NAILGUN:
+        msg = "%s was stapled down by %s's turret :nailgun:";
+        break;
+      case MOD_TURRET_QUAKE_SUPER_NAILGUN:
+        msg = "%s was riddled by %s's turret :nailgun:";
+        break;
+      case MOD_TURRET_QUAKE_GRENADE:
+        msg = "%s was bounced a present by %s's turret :grenade:";
+        break;
+      case MOD_TURRET_QUAKE_ROCKET:
+        msg = "%s was launched by %s's turret :rocket:";
+        break;
+      case MOD_TURRET_QUAKE_THUNDERBOLT:
+        msg = "%s took the full charge of %s's turret :lightning:";
+        break;
+      case MOD_TURRET_LASER:
+        msg = "%s was burned through by %s's turret :bfg:";
         break;
       case MOD_TURRET_GIBLETS:
         msg = "%s was fed %s's leftovers :death:";
@@ -239,22 +291,61 @@ static void G_ClientObituary(g_client_t *cl, g_entity_t *attacker, uint32_t mod)
       case MOD_TRIGGER_HURT:
         msg = "%s was in the wrong place :actofgod:";
         break;
-      case MOD_TRAP_BLASTER:
+      case MOD_BALLISTICS_BLASTER:
         msg = "%s got a face full of trap :blaster:";
         break;
-      case MOD_TRAP_NAIL:
-        msg = "%s was nailed to the wall :nailgun:";
+      case MOD_BALLISTICS_SHOTGUN:
+        msg = "%s walked into the spray :shotgun:";
         break;
-      case MOD_TRAP_ROCKET:
-        msg = "%s should have taken the other tunnel :rocket:";
+      case MOD_BALLISTICS_SUPER_SHOTGUN:
+        msg = "%s was shredded at close range :sshotgun:";
         break;
-      case MOD_TRAP_GRENADE:
+      case MOD_BALLISTICS_MACHINEGUN:
+        msg = "%s was ventilated :machinegun:";
+        break;
+      case MOD_BALLISTICS_GRENADE:
         msg = "%s stepped on it :grenade:";
         break;
-      case MOD_TRAP_LASER:
+      case MOD_BALLISTICS_ROCKET:
+        msg = "%s should have taken the other tunnel :rocket:";
+        break;
+      case MOD_BALLISTICS_HYPERBLASTER:
+        msg = "%s was cooked in the corridor :hyperblaster:";
+        break;
+      case MOD_BALLISTICS_LIGHTNING:
+        msg = "%s completed the circuit :lightning:";
+        break;
+      case MOD_BALLISTICS_RAILGUN:
         msg = "%s was cut down to size :railgun:";
         break;
-      case MOD_TRAP_GIBLETS:
+      case MOD_BALLISTICS_BFG:
+        msg = "%s should not have opened that door :bfg:";
+        break;
+      case MOD_BALLISTICS_QUAKE_SHOTGUN:
+        msg = "%s was greeted with buckshot :shotgun:";
+        break;
+      case MOD_BALLISTICS_QUAKE_SUPER_SHOTGUN:
+        msg = "%s was met at the door :sshotgun:";
+        break;
+      case MOD_BALLISTICS_QUAKE_NAILGUN:
+        msg = "%s was nailed to the wall :nailgun:";
+        break;
+      case MOD_BALLISTICS_QUAKE_SUPER_NAILGUN:
+        msg = "%s was perforated :nailgun:";
+        break;
+      case MOD_BALLISTICS_QUAKE_GRENADE:
+        msg = "%s watched it bounce closer :grenade:";
+        break;
+      case MOD_BALLISTICS_QUAKE_ROCKET:
+        msg = "%s never heard it coming :rocket:";
+        break;
+      case MOD_BALLISTICS_QUAKE_THUNDERBOLT:
+        msg = "%s was left twitching :lightning:";
+        break;
+      case MOD_BALLISTICS_LASER:
+        msg = "%s walked into the beam :bfg:";
+        break;
+      case MOD_BALLISTICS_GIBLETS:
         msg = "%s was pelted to death with meat :death:";
         break;
       case MOD_ACT_OF_GOD:
@@ -397,6 +488,53 @@ static void G_ClientGiblet_Touch(g_entity_t *ent, g_entity_t *other, const cm_tr
 }
 
 /**
+ * @brief How long a corpse and its giblets remain before they begin to despawn.
+ */
+#define CORPSE_LIFETIME 30000
+
+/**
+ * @brief The window a corpse or giblet spends fading out once its time is up, which must outlast
+ * the three seconds the client takes to fade it.
+ */
+#define DESPAWN_TIME 4000
+
+/**
+ * @brief Think for giblets spawned with an explicit lifetime. Bleeds while in flight, then sinks
+ * and fades from the deadline held in `timestamp`, and frees itself once faded.
+ * @remarks Giblets only bleed while their think is running, so giblets given a lifetime would
+ * otherwise fly clean; the trail is assigned by `G_ClientCorpse_Think`, which they never run,
+ * along with the despawn this mirrors.
+ */
+static void G_Giblet_Think(g_entity_t *ent) {
+
+  if (g_level.time >= ent->timestamp) {
+
+    if (g_level.time >= ent->timestamp + DESPAWN_TIME) {
+      G_FreeEntity(ent);
+      return;
+    }
+
+    // sink and fade out as a corpse's giblets do, rather than blinking out of the world
+    ent->s.effects |= EF_DESPAWN;
+    ent->s.trail = TRAIL_NONE;
+
+    ent->move_type = MOVE_TYPE_NONE;
+    ent->take_damage = false;
+    ent->solid = SOLID_NOT;
+
+    if (ent->ground.ent) {
+      ent->s.origin.z -= QUETOO_TICK_SECONDS * 4.f;
+    }
+
+    gi.LinkEntity(ent);
+  } else {
+    ent->s.trail = Vec3_Length(ent->velocity) > 30.f ? TRAIL_GIB : TRAIL_NONE;
+  }
+
+  ent->next_think = g_level.time + QUETOO_TICK_MILLIS;
+}
+
+/**
  * @brief Sink into the floor after a few seconds, providing a window of time for us to be made into
  * giblets or knocked around. This is called by corpses and giblets alike.
  */
@@ -448,13 +586,13 @@ static void G_ClientCorpse_Think(g_entity_t *ent) {
     }
   }
 
-  if (age > 30000 + 4000) {
+  if (age > CORPSE_LIFETIME + DESPAWN_TIME) {
     G_FreeEntity(ent);
     return;
   }
 
   // sink into the floor after a while
-  if (age > 30000) {
+  if (age > CORPSE_LIFETIME) {
 
     ent->s.effects |= EF_DESPAWN;
 
@@ -541,8 +679,9 @@ void G_Giblets(const g_giblets_t *giblets) {
     gib->Touch = G_ClientGiblet_Touch;
 
     if (giblets->lifetime) {
-      gib->Think = G_FreeEntity;
-      gib->next_think = g_level.time + giblets->lifetime;
+      gib->timestamp = g_level.time + giblets->lifetime;
+      gib->Think = G_Giblet_Think;
+      gib->next_think = g_level.time + QUETOO_TICK_MILLIS;
     } else {
       gib->Think = G_ClientCorpse_Think;
       gib->next_think = g_level.time + QUETOO_TICK_MILLIS;

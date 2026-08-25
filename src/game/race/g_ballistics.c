@@ -191,10 +191,10 @@ static void G_BlasterProjectile_Touch(g_entity_t *ent, g_entity_t *other, const 
 
 /**
  * @brief Fires a blaster projectile from the specified entity in the given direction.
- * @param ent The entity the projectile leaves, providing its origin and effect color.
+ * @param emitter The entity the projectile leaves, providing its origin and effect color.
  * @param attacker The entity credited with any damage the projectile inflicts.
  */
-void G_BlasterProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, uint32_t mod) {
+void G_BlasterProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, uint32_t mod) {
 
   const box3_t bounds = Box3f(2.f, 2.f, 2.f);
 
@@ -207,8 +207,8 @@ void G_BlasterProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t sta
   projectile->s.angles = Vec3_Euler(dir);
   projectile->velocity = Vec3_Scale(dir, speed);
 
-  if (G_ImmediateWall(ent, projectile)) {
-    projectile->s.origin = ent->s.origin;
+  if (G_ImmediateWall(emitter, projectile)) {
+    projectile->s.origin = emitter->s.origin;
   }
 
   projectile->solid = SOLID_PROJECTILE;
@@ -219,7 +219,7 @@ void G_BlasterProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t sta
   projectile->next_think = g_level.time + 8000;
   projectile->Think = G_FreeEntity;
   projectile->Touch = G_BlasterProjectile_Touch;
-  projectile->s.client = ent->s.client;
+  projectile->s.client = emitter->s.client;
   projectile->s.trail = TRAIL_BLASTER;
 
   gi.LinkEntity(projectile);
@@ -270,10 +270,10 @@ static void G_NailProjectile_Touch(g_entity_t *ent, g_entity_t *other, const cm_
 
 /**
  * @brief Fires a nail projectile from the specified entity in the given direction.
- * @param ent The entity the projectile leaves, providing its origin and effect color.
+ * @param emitter The entity the projectile leaves, providing its origin and effect color.
  * @param attacker The entity credited with any damage the projectile inflicts.
  */
-void G_NailProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, uint32_t mod) {
+void G_NailProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, uint32_t mod) {
 
   const box3_t bounds = Box3f(1.f, 1.f, 1.f);
 
@@ -286,8 +286,8 @@ void G_NailProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t start,
   projectile->s.angles = Vec3_Euler(dir);
   projectile->velocity = Vec3_Scale(dir, speed);
 
-  if (G_ImmediateWall(ent, projectile)) {
-    projectile->s.origin = ent->s.origin;
+  if (G_ImmediateWall(emitter, projectile)) {
+    projectile->s.origin = emitter->s.origin;
   }
 
   projectile->solid = SOLID_PROJECTILE;
@@ -298,7 +298,7 @@ void G_NailProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t start,
   projectile->next_think = g_level.time + 8000;
   projectile->Think = G_FreeEntity;
   projectile->Touch = G_NailProjectile_Touch;
-  projectile->s.client = ent->s.client;
+  projectile->s.client = emitter->s.client;
   projectile->s.model1 = g_media.models.quake_nail;
   projectile->s.trail = TRAIL_QUAKE_NAIL;
 
@@ -308,9 +308,9 @@ void G_NailProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t start,
 /**
  * @brief Fires a single bullet projectile with randomized spread, dealing damage and emitting impact effects.
  */
-void G_BulletProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, int32_t damage, int32_t knockback, int32_t hspread, int32_t vspread, int32_t mod) {
+void G_BulletProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t damage, int32_t knockback, int32_t hspread, int32_t vspread, int32_t mod) {
 
-  cm_trace_t tr = gi.Trace(ent->s.origin, start, Box3f(1.f, 1.f, 1.f), ent, CONTENTS_MASK_CLIP_PROJECTILE);
+  cm_trace_t tr = gi.Trace(emitter->s.origin, start, Box3f(1.f, 1.f, 1.f), emitter, CONTENTS_MASK_CLIP_PROJECTILE);
   if (tr.fraction == 1.0) {
     vec3_t angles, forward, right, up, end;
 
@@ -321,7 +321,7 @@ void G_BulletProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, i
     end = Vec3_Fmaf(end, RandomRangef(-hspread, hspread), right);
     end = Vec3_Fmaf(end, RandomRangef(-vspread, vspread), up);
 
-    tr = gi.Trace(start, end, Box3_Zero(), ent, CONTENTS_MASK_CLIP_PROJECTILE);
+    tr = gi.Trace(start, end, Box3_Zero(), emitter, CONTENTS_MASK_CLIP_PROJECTILE);
 
     G_Tracer(start, tr.end);
   }
@@ -330,8 +330,8 @@ void G_BulletProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, i
 
     G_Damage(&(g_damage_t) {
       .target = tr.ent,
-      .inflictor = ent,
-      .attacker = ent,
+      .inflictor = emitter,
+      .attacker = attacker,
       .dir = dir,
       .point = tr.end,
       .normal = tr.plane.normal,
@@ -358,10 +358,10 @@ void G_BulletProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, i
 /**
  * @brief Fires multiple bullet projectiles to simulate shotgun pellet spread.
  */
-void G_ShotgunProjectiles(g_entity_t *ent, const vec3_t start, const vec3_t dir, int32_t damage, int32_t knockback, int32_t hspread, int32_t vspread, int32_t count, int32_t mod) {
+void G_ShotgunProjectiles(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t damage, int32_t knockback, int32_t hspread, int32_t vspread, int32_t count, int32_t mod) {
 
   for (int32_t i = 0; i < count; i++) {
-    G_BulletProjectile(ent, start, dir, damage, knockback, hspread, vspread, mod);
+    G_BulletProjectile(emitter, attacker, start, dir, damage, knockback, hspread, vspread, mod);
   }
 }
 
@@ -505,10 +505,10 @@ static void G_QuakeGrenadeProjectile_Touch(g_entity_t *ent, g_entity_t *other, c
 
 /**
  * @brief Fires a grenade projectile with bounce physics and a timed fuse.
- * @param ent The entity the projectile leaves, providing its origin and effect color.
+ * @param emitter The entity the projectile leaves, providing its origin and effect color.
  * @param attacker The entity credited with any damage the projectile inflicts.
  */
-void G_GrenadeProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius, uint32_t timer, uint32_t mod) {
+void G_GrenadeProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius, uint32_t timer, uint32_t mod) {
 
   const box3_t bounds = Box3f(6.f, 6.f, 6.f);
 
@@ -549,7 +549,7 @@ void G_GrenadeProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t sta
   projectile->s.trail = TRAIL_GRENADE;
   projectile->s.model1 = g_media.models.grenade;
 
-  if (G_ImmediateImpact(ent, projectile)) {
+  if (G_ImmediateImpact(emitter, projectile)) {
     return;
   }
 
@@ -559,14 +559,14 @@ void G_GrenadeProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t sta
 /**
  * @brief Fires a Quake grenade projectile with bounce physics and a timed fuse.
  */
-void G_QuakeGrenadeProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius, uint32_t timer) {
+void G_QuakeGrenadeProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius, uint32_t timer) {
 
   const box3_t bounds = Box3f(6.f, 6.f, 3.f);
 
   vec3_t forward, right, up;
 
   g_entity_t *projectile = G_AllocEntity(__func__);
-  projectile->owner = ent;
+  projectile->owner = attacker;
   projectile->spawn_flags = QUAKE_GRENADE;
 
   projectile->s.origin = start;
@@ -581,8 +581,8 @@ void G_QuakeGrenadeProjectile(g_entity_t *ent, const vec3_t start, const vec3_t 
 
   G_PlayerProjectile(projectile, 0.33);
 
-  if (G_ImmediateWall(ent, projectile)) {
-    projectile->s.origin = ent->s.origin;
+  if (G_ImmediateWall(emitter, projectile)) {
+    projectile->s.origin = emitter->s.origin;
   }
 
   projectile->solid = SOLID_PROJECTILE;
@@ -723,10 +723,10 @@ static void G_RocketProjectile_Expire(g_entity_t *ent) {
 
 /**
  * @brief Fires a rocket projectile that explodes with radius damage on impact.
- * @param ent The entity the projectile leaves, providing its origin and effect color.
+ * @param emitter The entity the projectile leaves, providing its origin and effect color.
  * @param attacker The entity credited with any damage the projectile inflicts.
  */
-void G_RocketProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius, uint32_t mod) {
+void G_RocketProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius, uint32_t mod) {
 
   const box3_t bounds = Box3f(8.f, 8.f, 8.f);
 
@@ -758,7 +758,7 @@ void G_RocketProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t star
   G_ObserveProjectile(projectile, G_PROJECTILE_ROCKET,
                       G_PROJECTILE_SPAWN, Vec3_Zero());
 
-  if (G_ImmediateImpact(ent, projectile)) {
+  if (G_ImmediateImpact(emitter, projectile)) {
     return;
   }
 
@@ -768,12 +768,12 @@ void G_RocketProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t star
 /**
  * @brief Fires a Quake rocket projectile that explodes with radius damage on impact.
  */
-void G_QuakeRocketProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius) {
+void G_QuakeRocketProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius) {
 
   const box3_t bounds = Box3f(8.f, 8.f, 8.f);
 
   g_entity_t *projectile = G_AllocEntity(__func__);
-  projectile->owner = ent;
+  projectile->owner = attacker;
   projectile->spawn_flags = QUAKE_ROCKET;
 
   projectile->s.origin = start;
@@ -796,7 +796,7 @@ void G_QuakeRocketProjectile(g_entity_t *ent, const vec3_t start, const vec3_t d
   projectile->s.sound = g_media.sounds.rocket_fly;
   projectile->s.trail = TRAIL_ROCKET;
 
-  if (G_ImmediateImpact(ent, projectile)) {
+  if (G_ImmediateImpact(emitter, projectile)) {
     return;
   }
 
@@ -884,20 +884,20 @@ static void G_HyperblasterProjectile_Expire(g_entity_t *ent) {
 /**
  * @brief Fires a hyperblaster energy projectile in the given direction.
  */
-void G_HyperblasterProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback) {
+void G_HyperblasterProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback) {
 
   const box3_t bounds = Box3f(6.f, 6.f, 6.f);
 
   g_entity_t *projectile = G_AllocEntity(__func__);
-  projectile->owner = ent;
+  projectile->owner = attacker;
 
   projectile->s.origin = start;
   projectile->bounds = bounds;
   projectile->s.angles = Vec3_Euler(dir);
   projectile->velocity = Vec3_Scale(dir, speed);
 
-  if (G_ImmediateWall(ent, projectile)) {
-    projectile->s.origin = ent->s.origin;
+  if (G_ImmediateWall(emitter, projectile)) {
+    projectile->s.origin = emitter->s.origin;
   }
 
   projectile->solid = SOLID_PROJECTILE;
@@ -1134,19 +1134,155 @@ void G_LightningProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir
 }
 
 /**
+ * @brief Locates the sustained beam belonging to the given emitter, if it has one.
+ * @remarks Callers use this to tell striking a beam up from sustaining one, the two sounding
+ * differently: it is struck up once and hums thereafter.
+ */
+g_entity_t *G_FindBeamProjectile(const g_entity_t *emitter) {
+
+  g_entity_t *projectile = NULL;
+
+  while ((projectile = G_Find(projectile, EOFS(classname), "G_BeamProjectile"))) {
+    if (projectile->owner == emitter) {
+      return projectile;
+    }
+  }
+
+  return NULL;
+}
+
+/**
+ * @brief Re-traces the beam from its emitter and burns whatever it lands on.
+ * @remarks This runs every tick, rather than only when the emitter refreshes the beam. An
+ * operator holding a turret aims continuously, and a trigger_multiple only re-uses the turret as
+ * often as its own wait allows, so a beam that took its direction from the refresh would lag the
+ * operator's view badly. `touch_time` holds the deadline the emitter keeps pushing forward; the
+ * beam frees itself once the emitter stops asking.
+ */
+static void G_BeamProjectile_Think(g_entity_t *ent) {
+
+  const g_entity_t *emitter = ent->owner;
+
+  if (g_level.time >= ent->touch_time || !emitter->in_use) {
+    G_FreeEntity(ent);
+    return;
+  }
+
+  vec3_t dir = ent->move_dir;
+
+  if (ent->activator && ent->activator->client) {
+    dir = ent->activator->client->forward;
+  }
+
+  const vec3_t start = Vec3_Fmaf(emitter->s.origin, 8.f, dir);
+  const vec3_t end = Vec3_Fmaf(start, MAX_WORLD_DIST, dir);
+
+  const cm_trace_t tr = gi.Trace(start, end, Box3_Zero(), ent, CONTENTS_MASK_CLIP_PROJECTILE);
+
+  if (g_level.time >= ent->timestamp && G_TakesDamage(tr.ent)) {
+
+    ent->timestamp = g_level.time + (uint32_t) Maxf(SECONDS_TO_MILLIS(emitter->wait), QUETOO_TICK_MILLIS);
+
+    G_Damage(&(g_damage_t) {
+      .target = tr.ent,
+      .inflictor = ent,
+      .attacker = ent->activator ? ent->activator : ent->owner,
+      .dir = dir,
+      .point = tr.end,
+      .normal = tr.plane.normal,
+      .damage = ent->damage,
+      .knockback = ent->knockback,
+      .flags = DMG_ENERGY,
+      .mod = ent->mod
+    });
+  }
+
+  ent->s.origin = start;
+  ent->s.termination = tr.end;
+
+  gi.LinkEntity(ent);
+
+  ent->next_think = g_level.time + QUETOO_TICK_MILLIS;
+}
+
+/**
+ * @brief Creates or refreshes the sustained beam belonging to the given emitter.
+ * @param emitter The entity the beam emanates from, providing its color and damage interval.
+ * @param attacker The entity credited with any damage the beam inflicts, and whose view aims it
+ * when it is a player operating a turret.
+ * @param trail The trail the client renders the beam with, which is what distinguishes a laser
+ * from lightning; the two differ in appearance and in nothing else here.
+ * @param sound The looping sound the beam carries while it exists, or zero for a silent one.
+ * @remarks The beam is a persistent entity rather than an effect repeated per shot, so it costs a
+ * delta only on the ticks its endpoint actually moves. Its own think does the work; this only
+ * hands over the parameters and pushes the deadline out.
+ * @remarks `G_LightningProjectile` cannot serve here: its think resolves the muzzle through
+ * `ent->owner->client`, which a trap does not have.
+ */
+void G_BeamProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir,
+                      int32_t damage, int32_t knockback, uint32_t mod, uint8_t trail, uint16_t sound) {
+
+  g_entity_t *projectile = G_FindBeamProjectile(emitter);
+
+  if (!projectile) {
+    projectile = G_AllocEntity(__func__);
+
+    projectile->owner = emitter;
+    projectile->solid = SOLID_NOT;
+    projectile->clip_mask = CONTENTS_MASK_CLIP_PROJECTILE;
+    projectile->move_type = MOVE_TYPE_THINK;
+    projectile->Think = G_BeamProjectile_Think;
+    projectile->s.effects = EF_BEAM;
+    projectile->s.trail = trail;
+    projectile->s.sound = sound;
+    projectile->s.color = emitter->s.color;
+
+    // the beam leaves its emitter, never a player, so it must not be attributed to one;
+    // Cg_EntityTrail anchors an owned beam to that client's muzzle
+    projectile->s.client = MAX_CLIENTS;
+
+    projectile->timestamp = 0;
+  }
+
+  projectile->activator = attacker && attacker->client ? attacker : NULL;
+  projectile->move_dir = dir;
+  projectile->damage = damage;
+  projectile->knockback = knockback;
+  projectile->mod = mod;
+
+  // the deadline the emitter keeps pushing out; it must comfortably exceed the interval its
+  // refresher runs at, a trap being every tick but a turret only as often as its trigger fires
+  projectile->touch_time = g_level.time + 500;
+
+  G_BeamProjectile_Think(projectile);
+}
+
+/**
+ * @brief Frees the sustained beam belonging to the given emitter, if it has one.
+ */
+void G_FreeBeamProjectile(g_entity_t *emitter) {
+
+  g_entity_t *projectile = G_FindBeamProjectile(emitter);
+
+  if (projectile) {
+    G_FreeEntity(projectile);
+  }
+}
+
+/**
  * @brief Fires a railgun slug that traces through multiple targets, dealing damage to each.
- * @param ent The entity the slug leaves, providing its origin and effect color.
+ * @param emitter The entity the slug leaves, providing its origin and effect color.
  * @param attacker The entity credited with any damage the slug inflicts.
  */
-void G_RailgunProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t damage,
+void G_RailgunProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t damage,
              int32_t knockback, uint32_t mod) {
   vec3_t pos, end;
 
   pos = start;
 
-  cm_trace_t tr = gi.Trace(ent->s.origin, pos, Box3_Zero(), ent, CONTENTS_MASK_CLIP_PROJECTILE);
+  cm_trace_t tr = gi.Trace(emitter->s.origin, pos, Box3_Zero(), emitter, CONTENTS_MASK_CLIP_PROJECTILE);
   if (tr.fraction < 1.0) {
-    pos = ent->s.origin;
+    pos = emitter->s.origin;
   }
 
   int32_t content_mask = CONTENTS_MASK_CLIP_PROJECTILE | CONTENTS_MASK_LIQUID;
@@ -1162,7 +1298,7 @@ void G_RailgunProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t sta
 
   G_Ripple(NULL, pos, end, 24.f, true);
 
-  g_entity_t *ignore = ent;
+  g_entity_t *ignore = emitter;
   while (ignore) {
     tr = gi.Trace(pos, end, Box3_Zero(), ignore, content_mask);
     if (!tr.ent) {
@@ -1179,7 +1315,7 @@ void G_RailgunProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t sta
         .origin = &tr.end,
       }, MULTICAST_PHS);
 
-      ignore = ent;
+      ignore = emitter;
       continue;
     }
 
@@ -1191,10 +1327,10 @@ void G_RailgunProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t sta
     }
 
     // we've hit something, so damage it
-    if ((tr.ent != ent) && (tr.ent != attacker) && G_TakesDamage(tr.ent)) {
+    if ((tr.ent != emitter) && (tr.ent != attacker) && G_TakesDamage(tr.ent)) {
       G_Damage(&(g_damage_t) {
         .target = tr.ent,
-        .inflictor = ent,
+        .inflictor = emitter,
         .attacker = attacker,
         .dir = dir,
         .point = tr.end,
@@ -1216,7 +1352,7 @@ void G_RailgunProjectile(g_entity_t *ent, g_entity_t *attacker, const vec3_t sta
   gi.WritePosition(tr.end);
   gi.WriteDir(tr.plane.normal);
   gi.WriteLong(tr.surface);
-  gi.WriteByte(ent->s.client);
+  gi.WriteByte(emitter->s.client);
 
   gi.Multicast(start, MULTICAST_PHS);
 }
@@ -1272,6 +1408,13 @@ static void G_BfgProjectile_Touch(g_entity_t *ent, g_entity_t *other, const cm_t
  */
 static void G_BfgProjectile_Think(g_entity_t *ent) {
 
+  // every other projectile frees itself on a timer; this one only ever re-armed, so a ball that
+  // never touched anything, having been spawned inside the brushwork it left, hung about forever
+  if (g_level.time >= ent->timestamp) {
+    G_FreeEntity(ent);
+    return;
+  }
+
   const int32_t frame_damage = ent->damage * QUETOO_TICK_SECONDS;
   const int32_t frame_knockback = ent->knockback * QUETOO_TICK_SECONDS;
 
@@ -1326,19 +1469,19 @@ static void G_BfgProjectile_Think(g_entity_t *ent) {
 /**
  * @brief Fires a BFG projectile with continuous area-effect damage and a large on-impact explosion.
  */
-void G_BfgProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius) {
+void G_BfgProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t start, const vec3_t dir, int32_t speed, int32_t damage, int32_t knockback, float damage_radius) {
 
   const box3_t bounds = Box3f(24.f, 24.f, 24.f);
 
   g_entity_t *projectile = G_AllocEntity(__func__);
-  projectile->owner = ent;
+  projectile->owner = attacker;
 
   projectile->s.origin = start;
   projectile->bounds = bounds;
   projectile->velocity = Vec3_Scale(dir, speed);
 
-  if (G_ImmediateWall(ent, projectile)) {
-    projectile->s.origin = ent->s.origin;
+  if (G_ImmediateWall(emitter, projectile)) {
+    projectile->s.origin = emitter->s.origin;
   }
 
   projectile->solid = SOLID_PROJECTILE;
@@ -1348,6 +1491,7 @@ void G_BfgProjectile(g_entity_t *ent, const vec3_t start, const vec3_t dir, int3
   projectile->knockback = knockback;
   projectile->move_type = MOVE_TYPE_FLY;
   projectile->next_think = g_level.time + QUETOO_TICK_MILLIS;
+  projectile->timestamp = g_level.time + 8000;
   projectile->Think = G_BfgProjectile_Think;
   projectile->Touch = G_BfgProjectile_Touch;
   projectile->s.trail = TRAIL_BFG;
