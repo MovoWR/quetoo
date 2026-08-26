@@ -20,6 +20,7 @@
 #include "race_modes.h"
 #include "race_persistence.h"
 #include "race_physics.h"
+#include "race_physics_service.h"
 #include "race_replay_format.h"
 #include "race_replay_playback.h"
 #include "race_replay_store.h"
@@ -40,12 +41,14 @@ static race_replay_projectile_event_t
 static race_map_state_t race_map_state;
 static race_map_state_service_status_t race_map_state_status;
 static size_t race_map_state_validation_index;
+static const race_leaderboard_record_t *race_map_state_world_record;
 static char race_map_state_committed[MAX_OS_PATH];
 static char race_map_state_candidate[MAX_OS_PATH];
 
 static void Race_MapStateService_Publish(void) {
   race_leaderboard_wire_entry_t entries[RACE_LEADERBOARD_TOP_MAX];
   size_t count = 0;
+  race_map_state_world_record = NULL;
 
   if (race_map_state_status == RACE_MAP_STATE_SERVICE_READY &&
       Race_MapState_ReplayBacked(&race_map_state)) {
@@ -53,6 +56,9 @@ static void Race_MapStateService_Publish(void) {
     count = Race_Leaderboard_Top(race_map_state.records,
                                  race_map_state.record_count,
                                  top, lengthof(top));
+    if (count) {
+      race_map_state_world_record = top[0];
+    }
     for (size_t i = 0; i < count; i++) {
       memset(entries + i, 0, sizeof(entries[i]));
       q_strlcpy(entries[i].name, top[i]->display_name,
@@ -73,7 +79,7 @@ static void Race_MapStateService_Publish(void) {
 static bool Race_MapStateService_PhysicsRankable(void) {
   const race_physics_config_t *config = Race_Physics_Current();
   const char *ruleset = Race_Physics_ConfigRuleset(config);
-  return Race_Physics_ConfigRankable(config) &&
+  return Race_PhysicsService_Rankable() &&
          Race_MapState_RulesetValid(ruleset);
 }
 
@@ -307,17 +313,12 @@ void Race_MapStateService_ClientTimes(const g_client_t *cl,
     return;
   }
 
-  if (world_record) {
-    const race_leaderboard_record_t *top[1];
-    if (Race_Leaderboard_Top(race_map_state.records,
-                             race_map_state.record_count,
-                             top, lengthof(top))) {
-      *world_record = top[0]->elapsed_time;
-    }
+  if (world_record && race_map_state_world_record) {
+    *world_record = race_map_state_world_record->elapsed_time;
   }
 
   if (personal_best && cl->persistent.race_profile.ready) {
-    const race_leaderboard_record_t *record = Race_Leaderboard_Find(
+    const race_leaderboard_record_t *record = Race_Leaderboard_FindSorted(
       race_map_state.records, race_map_state.record_count,
       cl->persistent.race_profile.uid);
     if (record) {
@@ -343,19 +344,16 @@ void Race_MapStateService_ClientSplitTimes(const g_client_t *cl,
     return;
   }
 
-  if (world_record) {
-    const race_leaderboard_record_t *top[1];
-    if (Race_Leaderboard_Top(race_map_state.records,
-                             race_map_state.record_count,
-                             top, lengthof(top)) &&
-        top[0]->split_count == g_level.race_course.split_count &&
-        top[0]->split_layout == g_level.race_course.split_layout) {
-      *world_record = top[0]->split_times[split - 1u];
-    }
+  if (world_record && race_map_state_world_record &&
+      race_map_state_world_record->split_count ==
+        g_level.race_course.split_count &&
+      race_map_state_world_record->split_layout ==
+        g_level.race_course.split_layout) {
+    *world_record = race_map_state_world_record->split_times[split - 1u];
   }
 
   if (personal_best && cl->persistent.race_profile.ready) {
-    const race_leaderboard_record_t *record = Race_Leaderboard_Find(
+    const race_leaderboard_record_t *record = Race_Leaderboard_FindSorted(
       race_map_state.records, race_map_state.record_count,
       cl->persistent.race_profile.uid);
     if (record && record->split_count == g_level.race_course.split_count &&

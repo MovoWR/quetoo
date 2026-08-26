@@ -54,8 +54,8 @@
 #define RACE_FIXTURE_REPLAY_ID UINT64_C(0xdba8d53d1dc24cab)
 #define RACE_FIXTURE_REPLAY_BYTES 550u
 #define RACE_FIXTURE_REPLAY_CRC32 UINT32_C(0x34c8c332)
-#define RACE_FIXTURE_WIRE_BYTES 540u
-#define RACE_FIXTURE_WIRE_CRC32 UINT32_C(0x8ee29581)
+#define RACE_FIXTURE_WIRE_BYTES 541u
+#define RACE_FIXTURE_WIRE_CRC32 UINT32_C(0x73775f65)
 
 typedef struct {
   char profile[RACE_PROFILE_SERIALIZED_MAX];
@@ -363,10 +363,12 @@ static bool Race_FixtureWire(race_portability_fixture_t *fixture) {
   uint8_t payload[512];
   race_finish_report_t finish = {
     .mode = RACE_MODE_RACE,
-    .invalid_flags = 5u,
+    .invalid_flags = 0u,
+    .publication_committed = true,
+    .new_world_record = true,
     .elapsed_time = 45678u,
     .previous_pb = 47000u,
-    .world_record = 44000u,
+    .world_record = 45678u,
     .checkpoint_count = 2u,
     .checkpoint_times = { 12345u, 34567u },
     .start_speed = 320.5f,
@@ -642,8 +644,11 @@ static bool Race_FixtureVerifyFinishWire(const uint8_t *payload,
   race_finish_report_t finish;
   RACE_FIXTURE_REQUIRE(Race_FinishReport_Decode(payload, length, &finish));
   RACE_FIXTURE_REQUIRE(finish.mode == RACE_MODE_RACE &&
-                       finish.invalid_flags == 5u &&
+                       finish.invalid_flags == 0u &&
+                       finish.publication_committed &&
+                       finish.new_world_record &&
                        finish.elapsed_time == 45678u &&
+                       finish.world_record == 45678u &&
                        finish.checkpoint_count == 2u &&
                        finish.checkpoint_times[0] == 12345u &&
                        finish.checkpoint_times[1] == 34567u);
@@ -789,6 +794,20 @@ static bool Race_FixtureVerifyWire(const race_portability_fixture_t *fixture) {
       crc != RACE_FIXTURE_WIRE_CRC32) {
     fprintf(stderr, "RACE_PORTABILITY_WIRE_ACTUAL bytes=%zu crc32=%08x\n",
             fixture->wire_length, crc);
+
+    size_t record_offset = 8u;
+    while (record_offset + RACE_FIXTURE_WIRE_RECORD_HEADER_SIZE <=
+           fixture->wire_length) {
+      const uint8_t *record = fixture->wire + record_offset;
+      const size_t record_length = Race_FixtureRead16(record + 4u);
+      fprintf(stderr, "RACE_PORTABILITY_WIRE_RECORD tag=%.4s bytes=%zu\n",
+              (const char *) record, record_length);
+      if (record_length > fixture->wire_length - record_offset -
+                            RACE_FIXTURE_WIRE_RECORD_HEADER_SIZE) {
+        break;
+      }
+      record_offset += RACE_FIXTURE_WIRE_RECORD_HEADER_SIZE + record_length;
+    }
     return false;
   }
   return true;

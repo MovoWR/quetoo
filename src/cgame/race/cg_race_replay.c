@@ -697,10 +697,10 @@ static void Cg_RaceReplay_DrawTopStack(
   q_snprintf(tag, sizeof(tag), "REPLAY%s%s", RACE_HUD_SEPARATOR,
              Cg_RaceReplay_SourceLabel(state));
 
-  const char *map_name = cgi.ConfigString(CS_MESSAGE);
-  if (!map_name || !*map_name) {
-    map_name = "unknown";
-  }
+  char map_title[MAX_STRING_CHARS];
+  Cg_RaceHud_ResolveEscapes(cgi.ConfigString(CS_MESSAGE), map_title,
+                            sizeof(map_title), false);
+  const char *map_name = *map_title ? map_title : "unknown";
 
   int32_t tag_height, route_height;
   Cg_RaceHud_BindFont(RACE_FONT_BODY, &tag_height);

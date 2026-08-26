@@ -12,15 +12,25 @@
 #include <string.h>
 
 #include "cg_race_map_browser.h"
+#include "cg_race_message.h"
 #include "ui/maps/MapBrowserViewController.h"
 
 static race_map_browser_page_t race_map_browser_page;
 static race_map_browser_detail_t race_map_browser_detail;
 
+static const char *Cg_RaceMapBrowser_ReadPayload(void) {
+  const char *payload = cgi.ReadString();
+  if (!Cg_RaceMessage_StringComplete(payload, NULL)) {
+    Cg_Error("Unterminated Race map browser payload\n");
+  }
+  return payload;
+}
+
 bool Cg_RaceMapBrowser_ParseMessage(const int32_t command) {
   if (command == SV_CMD_RACE_MAP_BROWSER) {
     race_map_browser_page_t page;
-    if (Race_MapBrowserWire_DecodePage(cgi.ReadString(), &page)) {
+    if (Race_MapBrowserWire_DecodePage(
+          Cg_RaceMapBrowser_ReadPayload(), &page)) {
       race_map_browser_page = page;
       MapBrowserViewController_RefreshValues();
     } else {
@@ -30,7 +40,8 @@ bool Cg_RaceMapBrowser_ParseMessage(const int32_t command) {
   }
   if (command == SV_CMD_RACE_MAP_BROWSER_DETAIL) {
     race_map_browser_detail_t detail;
-    if (Race_MapBrowserWire_DecodeDetail(cgi.ReadString(), &detail)) {
+    if (Race_MapBrowserWire_DecodeDetail(
+          Cg_RaceMapBrowser_ReadPayload(), &detail)) {
       race_map_browser_detail = detail;
       MapBrowserViewController_RefreshDetails();
     } else {

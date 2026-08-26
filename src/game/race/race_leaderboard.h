@@ -79,6 +79,13 @@ bool Race_Leaderboard_RecordsValid(const race_leaderboard_record_t *records,
 
 const race_leaderboard_record_t *Race_Leaderboard_Find(
   const race_leaderboard_record_t *records, size_t count, const char *uid);
+/**
+ * @brief Finds a canonical UID in an array already validated as UID-sorted.
+ * @details Callers must establish Race_Leaderboard_RecordsValid when the array
+ * enters their ownership; this function preserves logarithmic hot-path lookup.
+ */
+const race_leaderboard_record_t *Race_Leaderboard_FindSorted(
+  const race_leaderboard_record_t *records, size_t count, const char *uid);
 
 bool Race_Leaderboard_Evaluate(const race_leaderboard_record_t *records,
                                size_t count, size_t capacity,

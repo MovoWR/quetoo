@@ -14,6 +14,7 @@
 #include "cg_jump_viewer.h"
 #include "cg_race_hud.h"
 #include "cg_race_finish_report.h"
+#include "cg_race_message.h"
 #include "cg_race_physics.h"
 #include "cg_race_presentation.h"
 #include "cg_race_replay.h"
@@ -37,7 +38,6 @@
 #define RACE_HUD_PIP_HEIGHT 5.f
 #define RACE_HUD_PIP_GAP 5.f
 #define RACE_HUD_PIP_CAPTION_GAP 9.f
-#define RACE_HUD_CLOCK_CAPTION_GAP 6.f
 
 // Speed, per §5.
 #define RACE_HUD_SPEED_OFFSET 80.f
@@ -85,19 +85,21 @@ bool Cg_RaceHud_ParseMessage(const int32_t command) {
 
   const int32_t number = cgi.ReadByte();
   const char *label = cgi.ReadString();
-  char copied_label[sizeof(cg_race_hud.analytical.label)];
-  if (!label || q_strlen(label) >= sizeof(copied_label)) {
-    Cg_Warn("Rejected malformed Race split event\n");
-    Cg_RaceHud_Clear();
-    return true;
+  size_t label_length;
+  if (!Cg_RaceMessage_StringComplete(label, &label_length)) {
+    Cg_Error("Unterminated Race split label\n");
   }
-  q_strlcpy(copied_label, label, sizeof(copied_label));
+  char copied_label[sizeof(cg_race_hud.analytical.label)];
+  const bool label_valid = label && label_length < sizeof(copied_label);
+  if (label_valid) {
+    q_strlcpy(copied_label, label, sizeof(copied_label));
+  }
   const int32_t cumulative = cgi.ReadLong();
   const int32_t segment = cgi.ReadLong();
   const int32_t flags = cgi.ReadByte();
   const int32_t pb_delta = cgi.ReadLong();
   const int32_t wr_delta = cgi.ReadLong();
-  if (number < 1 || number > RACE_MAX_CHECKPOINTS ||
+  if (!label_valid || number < 1 || number > RACE_MAX_CHECKPOINTS ||
       cumulative <= 0 || segment <= 0 || segment > cumulative ||
       (flags & ~3)) {
     Cg_Warn("Rejected malformed Race split event\n");
@@ -313,8 +315,8 @@ static void Cg_RaceHud_FormatRecord(const uint32_t elapsed,
   Cg_Race_FormatElapsed(elapsed, output, size);
 }
 
-static void Cg_RaceHud_FormatDelta(const int32_t delta, char *output,
-                                   const size_t size) {
+void Cg_RaceHud_FormatDelta(const int32_t delta, char *output,
+                            const size_t size) {
   const int64_t magnitude = delta < 0 ? -(int64_t) delta : delta;
   q_snprintf(output, size, "%c%lld.%03lld",
              delta < 0 ? '-' : '+',
@@ -342,10 +344,10 @@ static uint16_t Cg_RaceHud_CheckpointsReached(const player_state_t *ps,
  */
 static void Cg_RaceHud_RouteLine(const player_state_t *ps, char *output,
                                  const size_t size) {
-  const char *map_name = cgi.ConfigString(CS_MESSAGE);
-  if (!map_name || !*map_name) {
-    map_name = "unknown";
-  }
+  char map_title[MAX_STRING_CHARS];
+  Cg_RaceHud_ResolveEscapes(cgi.ConfigString(CS_MESSAGE), map_title,
+                            sizeof(map_title), false);
+  const char *map_name = *map_title ? map_title : "unknown";
 
   const race_physics_config_t *physics = Race_Physics_Current();
   const race_physics_preset_descriptor_t *preset =
@@ -846,12 +848,16 @@ static void Cg_RaceHud_DrawElements(const player_state_t *ps,
       Cg_RaceHud_DrawSpeed(ps);
     }
 
-    const uint16_t total = Cg_RaceHud_CheckpointTotal();
-    if (total) {
-      Cg_RaceHud_DrawCheckpointRibbon(total);
-      Cg_RaceHud_DrawPips(ps, total);
+    // The finish bar is full-width and draws its own clock, so the bottom
+    // cluster stands down for its duration rather than showing through it.
+    if (!Cg_RaceFinishReport_Active(ps)) {
+      const uint16_t total = Cg_RaceHud_CheckpointTotal();
+      if (total) {
+        Cg_RaceHud_DrawCheckpointRibbon(total);
+        Cg_RaceHud_DrawPips(ps, total);
+      }
+      Cg_RaceHud_DrawClock();
     }
-    Cg_RaceHud_DrawClock();
     Cg_InputViewer_Draw(ps);
   }
 
@@ -861,6 +867,44 @@ static void Cg_RaceHud_DrawElements(const player_state_t *ps,
   Cg_RaceFinishReport_Draw(ps);
   Cg_RaceReplay_DrawHud(ps);
   cgi.BindFont(NULL, NULL, NULL);
+}
+
+void Cg_RaceHud_ResolveEscapes(const char *input, char *output,
+                               const size_t size, const bool multiline) {
+
+  if (output == NULL || size == 0) {
+    return;
+  }
+
+  const char separator = multiline ? '\n' : ' ';
+  size_t written = 0;
+
+  for (const char *c = input ? input : ""; *c && written + 1 < size; c++) {
+
+    if (c[0] == '\\' && c[1] == 'n') {
+
+      // A run of escapes is one break: mappers write a blank line between a
+      // title and its byline, and a second empty line reads as a gap the
+      // surface did not ask for.
+      while (c[0] == '\\' && c[1] == 'n') {
+        c += 2;
+      }
+      c--;
+
+      // Nothing printed yet means the title opened with a break; nothing to
+      // separate, so it is dropped rather than indenting the first line.
+      if (written == 0 || *(c + 1) == '\0') {
+        continue;
+      }
+
+      output[written++] = separator;
+      continue;
+    }
+
+    output[written++] = *c;
+  }
+
+  output[written] = '\0';
 }
 
 void Cg_RaceHud_Init(void) {

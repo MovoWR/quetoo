@@ -79,6 +79,7 @@
     <ClCompile Include="..\src\tests\check_race_persistence_native.c" />
     <ClCompile Include="..\src\cgame\race\cg_module.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_admin_command.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_client_file.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_double_jump.c" />
     <ClCompile Include="..\src\cgame\race\cg_score_model.c" />
     <ClCompile Include="..\src\cgame\race\cg_team_mode.c" />

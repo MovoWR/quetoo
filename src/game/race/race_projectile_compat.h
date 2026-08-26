@@ -1,8 +1,8 @@
 #pragma once
 
 /*
- * Race-local projectile observation seam used by QRPL recording. This is kept
- * out of the stock v1.0.79 GAME headers so the host API remains untouched.
+ * Race-local projectile observation seam used by QRPL recording. This remains
+ * outside the public GAME headers so the current module ABI stays unchanged.
  */
 typedef enum {
   G_PROJECTILE_ROCKET,

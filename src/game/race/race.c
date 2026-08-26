@@ -296,10 +296,14 @@ static void Race_AnnouncePublication(
 }
 
 static void Race_SendFinishReport(g_client_t *cl, const uint32_t previous_pb,
-                                  const uint32_t world_record) {
+                                  const uint32_t world_record,
+                                  const bool publication_committed,
+                                  const bool new_world_record) {
   race_finish_report_t report = {
     .mode = cl->race_run.mode,
     .invalid_flags = (uint8_t) cl->race_run.invalid_flags,
+    .publication_committed = publication_committed,
+    .new_world_record = new_world_record,
     .elapsed_time = cl->race_run.elapsed_time,
     .previous_pb = previous_pb,
     .world_record = world_record,
@@ -455,6 +459,8 @@ bool Race_Finish(g_client_t *cl) {
   const bool valid = Race_Run_IsValid(&cl->race_run);
   uint32_t previous_pb = 0u;
   uint32_t world_record = 0u;
+  bool publication_committed = false;
+  bool new_world_record = false;
   bool milestone_cue = false;
   Race_MapStateService_ClientTimes(cl, &previous_pb, &world_record);
 
@@ -470,6 +476,8 @@ bool Race_Finish(g_client_t *cl) {
     uint64_t replay_id;
     if (Race_ReplayService_Finish(cl, &evaluation, &replay_id)) {
       Race_AnnouncePublication(cl, &evaluation, replay_id);
+      publication_committed = true;
+      new_world_record = evaluation.world_record;
       milestone_cue = evaluation.world_record || evaluation.first_completion;
       Race_MapStateService_ClientTimes(cl, NULL, &world_record);
     }
@@ -498,7 +506,8 @@ bool Race_Finish(g_client_t *cl) {
                    "^1Invalid finish:^7 this run was not submitted as a record.\n");
   }
 
-  Race_SendFinishReport(cl, previous_pb, world_record);
+  Race_SendFinishReport(cl, previous_pb, world_record,
+                        publication_committed, new_world_record);
 
   if (!milestone_cue && race_finish_sound &&
       Race_SettingsService_FinishCueEnabled()) {

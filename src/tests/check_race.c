@@ -43,6 +43,8 @@
 #include "race_admin_store.h"
 #include "race_connection_address.h"
 #include "race_finish_report.h"
+#include "cg_race_finish_report_math.h"
+#include "cg_race_message.h"
 #include "race_logic.h"
 #include "race_leaderboard.h"
 #include "race_leaderboard_wire.h"
@@ -62,6 +64,7 @@
 #include "race_settings.h"
 #include "race_settings_store.h"
 #include "race_vote.h"
+#include "race_vote_admission.h"
 #include "race_vote_menu.h"
 #include "miniz.h"
 #include "race_wire.h"
@@ -586,6 +589,181 @@ START_TEST(_Race_VoteEligibilityMathAndCooldown) {
   ck_assert(Race_Vote_TimeReached(10u, UINT32_MAX - 5u));
   ck_assert_uint_eq(Race_Vote_TimeRemaining(1000u, 2000u), 1000u);
   ck_assert_uint_eq(Race_Vote_TimeRemaining(2000u, 2000u), 0u);
+} END_TEST
+
+static const uint8_t *race_test_message_data;
+static size_t race_test_message_size;
+static size_t race_test_message_read;
+
+static int32_t Race_TestMessageReadChar(void) {
+  const int32_t value = race_test_message_read < race_test_message_size
+    ? race_test_message_data[race_test_message_read]
+    : -1;
+  race_test_message_read++;
+  return value;
+}
+
+static const char *Race_TestMessageReadString(void) {
+  static char text[MAX_STRING_CHARS];
+  size_t length = 0u;
+  do {
+    const int32_t value = Race_TestMessageReadChar();
+    if (value <= 0) {
+      break;
+    }
+    text[length++] = (char) value;
+  } while (length < sizeof(text) - 1u);
+  text[length] = '\0';
+  return text;
+}
+
+static void Race_TestMessageReadData(void *data, const size_t length) {
+  uint8_t *output = data;
+  for (size_t i = 0u; i < length; i++) {
+    const int32_t value = Race_TestMessageReadChar();
+    output[i] = value < 0 ? UINT8_MAX : (uint8_t) value;
+  }
+}
+
+START_TEST(_Race_MessageReadersDrainOrFailClosed) {
+  uint8_t frame[MAX_STRING_CHARS + 2u];
+  for (size_t length = 0u; length < MAX_STRING_CHARS - 1u; length++) {
+    memset(frame, 'x', length);
+    frame[length] = '\0';
+    frame[length + 1u] = 0x4du;
+    race_test_message_data = frame;
+    race_test_message_size = length + 2u;
+    race_test_message_read = 0u;
+
+    const char *text = Race_TestMessageReadString();
+    size_t decoded_length;
+    ck_assert(Cg_RaceMessage_StringComplete(text, &decoded_length));
+    ck_assert_uint_eq(decoded_length, length);
+    ck_assert_uint_eq(race_test_message_read, length + 1u);
+    ck_assert_uint_eq(frame[race_test_message_read], 0x4du);
+  }
+
+  memset(frame, 'x', MAX_STRING_CHARS - 1u);
+  frame[MAX_STRING_CHARS - 1u] = 0x4du;
+  frame[MAX_STRING_CHARS] = '\0';
+  race_test_message_data = frame;
+  race_test_message_size = MAX_STRING_CHARS + 1u;
+  race_test_message_read = 0u;
+  const char *unterminated = Race_TestMessageReadString();
+  size_t unterminated_length;
+  ck_assert(!Cg_RaceMessage_StringComplete(
+    unterminated, &unterminated_length));
+  ck_assert_uint_eq(unterminated_length, MAX_STRING_CHARS - 1u);
+  ck_assert_uint_eq(race_test_message_read, MAX_STRING_CHARS - 1u);
+  ck_assert_uint_eq(frame[race_test_message_read], 0x4du);
+
+  for (size_t length = 1u; length <= 512u; length++) {
+    memset(frame, 0xa5, length);
+    frame[length] = 0x6eu;
+    race_test_message_data = frame;
+    race_test_message_size = length + 1u;
+    race_test_message_read = 0u;
+    ck_assert(Cg_RaceMessage_Drain(Race_TestMessageReadData, length));
+    ck_assert_uint_eq(race_test_message_read, length);
+    ck_assert_uint_eq(frame[race_test_message_read], 0x6eu);
+  }
+
+  race_test_message_data = frame;
+  race_test_message_size = 17u;
+  race_test_message_read = 0u;
+  ck_assert(Cg_RaceMessage_Drain(Race_TestMessageReadData, 512u));
+  ck_assert_uint_gt(race_test_message_read, race_test_message_size);
+  ck_assert(!Cg_RaceMessage_Drain(NULL, 32u));
+} END_TEST
+
+START_TEST(_Race_VoteAdmissionSurvivesReconnect) {
+  Race_VoteAdmission_Reset();
+
+  race_vote_admission_identity_t identity = {
+    .profile_uid = RACE_TEST_UID_A,
+    .address = "198.51.100.10"
+  };
+  uint32_t remaining = UINT32_MAX;
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &identity, 1000u, 2u, &remaining),
+                   RACE_VOTE_ADMISSION_AVAILABLE);
+  ck_assert_uint_eq(remaining, 0u);
+  ck_assert(Race_VoteAdmission_Record(&identity, 1000u, 2000u, 2u));
+
+  const race_vote_admission_identity_t reconnected = {
+    .profile_uid = RACE_TEST_UID_A,
+    .address = "198.51.100.10"
+  };
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &reconnected, 1500u, 2u, &remaining),
+                   RACE_VOTE_ADMISSION_COOLDOWN);
+  ck_assert_uint_eq(remaining, 500u);
+
+  const race_vote_admission_identity_t changed_address = {
+    .profile_uid = RACE_TEST_UID_A,
+    .address = "203.0.113.20"
+  };
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &changed_address, 1500u, 2u, &remaining),
+                   RACE_VOTE_ADMISSION_COOLDOWN);
+  ck_assert_uint_eq(remaining, 500u);
+
+  const race_vote_admission_identity_t missing_profile = {
+    .address = "198.51.100.10"
+  };
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &missing_profile, 1500u, 2u, &remaining),
+                   RACE_VOTE_ADMISSION_COOLDOWN);
+  ck_assert_uint_eq(remaining, 500u);
+
+  ck_assert(Race_VoteAdmission_Record(&reconnected, 2000u, 3000u, 2u));
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &changed_address, 3000u, 2u, &remaining),
+                   RACE_VOTE_ADMISSION_LIMIT);
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &missing_profile, 3000u, 2u, &remaining),
+                   RACE_VOTE_ADMISSION_LIMIT);
+
+  const race_vote_admission_identity_t changed_profile = {
+    .profile_uid = RACE_TEST_UID_B,
+    .address = "198.51.100.10"
+  };
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &changed_profile, 3000u, 2u, &remaining),
+                   RACE_VOTE_ADMISSION_LIMIT);
+
+  Race_VoteAdmission_Reset();
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &reconnected, 3000u, 2u, &remaining),
+                   RACE_VOTE_ADMISSION_AVAILABLE);
+
+  char addresses[RACE_VOTE_ADMISSION_ENTRY_COUNT]
+                [RACE_CONNECTION_ADDRESS_SIZE];
+  for (size_t i = 0u; i < RACE_VOTE_ADMISSION_ENTRY_COUNT; i++) {
+    snprintf(addresses[i], sizeof(addresses[i]), "198.51.100.%zu", i);
+    identity = (race_vote_admission_identity_t) {
+      .address = addresses[i]
+    };
+    ck_assert_int_eq(Race_VoteAdmission_Check(
+                       &identity, 4000u, UINT8_MAX, NULL),
+                     RACE_VOTE_ADMISSION_AVAILABLE);
+    ck_assert(Race_VoteAdmission_Record(
+      &identity, 4000u, 0u, UINT8_MAX));
+  }
+  identity = (race_vote_admission_identity_t) {
+    .address = "203.0.113.200"
+  };
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &identity, 4000u, UINT8_MAX, NULL),
+                   RACE_VOTE_ADMISSION_CAPACITY);
+
+  identity = (race_vote_admission_identity_t) {
+    .address = "127.0.0.1:27910"
+  };
+  ck_assert_int_eq(Race_VoteAdmission_Check(
+                     &identity, 4000u, UINT8_MAX, NULL),
+                   RACE_VOTE_ADMISSION_INVALID);
+  Race_VoteAdmission_Reset();
 } END_TEST
 
 START_TEST(_Race_VoteCreationAndBallots) {
@@ -1123,13 +1301,15 @@ START_TEST(_Race_RunMetadata) {
   ck_assert_float_eq_tol(Race_Run_AverageSpeed(&run), 0.f, 0.001f);
 } END_TEST
 
-START_TEST(_Race_FinishReportWireV1) {
+START_TEST(_Race_FinishReportWireV2) {
   race_finish_report_t report = {
     .mode = RACE_MODE_RACE,
-    .invalid_flags = RACE_INVALID_NOCLIP,
+    .invalid_flags = RACE_INVALID_NONE,
+    .publication_committed = true,
+    .new_world_record = true,
     .elapsed_time = 12345u,
     .previous_pb = 13000u,
-    .world_record = 11000u,
+    .world_record = 12345u,
     .checkpoint_count = 3u,
     .checkpoint_times = { 3000u, 6500u, 9000u },
     .start_speed = 320.f,
@@ -1143,11 +1323,14 @@ START_TEST(_Race_FinishReportWireV1) {
   ck_assert_uint_eq(length, 38u + 3u * sizeof(uint32_t));
   ck_assert_uint_eq(bytes[0], RACE_FINISH_REPORT_VERSION);
   ck_assert_uint_eq(bytes[1], RACE_MODE_RACE);
+  ck_assert_uint_eq(bytes[3], 3u);
 
   race_finish_report_t parsed;
   ck_assert(Race_FinishReport_Decode(bytes, length, &parsed));
   ck_assert_int_eq(parsed.mode, report.mode);
   ck_assert_uint_eq(parsed.invalid_flags, report.invalid_flags);
+  ck_assert(parsed.publication_committed);
+  ck_assert(parsed.new_world_record);
   ck_assert_uint_eq(parsed.elapsed_time, report.elapsed_time);
   ck_assert_uint_eq(parsed.previous_pb, report.previous_pb);
   ck_assert_uint_eq(parsed.world_record, report.world_record);
@@ -1165,6 +1348,9 @@ START_TEST(_Race_FinishReportWireV1) {
   bytes[0]++;
   ck_assert(!Race_FinishReport_Decode(bytes, length, &parsed));
   bytes[0] = RACE_FINISH_REPORT_VERSION;
+  bytes[3] = 0x80u;
+  ck_assert(!Race_FinishReport_Decode(bytes, length, &parsed));
+  bytes[3] = 3u;
   bytes[16] = RACE_MAX_CHECKPOINTS + 1u;
   bytes[17] = 0u;
   ck_assert(!Race_FinishReport_Decode(bytes, length, &parsed));
@@ -1177,9 +1363,106 @@ START_TEST(_Race_FinishReportWireV1) {
   ck_assert_uint_eq(Race_FinishReport_Encode(
     &report, bytes, sizeof(bytes)), 0u);
   report.elapsed_time = 12345u;
+  report.world_record = 11000u;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), 0u);
+  report.world_record = 12345u;
+  report.invalid_flags = RACE_INVALID_NOCLIP;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), 0u);
+  report.invalid_flags = RACE_INVALID_NONE;
+  report.previous_pb = report.elapsed_time;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), 0u);
+  report.previous_pb = report.elapsed_time - 1u;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), 0u);
+  report.previous_pb = 0u;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), length);
+  report.previous_pb = 13000u;
+  report.new_world_record = false;
+  report.world_record = 0u;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), 0u);
+  report.world_record = report.elapsed_time + 1u;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), 0u);
+  report.world_record = report.elapsed_time;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), length);
+  ck_assert_uint_eq(bytes[3], 2u);
+  ck_assert(Race_FinishReport_Decode(bytes, length, &parsed));
+  bytes[12]++;
+  ck_assert(!Race_FinishReport_Decode(bytes, length, &parsed));
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), length);
+  bytes[12] = bytes[13] = bytes[14] = bytes[15] = 0u;
+  ck_assert(!Race_FinishReport_Decode(bytes, length, &parsed));
+  report.world_record = report.elapsed_time - 1u;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), length);
+  report.new_world_record = true;
+  report.world_record = report.elapsed_time;
+  report.publication_committed = false;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), 0u);
+  report.new_world_record = false;
+  report.world_record = report.elapsed_time - 1u;
+  ck_assert_uint_eq(Race_FinishReport_Encode(
+    &report, bytes, sizeof(bytes)), length);
+  ck_assert_uint_eq(bytes[3], 0u);
+  ck_assert(Race_FinishReport_Decode(bytes, length, &parsed));
+  ck_assert(!parsed.publication_committed);
+  ck_assert(!parsed.new_world_record);
   report.mode = RACE_MODE_TOTAL;
   ck_assert_uint_eq(Race_FinishReport_Encode(
     &report, bytes, sizeof(bytes)), 0u);
+} END_TEST
+
+START_TEST(_Race_FinishReportHeadline) {
+  // A rejected run is never a record, however fast it was.
+  ck_assert_int_eq(Cg_RaceFinishReport_Classify(
+    RACE_MODE_RACE, RACE_INVALID_NOCLIP, true, true),
+    CG_RACE_FINISH_STATE_INVALID);
+
+  // A practice run is never submitted, so it is neither record nor best.
+  ck_assert_int_eq(Cg_RaceFinishReport_Classify(
+    RACE_MODE_PRACTICE, RACE_INVALID_NONE, true, true),
+    CG_RACE_FINISH_STATE_PRACTICE);
+
+  // GAME reports a committed record explicitly; equality is not enough.
+  ck_assert_int_eq(Cg_RaceFinishReport_Classify(
+    RACE_MODE_RACE, RACE_INVALID_NONE, true, true),
+    CG_RACE_FINISH_STATE_WORLD_RECORD);
+
+  // Another runner tying the standing record gets only their earned PB.
+  ck_assert_int_eq(Cg_RaceFinishReport_Classify(
+    RACE_MODE_RACE, RACE_INVALID_NONE, true, false),
+    CG_RACE_FINISH_STATE_PERSONAL_BEST);
+
+  // No durable publication -- whether there was no candidate or its commit
+  // failed -- can produce a PB or WR headline.
+  ck_assert_int_eq(Cg_RaceFinishReport_Classify(
+    RACE_MODE_RACE, RACE_INVALID_NONE, false, false),
+    CG_RACE_FINISH_STATE_COMPLETE);
+
+  ck_assert_str_eq(Cg_RaceFinishReport_Headline(
+    CG_RACE_FINISH_STATE_WORLD_RECORD), "World record");
+  ck_assert_str_eq(Cg_RaceFinishReport_Headline(
+    CG_RACE_FINISH_STATE_COMPLETE), "Run complete");
+
+  // The record chip compares only when there is something else to compare to.
+  ck_assert(Cg_RaceFinishReport_ComparesToRecord(
+    CG_RACE_FINISH_STATE_COMPLETE, 16802u));
+  ck_assert(!Cg_RaceFinishReport_ComparesToRecord(
+    CG_RACE_FINISH_STATE_WORLD_RECORD, 16802u));
+  ck_assert(!Cg_RaceFinishReport_ComparesToRecord(
+    CG_RACE_FINISH_STATE_PERSONAL_BEST, 0u));
+
+  ck_assert(Cg_RaceFinishReport_Ahead(-1));
+  ck_assert(Cg_RaceFinishReport_Ahead(0));
+  ck_assert(!Cg_RaceFinishReport_Ahead(1));
 } END_TEST
 
 START_TEST(_Race_ResetAndRestart) {
@@ -2101,6 +2384,10 @@ START_TEST(_Race_LeaderboardPbWrAndIdentity) {
   ck_assert_uint_eq(count, 2u);
   ck_assert_ptr_nonnull(Race_Leaderboard_Find(records, count, RACE_TEST_UID_A));
   ck_assert_ptr_nonnull(Race_Leaderboard_Find(records, count, RACE_TEST_UID_B));
+  ck_assert_ptr_nonnull(
+    Race_Leaderboard_FindSorted(records, count, RACE_TEST_UID_A));
+  ck_assert_ptr_null(
+    Race_Leaderboard_FindSorted(records, count, "not-a-profile-uid"));
 
   ck_assert(!Race_Leaderboard_RecordInit(&same_name, NULL, "Unregistered",
                                          1000u, NULL, 0));
@@ -2162,6 +2449,7 @@ START_TEST(_Race_LeaderboardTopBoundAndUpdate) {
 
 START_TEST(_Race_MapIdentityAndPaths) {
   ck_assert(Race_MapState_RulesetValid(RACE_PHYSICS_PRESET_Q2_V1_KEY));
+  ck_assert(Race_MapState_RulesetValid(RACE_PHYSICS_PRESET_DP2_V1_KEY));
   ck_assert(Race_MapState_RulesetValid(
     RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY));
   ck_assert(Race_MapState_RulesetValid(
@@ -2196,6 +2484,19 @@ START_TEST(_Race_MapIdentityAndPaths) {
                    RACE_MAP_STATE_ROOT_DIRECTORY "/q2-v1/65646765.candidate");
   ck_assert_ptr_null(strstr(committed, ".."));
   ck_assert_ptr_null(strchr(committed, '\\'));
+
+  char dp2_committed[256], dp2_candidate[256];
+  ck_assert(Race_MapState_Paths(RACE_PHYSICS_PRESET_DP2_V1_KEY,
+                                 "maps/EDGE.bsp",
+                                 dp2_committed, sizeof(dp2_committed),
+                                 dp2_candidate, sizeof(dp2_candidate)));
+  ck_assert_str_eq(dp2_committed,
+                   RACE_MAP_STATE_ROOT_DIRECTORY "/dp2-v1/65646765.state");
+  ck_assert_str_eq(dp2_candidate,
+                   RACE_MAP_STATE_ROOT_DIRECTORY "/dp2-v1/65646765.candidate");
+  ck_assert_str_ne(dp2_committed, committed);
+  ck_assert_str_ne(dp2_candidate, candidate);
+
   ck_assert(!Race_MapState_Paths("../q2-v1", "edge",
                                   committed, sizeof(committed),
                                   candidate, sizeof(candidate)));
@@ -2733,6 +3034,17 @@ START_TEST(_Race_ReplayFormatRoundTripAndIdentity) {
   ck_assert_ptr_nonnull(strstr(committed, "replay-"));
   ck_assert_ptr_nonnull(strstr(committed, ".ghost"));
   ck_assert_ptr_nonnull(strstr(candidate, ".candidate"));
+
+  char dp2_committed[256], dp2_candidate[256];
+  ck_assert(Race_Replay_Paths(RACE_PHYSICS_PRESET_DP2_V1_KEY,
+                               "maps/EDGE.bsp", replay_id,
+                               dp2_committed, sizeof(dp2_committed),
+                               dp2_candidate, sizeof(dp2_candidate)));
+  ck_assert_ptr_nonnull(strstr(dp2_committed, "/dp2-v1/"));
+  ck_assert_ptr_nonnull(strstr(dp2_committed, "/65646765/"));
+  ck_assert_ptr_nonnull(strstr(dp2_committed, id));
+  ck_assert_str_ne(dp2_committed, committed);
+  ck_assert_str_ne(dp2_candidate, candidate);
 } END_TEST
 
 START_TEST(_Race_ReplayFormatRejectsCorruptionAndBounds) {
@@ -2892,46 +3204,70 @@ START_TEST(_Race_ReplayProjectileFormatAndLifecycle) {
 } END_TEST
 
 START_TEST(_Race_ReplayRecordingCadenceAndLimits) {
+  race_replay_recording_t concurrent[MAX_CLIENTS] = { 0 };
+  size_t concurrent_bytes = 0u;
+  for (size_t i = 0u; i < lengthof(concurrent); i++) {
+    ck_assert(Race_ReplayRecording_Start(
+      concurrent + i, "edge", RACE_TEST_UID_A, "Runner", 42, 0u, 1000u,
+      RACE_REPLAY_RECORDING_MEMORY_BYTES - concurrent_bytes));
+    concurrent_bytes += Race_ReplayRecording_AllocationBytes(concurrent + i);
+  }
+  ck_assert(concurrent_bytes <= RACE_REPLAY_RECORDING_MEMORY_BYTES);
+  for (size_t i = 0u; i < lengthof(concurrent); i++) {
+    Race_ReplayRecording_Destroy(concurrent + i);
+  }
+
   race_replay_recording_t recording = { 0 };
   const uint32_t start = UINT32_MAX - 10u;
   ck_assert(Race_ReplayRecording_Start(&recording, "edge", RACE_TEST_UID_A,
-                                       "Runner", 42, 0u, start));
+                                       "Runner", 42, 0u, start,
+                                       RACE_REPLAY_RECORDING_MEMORY_BYTES));
   race_replay_sample_t sample = Race_TestReplaySample(0u, 1.f);
-  ck_assert(Race_ReplayRecording_Capture(&recording, start, &sample));
+  ck_assert(Race_ReplayRecording_Capture(
+    &recording, start, &sample, RACE_REPLAY_RECORDING_MEMORY_BYTES));
   sample = Race_TestReplaySample(0u, 2.f);
-  ck_assert(Race_ReplayRecording_Capture(&recording, start, &sample));
+  ck_assert(Race_ReplayRecording_Capture(
+    &recording, start, &sample, RACE_REPLAY_RECORDING_MEMORY_BYTES));
   ck_assert_uint_eq(recording.replay.sample_count, 1u);
   ck_assert_float_eq(recording.replay.samples[0].pm_state.origin.x, 2.f);
   sample = Race_TestReplaySample(0u, 3.f);
-  ck_assert(Race_ReplayRecording_Capture(&recording, start + 25u, &sample));
+  ck_assert(Race_ReplayRecording_Capture(
+    &recording, start + 25u, &sample,
+    RACE_REPLAY_RECORDING_MEMORY_BYTES));
   sample = Race_TestReplaySample(0u, 4.f);
   ck_assert(Race_ReplayRecording_Finish(&recording, start + 50u, 50u,
-                                        &sample));
+                                        &sample,
+                                        RACE_REPLAY_RECORDING_MEMORY_BYTES));
   ck_assert_uint_eq(recording.replay.sample_count, 3u);
   ck_assert_uint_eq(recording.replay.samples[2].time_ms, 50u);
   Race_ReplayRecording_Destroy(&recording);
 
   ck_assert(Race_ReplayRecording_Start(&recording, "edge", RACE_TEST_UID_A,
-                                       "Runner", 42, 0u, 1000u));
+                                       "Runner", 42, 0u, 1000u,
+                                       RACE_REPLAY_RECORDING_MEMORY_BYTES));
   for (size_t i = 0; i < RACE_REPLAY_MAX_SAMPLES; i++) {
     sample = Race_TestReplaySample(0u, (float) i);
     ck_assert(Race_ReplayRecording_Capture(
-      &recording, 1000u + (uint32_t) i * RACE_REPLAY_TICK_MSEC, &sample));
+      &recording, 1000u + (uint32_t) i * RACE_REPLAY_TICK_MSEC, &sample,
+      RACE_REPLAY_RECORDING_MEMORY_BYTES));
   }
   sample = Race_TestReplaySample(0u, 999.f);
   ck_assert(Race_ReplayRecording_Finish(
     &recording, 1000u + RACE_REPLAY_MAX_TIME_MS,
-    RACE_REPLAY_MAX_TIME_MS, &sample));
+    RACE_REPLAY_MAX_TIME_MS, &sample,
+    RACE_REPLAY_RECORDING_MEMORY_BYTES));
   ck_assert_uint_eq(recording.replay.sample_count, RACE_REPLAY_MAX_SAMPLES);
   ck_assert_uint_eq(recording.replay.samples[RACE_REPLAY_MAX_SAMPLES - 1u].time_ms,
                     RACE_REPLAY_MAX_TIME_MS);
   Race_ReplayRecording_Destroy(&recording);
 
   ck_assert(Race_ReplayRecording_Start(&recording, "edge", RACE_TEST_UID_A,
-                                       "Runner", 42, 0u, 0u));
+                                       "Runner", 42, 0u, 0u,
+                                       RACE_REPLAY_RECORDING_MEMORY_BYTES));
   sample = Race_TestReplaySample(0u, 1.f);
   sample.pm_state.velocity.y = NAN;
-  ck_assert(!Race_ReplayRecording_Capture(&recording, 0u, &sample));
+  ck_assert(!Race_ReplayRecording_Capture(
+    &recording, 0u, &sample, RACE_REPLAY_RECORDING_MEMORY_BYTES));
   ck_assert(recording.invalid);
   Race_ReplayRecording_Destroy(&recording);
 } END_TEST
@@ -3824,6 +4160,13 @@ START_TEST(_Race_MapStateMissingAndIdentityMismatch) {
   ck_assert_int_eq(Race_MapStateStore_Load(
                                             race_test_map_committed, "edge",
                                             RACE_PHYSICS_PRESET_Q2_V1_KEY,
+                                            records, RACE_TEST_LENGTHOF(records),
+                                            &state, &parse_result),
+                   RACE_MAP_STATE_STORE_IDENTITY_MISMATCH);
+  ck_assert(Race_MapState_Equals(&state, &unchanged));
+  ck_assert_int_eq(Race_MapStateStore_Load(
+                                            race_test_map_committed, "edge",
+                                            RACE_PHYSICS_PRESET_DP2_V1_KEY,
                                             records, RACE_TEST_LENGTHOF(records),
                                             &state, &parse_result),
                    RACE_MAP_STATE_STORE_IDENTITY_MISMATCH);
@@ -5767,7 +6110,8 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_StartPolicies);
   tcase_add_test(tcase, _Race_InvalidStartPreservesAttempt);
   tcase_add_test(tcase, _Race_RunMetadata);
-  tcase_add_test(tcase, _Race_FinishReportWireV1);
+  tcase_add_test(tcase, _Race_FinishReportWireV2);
+  tcase_add_test(tcase, _Race_FinishReportHeadline);
   tcase_add_test(tcase, _Race_ResetAndRestart);
   tcase_add_test(tcase, _Race_ZeroCheckpointCourse);
   tcase_add_test(tcase, _Race_ClientIndependence);
@@ -5791,6 +6135,8 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_PresentationSpeed);
   tcase_add_test(tcase, _Race_HudLayoutVisibilityAndClimb);
   tcase_add_test(tcase, _Race_VoteEligibilityMathAndCooldown);
+  tcase_add_test(tcase, _Race_MessageReadersDrainOrFailClosed);
+  tcase_add_test(tcase, _Race_VoteAdmissionSurvivesReconnect);
   tcase_add_test(tcase, _Race_VoteCreationAndBallots);
   tcase_add_test(tcase, _Race_VoteOutcomesAndConnections);
   tcase_add_test(tcase, _Race_VoteExecutionOnce);

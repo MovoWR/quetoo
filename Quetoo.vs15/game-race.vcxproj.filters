@@ -276,6 +276,9 @@
     <ClInclude Include="..\src\game\race\race_vote.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\game\race\race_vote_admission.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\game\race\race_vote_menu.h">
       <Filter>src\race</Filter>
     </ClInclude>
@@ -627,6 +630,9 @@
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_vote.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_vote_admission.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_vote_menu.c">

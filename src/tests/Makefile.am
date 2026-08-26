@@ -199,6 +199,7 @@ check_race_SOURCES = \
 	$(top_srcdir)/deps/argon2/src/core.c \
 	$(top_srcdir)/deps/argon2/src/encoding.c \
 	$(top_srcdir)/deps/argon2/src/ref.c \
+	$(top_srcdir)/src/cgame/race/cg_race_message.c \
 	$(top_srcdir)/src/cgame/race/cg_race_presentation.c \
 	$(top_srcdir)/src/game/race/race_admin.c \
 	$(top_srcdir)/src/game/race/race_admin_admission.c \
@@ -229,6 +230,7 @@ check_race_SOURCES = \
 	$(top_srcdir)/src/game/race/race_settings.c \
 	$(top_srcdir)/src/game/race/race_settings_store.c \
 	$(top_srcdir)/src/game/race/race_vote.c \
+	$(top_srcdir)/src/game/race/race_vote_admission.c \
 	$(top_srcdir)/src/game/race/race_vote_menu.c
 check_race_CFLAGS = \
 	-DARGON2_NO_THREADS \
@@ -252,6 +254,7 @@ check_race_native_SOURCES = \
 	check_race_persistence_native.c \
 	$(top_srcdir)/src/cgame/race/cg_module.c \
 	$(top_srcdir)/src/cgame/race/cg_race_admin_command.c \
+	$(top_srcdir)/src/cgame/race/cg_race_client_file.c \
 	$(top_srcdir)/src/cgame/race/cg_race_double_jump.c \
 	$(top_srcdir)/src/cgame/race/cg_score_model.c \
 	$(top_srcdir)/src/cgame/race/cg_team_mode.c \

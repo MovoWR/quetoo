@@ -203,9 +203,13 @@ static size_t Race_Leaderboard_LowerBound(const race_leaderboard_record_t *recor
   return low;
 }
 
-const race_leaderboard_record_t *Race_Leaderboard_Find(
-  const race_leaderboard_record_t *records, size_t count, const char *uid) {
-  if (!uid || !Race_Leaderboard_RecordsValid(records, count)) {
+const race_leaderboard_record_t *Race_Leaderboard_FindSorted(
+    const race_leaderboard_record_t *records, const size_t count,
+    const char *uid) {
+  char canonical[RACE_PROFILE_UID_SIZE];
+  if ((!records && count) || !uid ||
+      !Race_Profile_CanonicalizeUid(uid, canonical) ||
+      strcmp(uid, canonical)) {
     return NULL;
   }
 
@@ -213,6 +217,15 @@ const race_leaderboard_record_t *Race_Leaderboard_Find(
   return index < count && !strcmp(records[index].uid, uid)
     ? records + index
     : NULL;
+}
+
+const race_leaderboard_record_t *Race_Leaderboard_Find(
+  const race_leaderboard_record_t *records, size_t count, const char *uid) {
+  if (!uid || !Race_Leaderboard_RecordsValid(records, count)) {
+    return NULL;
+  }
+
+  return Race_Leaderboard_FindSorted(records, count, uid);
 }
 
 bool Race_Leaderboard_Evaluate(const race_leaderboard_record_t *records,

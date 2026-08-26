@@ -61,6 +61,8 @@ typedef struct {
 
 #if defined(__CG_LOCAL_H__)
 size_t Cg_LeaderboardSnapshot(cg_leaderboard_snapshot_entry_t *entries, size_t capacity);
+void Cg_ClearScores(void);
+void Cg_InvalidateClientScore(uint16_t client);
 void Cg_ParseScores(void);
 void Cg_DrawScores(const player_state_t *ps);
 int16_t Cg_LocalPing(void);

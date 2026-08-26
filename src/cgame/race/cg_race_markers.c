@@ -214,7 +214,7 @@ static void Cg_RaceMarker_Draw(const cg_race_marker_t *marker) {
 void Cg_RaceMarkers_Init(void) {
   memset(&cg_race_markers_state, 0, sizeof(cg_race_markers_state));
   cg_race_markers = cgi.AddCvar(
-    "cg_race_markers", "1", CVAR_ARCHIVE,
+    "cg_race_markers", "0", CVAR_ARCHIVE,
     "Draw Race course start, checkpoint, and finish markers.");
 }
 

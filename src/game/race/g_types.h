@@ -1275,15 +1275,13 @@ typedef struct {
   race_admin_challenge_t race_admin_challenge;
 
   /**
-   * @brief Race vote identity and anti-spam state for this exact connection.
+   * @brief Race vote identity for this exact connection.
    *
-   * The identifier is server-generated and is not derived from profile GUID,
-   * display name or address. All fields are cleared by the existing connection
-   * reset; cooldown and start count are also reset when a level is configured.
+   * The identifier protects active ballots from slot reuse. Durable vote-start
+   * admission is owned by the Race vote service and keyed independently by the
+   * authenticated profile and normalized connection address.
    */
   uint64_t race_vote_connection_id;
-  uint32_t race_vote_next_start_time;
-  uint8_t race_vote_starts;
 
   /**
    * @brief True if the player is a spectator.

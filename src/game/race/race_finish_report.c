@@ -13,6 +13,11 @@
 #include <string.h>
 
 #define RACE_FINISH_REPORT_HEADER_BYTES 38u
+#define RACE_FINISH_REPORT_FLAG_NEW_WORLD_RECORD (1u << 0u)
+#define RACE_FINISH_REPORT_FLAG_PUBLICATION_COMMITTED (1u << 1u)
+#define RACE_FINISH_REPORT_FLAGS_MASK \
+  (RACE_FINISH_REPORT_FLAG_NEW_WORLD_RECORD | \
+   RACE_FINISH_REPORT_FLAG_PUBLICATION_COMMITTED)
 
 static void Race_FinishReport_Write16(uint8_t *output, const uint16_t value) {
   output[0] = (uint8_t) value;
@@ -63,6 +68,19 @@ static bool Race_FinishReport_Valid(const race_finish_report_t *report) {
       report->average_speed < 0.f) {
     return false;
   }
+  if (report->publication_committed &&
+      (report->mode != RACE_MODE_RACE || report->invalid_flags ||
+       !report->world_record ||
+       (report->previous_pb && report->elapsed_time >= report->previous_pb) ||
+       (!report->new_world_record &&
+        report->elapsed_time < report->world_record))) {
+    return false;
+  }
+  if (report->new_world_record &&
+      (!report->publication_committed ||
+       report->elapsed_time != report->world_record)) {
+    return false;
+  }
   uint32_t previous = 0u;
   for (size_t i = 0; i < report->checkpoint_count; i++) {
     const uint32_t split = report->checkpoint_times[i];
@@ -89,7 +107,10 @@ size_t Race_FinishReport_Encode(const race_finish_report_t *report,
   bytes[0] = RACE_FINISH_REPORT_VERSION;
   bytes[1] = (uint8_t) report->mode;
   bytes[2] = report->invalid_flags;
-  bytes[3] = 0u;
+  bytes[3] = (report->new_world_record
+                ? RACE_FINISH_REPORT_FLAG_NEW_WORLD_RECORD : 0u) |
+             (report->publication_committed
+                ? RACE_FINISH_REPORT_FLAG_PUBLICATION_COMMITTED : 0u);
   Race_FinishReport_Write32(bytes + 4u, report->elapsed_time);
   Race_FinishReport_Write32(bytes + 8u, report->previous_pb);
   Race_FinishReport_Write32(bytes + 12u, report->world_record);
@@ -113,7 +134,8 @@ bool Race_FinishReport_Decode(const void *input, const size_t length,
     return false;
   }
   const uint8_t *bytes = input;
-  if (bytes[0] != RACE_FINISH_REPORT_VERSION || bytes[3] != 0u ||
+  if (bytes[0] != RACE_FINISH_REPORT_VERSION ||
+      (bytes[3] & ~RACE_FINISH_REPORT_FLAGS_MASK) ||
       Race_FinishReport_Read32(bytes + 34u) != length) {
     return false;
   }
@@ -121,6 +143,10 @@ bool Race_FinishReport_Decode(const void *input, const size_t length,
   race_finish_report_t parsed = {
     .mode = (race_mode_t) bytes[1],
     .invalid_flags = bytes[2],
+    .publication_committed =
+      (bytes[3] & RACE_FINISH_REPORT_FLAG_PUBLICATION_COMMITTED) != 0u,
+    .new_world_record =
+      (bytes[3] & RACE_FINISH_REPORT_FLAG_NEW_WORLD_RECORD) != 0u,
     .elapsed_time = Race_FinishReport_Read32(bytes + 4u),
     .previous_pb = Race_FinishReport_Read32(bytes + 8u),
     .world_record = Race_FinishReport_Read32(bytes + 12u),

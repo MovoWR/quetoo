@@ -121,6 +121,7 @@ typedef struct {
 typedef struct {
   cg_score_model_t model;
   cg_ping_history_t ping_history[MAX_CLIENTS];
+  bool score_fresh[MAX_CLIENTS];
 } cg_score_state_t;
 
 /**
@@ -146,6 +147,26 @@ static cg_score_state_t cg_score_state;
 
 _Static_assert(RACE_LEADERBOARD_CONFIG_MAX_BYTES < MAX_STRING_CHARS,
                "Race leaderboard configstring exceeds MAX_STRING_CHARS");
+
+/**
+ * @brief Clears all score-derived presentation state between servers.
+ */
+void Cg_ClearScores(void) {
+  memset(&cg_score_state, 0, sizeof(cg_score_state));
+}
+
+/**
+ * @brief Invalidates score enrichment for one changed client-info slot.
+ */
+void Cg_InvalidateClientScore(const uint16_t client) {
+  if (client >= MAX_CLIENTS) {
+    return;
+  }
+
+  cg_score_state.score_fresh[client] = false;
+  memset(&cg_score_state.ping_history[client], 0,
+         sizeof(cg_score_state.ping_history[client]));
+}
 
 /**
  * @brief Rebuilds the cached Top-15 only when its configstring changes.
@@ -207,6 +228,8 @@ static void Cg_AddPingSample(cg_ping_history_t *history, const char *name, int16
 static void Cg_UpdatePingHistory(void) {
 
   bool present[MAX_CLIENTS] = { false };
+  memset(cg_score_state.score_fresh, 0,
+         sizeof(cg_score_state.score_fresh));
 
   for (size_t i = 0; i < cg_score_state.model.num_scores; i++) {
     const g_score_t *score = &cg_score_state.model.scores[i];
@@ -215,6 +238,7 @@ static void Cg_UpdatePingHistory(void) {
     }
 
     present[score->client] = true;
+    cg_score_state.score_fresh[score->client] = true;
     Cg_AddPingSample(&cg_score_state.ping_history[score->client],
                      Cg_ScoreName(score), score->ping);
   }
@@ -306,6 +330,9 @@ int16_t Cg_LocalPing(void) {
 
   if (cgi.client) {
     const uint16_t client = cgi.client->frame.ps.client;
+    if (client >= MAX_CLIENTS || !cg_score_state.score_fresh[client]) {
+      return -1;
+    }
     for (size_t i = 0; i < cg_score_state.model.num_scores; i++) {
       const g_score_t *score = &cg_score_state.model.scores[i];
       if (!(score->flags & SCORE_AGGREGATE) && score->client == client) {
@@ -317,27 +344,66 @@ int16_t Cg_LocalPing(void) {
   return -1;
 }
 
+static int32_t Cg_RosterCompare(const void *a, const void *b) {
+  const cg_roster_entry_t *ea = a;
+  const cg_roster_entry_t *eb = b;
+  if (ea->group != eb->group) {
+    return (int32_t) ea->group - (int32_t) eb->group;
+  }
+  return (int32_t) ea->client - (int32_t) eb->client;
+}
+
 /**
- * @brief Copies the latest server roster into presentation-neutral entries.
+ * @brief Copies connected client-info entries and enriches them with the latest
+ * complete score snapshot.
  */
 size_t Cg_RosterSnapshot(cg_roster_entry_t *entries, size_t capacity) {
 
+  if (!entries || !capacity) {
+    return 0;
+  }
+
+  cg_roster_entry_t roster[MAX_CLIENTS];
+  int16_t entryIndices[MAX_CLIENTS];
   size_t count = 0;
 
-  for (size_t i = 0; i < cg_score_state.model.num_scores && count < capacity; i++) {
-    const g_score_t *score = &cg_score_state.model.scores[i];
-    if (score->flags & SCORE_AGGREGATE || score->client >= MAX_CLIENTS) {
+  for (size_t i = 0; i < lengthof(entryIndices); i++) {
+    entryIndices[i] = -1;
+  }
+
+  for (uint16_t client = 0; client < MAX_CLIENTS; client++) {
+    const char *clientInfo = cgi.ConfigString(CS_CLIENTS + client);
+    if (!clientInfo || !*clientInfo) {
       continue;
     }
 
-    cg_roster_entry_t *entry = &entries[count++];
+    entryIndices[client] = (int16_t) count;
+    cg_roster_entry_t *entry = &roster[count++];
     memset(entry, 0, sizeof(*entry));
+    entry->client = client;
+    entry->ping = -1;
+    entry->group = CG_ROSTER_RACE_MODE;
+    entry->quality = CG_CONNECTION_UNAVAILABLE;
+    entry->spectator_target = -1;
+    q_strlcpy(entry->name, cg_state.clients[client].name,
+              sizeof(entry->name));
+  }
 
-    entry->client = score->client;
+  for (size_t i = 0; i < cg_score_state.model.num_scores; i++) {
+    const g_score_t *score = &cg_score_state.model.scores[i];
+    if (score->flags & SCORE_AGGREGATE || score->client >= MAX_CLIENTS ||
+        !cg_score_state.score_fresh[score->client]) {
+      continue;
+    }
+
+    const int16_t entryIndex = entryIndices[score->client];
+    if (entryIndex < 0) {
+      continue;
+    }
+
+    cg_roster_entry_t *entry = &roster[entryIndex];
     entry->ping = score->ping;
     entry->flags = score->flags;
-    entry->spectator_target = -1;
-    q_strlcpy(entry->name, Cg_ScoreName(score), sizeof(entry->name));
     Cg_SetConnectionStats(entry, &cg_score_state.ping_history[score->client]);
 
     if (score->flags & SCORE_SPECTATOR) {
@@ -352,6 +418,9 @@ size_t Cg_RosterSnapshot(cg_roster_entry_t *entries, size_t capacity) {
     }
   }
 
+  qsort(roster, count, sizeof(*roster), Cg_RosterCompare);
+  count = Minz(count, capacity);
+  memcpy(entries, roster, count * sizeof(*entries));
   return count;
 }
 
@@ -728,7 +797,11 @@ static int32_t Cg_ScoresDrawBoardHeader(const cg_scores_layout_t *layout) {
     q_strlcpy(map_name, "Unknown map", sizeof(map_name));
   }
   if (message && *message) {
-    q_strlcpy(map_name, message, sizeof(map_name));
+    char resolved[MAX_QPATH];
+    Cg_RaceHud_ResolveEscapes(message, resolved, sizeof(resolved), true);
+    if (*resolved) {
+      q_strlcpy(map_name, resolved, sizeof(map_name));
+    }
   }
 
   // The design bottom-aligns the stats with the map path, so the left block is
@@ -751,9 +824,33 @@ static int32_t Cg_ScoresDrawBoardHeader(const cg_scores_layout_t *layout) {
   y += eyebrow_h + Cg_RaceHud_Scale(SCORES_TITLE_GAP);
   Cg_ScoresBindFitted(RACE_FONT_TIMER, Cg_RaceHud_Scale(SCORES_TITLE_MAX_H),
                       &title_h);
-  char title[MAX_STRING_CHARS];
-  Cg_CopyFittedText(title, sizeof(title), map_name, Maxi(0, layout->board.w / 2));
-  Cg_RaceHud_DrawShadowedString(x, y, title, Cg_ScoresColor(SCORES_INK, 1.f));
+  // The title carries whatever line breaks the mapper wrote. The string drawer
+  // paints one line, so each is fitted and drawn in turn and `y` carries the
+  // extra height into the path and the bottom-aligned stats below.
+  const char *line = map_name;
+  while (line) {
+
+    const char *split = strchr(line, '\n');
+
+    char segment[MAX_QPATH];
+    if (split) {
+      const size_t length = Minz((size_t) (split - line), sizeof(segment) - 1u);
+      memcpy(segment, line, length);
+      segment[length] = '\0';
+    } else {
+      q_strlcpy(segment, line, sizeof(segment));
+    }
+
+    char title[MAX_STRING_CHARS];
+    Cg_CopyFittedText(title, sizeof(title), segment,
+                      Maxi(0, layout->board.w / 2));
+    Cg_RaceHud_DrawShadowedString(x, y, title, Cg_ScoresColor(SCORES_INK, 1.f));
+
+    line = split ? split + 1 : NULL;
+    if (line) {
+      y += title_h;
+    }
+  }
 
   y += title_h + Cg_RaceHud_Scale(SCORES_PATH_GAP);
   Cg_RaceHud_BindFont(RACE_FONT_BODY, &path_h);

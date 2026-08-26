@@ -120,6 +120,7 @@ game_la_SOURCES = \
 	race_trigger.c \
 	race_training_service.c \
 	race_vote.c \
+	race_vote_admission.c \
 	race_vote_menu.c \
 	race_vote_menu_service.c \
 	race_vote_service.c

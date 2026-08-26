@@ -189,6 +189,8 @@ cgame_la_SOURCES = \
 	cg_race_map_browser.c \
 	cg_race_finish_report.c \
 	cg_race_hud.c \
+	cg_race_client_file.c \
+	cg_race_message.c \
 	cg_race_markers.c \
 	cg_race_practice_markers.c \
 	cg_race_physics.c \

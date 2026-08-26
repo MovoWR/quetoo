@@ -231,6 +231,12 @@
     <ClInclude Include="..\src\cgame\race\cg_race_finish_report.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_finish_report_math.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_client_file.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_admin_command.h">
       <Filter>src\race</Filter>
     </ClInclude>
@@ -298,6 +304,9 @@
       <Filter>src\race\ui\settings</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_map_browser.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_message.h">
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_vote.h">
@@ -575,7 +584,13 @@
     <ClCompile Include="..\src\cgame\race\cg_race_finish_report.c">
       <Filter>src\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_client_file.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_admin_command.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_message.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_vote.c">

@@ -319,6 +319,7 @@ static void Cg_UpdateConfigString(int32_t i) {
 
   if (i >= CS_CLIENTS && i < CS_CLIENTS + MAX_CLIENTS) {
 
+    Cg_InvalidateClientScore((uint16_t) (i - CS_CLIENTS));
     cg_client_info_t *ci = &cg_state.clients[i - CS_CLIENTS];
     Cg_LoadClient(ci, s);
 
@@ -426,6 +427,7 @@ static void Cg_ClearState(void) {
 #if defined(G_HOOK)
   cg_hook_pull_speed_valid = false;
 #endif
+  Cg_ClearScores();
 
   Cg_ClearInput();
 

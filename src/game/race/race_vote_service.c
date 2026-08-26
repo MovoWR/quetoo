@@ -14,12 +14,15 @@
 #include "race_actions.h"
 #include "race_admin.h"
 #include "race_admin_service.h"
+#include "race_connection_address.h"
 #include "race_map_browser_service.h"
 #include "race_map_catalog.h"
 #include "race_modes.h"
 #include "race_physics.h"
+#include "race_profiles.h"
 #include "race_settings_service.h"
 #include "race_vote.h"
+#include "race_vote_admission.h"
 #include "race_vote_service.h"
 
 #define RACE_VOTE_KICK_REASON "Removed by successful Race vote"
@@ -27,10 +30,7 @@
 #define RACE_VOTE_EXECUTE_DELAY 2500u
 #define RACE_VOTE_SOLE_EXECUTE_DELAY 1500u
 #define RACE_VOTE_PHYSICS_CVAR "g_race_physics"
-#define RACE_VOTE_PHYSICS_KEYS \
-  RACE_PHYSICS_PRESET_QUETOO_COMMON_V1_KEY "|" \
-  RACE_PHYSICS_PRESET_Q2_V1_KEY "|" \
-  RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY
+#define RACE_VOTE_PHYSICS_KEYS_SIZE 256u
 
 static race_vote_state_t race_vote;
 static uint64_t race_vote_next_connection_id;
@@ -123,6 +123,27 @@ static const char *Race_VoteService_PhysicsDisplayName(const char *key) {
   return preset ? preset->short_name : key;
 }
 
+static const char *Race_VoteService_PhysicsKeys(void) {
+  static char keys[RACE_VOTE_PHYSICS_KEYS_SIZE];
+  if (*keys) {
+    return keys;
+  }
+
+  size_t count;
+  const race_physics_preset_descriptor_t *presets =
+    Race_Physics_Presets(&count);
+  for (size_t i = 0u; i < count; i++) {
+    if (!presets[i].available) {
+      continue;
+    }
+    if (*keys) {
+      q_strlcat(keys, "|", sizeof(keys));
+    }
+    q_strlcat(keys, presets[i].key, sizeof(keys));
+  }
+  return keys;
+}
+
 static const char *Race_VoteService_Subject(const race_vote_state_t *vote) {
   if (vote->type == RACE_VOTE_TYPE_MAP) {
     return vote->target.map;
@@ -182,9 +203,10 @@ static void Race_VoteService_PrintUsage(g_client_t *cl) {
                  "  race vote status\n"
                  "  race vote map <map>\n"
                  "  race vote kick <client-slot>\n"
-                 "  race vote physics <" RACE_VOTE_PHYSICS_KEYS ">\n"
+                 "  race vote physics <%s>\n"
                  "  race vote yes\n"
-                 "  race vote no\n");
+                 "  race vote no\n",
+                 Race_VoteService_PhysicsKeys());
 }
 
 static void Race_VoteService_PrintStatus(g_client_t *cl) {
@@ -378,6 +400,34 @@ static void Race_VoteService_Evaluate(void) {
   }
 }
 
+static bool Race_VoteService_AdmissionIdentity(
+  const g_client_t *cl, race_vote_admission_identity_t *identity,
+  char address[RACE_CONNECTION_ADDRESS_SIZE]) {
+  const char *source = cl
+    ? InfoString_Get(cl->persistent.user_info, "ip")
+    : NULL;
+  if (!identity || !Race_ConnectionAddressKey(source, address)) {
+    return false;
+  }
+  *identity = (race_vote_admission_identity_t) {
+    .profile_uid = Race_Profiles_AuthenticatedUid(cl),
+    .address = address
+  };
+  return true;
+}
+
+static race_vote_admission_result_t Race_VoteService_Admission(
+  const g_client_t *cl, uint32_t *cooldown_remaining) {
+  char address[RACE_CONNECTION_ADDRESS_SIZE];
+  race_vote_admission_identity_t identity;
+  if (!Race_VoteService_AdmissionIdentity(cl, &identity, address)) {
+    return RACE_VOTE_ADMISSION_INVALID;
+  }
+  return Race_VoteAdmission_Check(
+    &identity, g_level.time, (uint8_t) Race_SettingsService_MaxVotes(),
+    cooldown_remaining);
+}
+
 static bool Race_VoteService_CheckInitiator(g_client_t *cl) {
   if (g_level.intermission_time) {
     gi.ClientPrint(cl, PRINT_HIGH,
@@ -414,21 +464,23 @@ static bool Race_VoteService_CheckInitiator(g_client_t *cl) {
     return false;
   }
 
-  const race_vote_start_availability_t availability =
-    Race_Vote_StartAvailability(
-      g_level.time, cl->persistent.race_vote_next_start_time,
-      cl->persistent.race_vote_starts,
-      (uint8_t) Race_SettingsService_MaxVotes());
-  if (availability == RACE_VOTE_START_LIMIT) {
+  uint32_t cooldown_remaining;
+  const race_vote_admission_result_t admission =
+    Race_VoteService_Admission(cl, &cooldown_remaining);
+  if (admission == RACE_VOTE_ADMISSION_LIMIT) {
     gi.ClientPrint(cl, PRINT_HIGH,
                    "Race vote rejected: per-map start limit reached\n");
     return false;
   }
-  if (availability == RACE_VOTE_START_COOLDOWN) {
+  if (admission == RACE_VOTE_ADMISSION_COOLDOWN) {
     gi.ClientPrint(cl, PRINT_HIGH,
                    "Race vote rejected: start cooldown has %ums remaining\n",
-                   Race_Vote_TimeRemaining(
-                     g_level.time, cl->persistent.race_vote_next_start_time));
+                   cooldown_remaining);
+    return false;
+  }
+  if (admission != RACE_VOTE_ADMISSION_AVAILABLE) {
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "Race vote rejected: admission state is unavailable\n");
     return false;
   }
   return true;
@@ -456,9 +508,19 @@ static bool Race_VoteService_Begin(g_client_t *cl,
     return false;
   }
 
-  cl->persistent.race_vote_starts++;
-  cl->persistent.race_vote_next_start_time =
-    g_level.time + request->duration * 5u;
+  char address[RACE_CONNECTION_ADDRESS_SIZE];
+  race_vote_admission_identity_t admission_identity;
+  if (!Race_VoteService_AdmissionIdentity(
+        cl, &admission_identity, address) ||
+      !Race_VoteAdmission_Record(
+        &admission_identity, g_level.time,
+        g_level.time + request->duration * 5u,
+        (uint8_t) Race_SettingsService_MaxVotes())) {
+    Race_Vote_Complete(&race_vote, RACE_VOTE_OUTCOME_CANCELLED_ADMIN, NULL);
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "Race vote rejected: admission state is unavailable\n");
+    return false;
+  }
   q_strlcpy(race_vote_initiator_name, cl->persistent.net_name,
             sizeof(race_vote_initiator_name));
   if (request->type == RACE_VOTE_TYPE_KICK) {
@@ -589,9 +651,8 @@ static void Race_VoteService_StartPhysics(g_client_t *cl,
   race_vote_request_t request = { .type = RACE_VOTE_TYPE_PHYSICS };
   if (!Race_VoteService_PhysicsTarget(physics, request.target.physics)) {
     gi.ClientPrint(cl, PRINT_HIGH,
-                   "Unknown physics mode: %s. Use "
-                   RACE_VOTE_PHYSICS_KEYS ".\n",
-                   physics);
+                   "Unknown physics mode: %s. Use %s.\n",
+                   physics, Race_VoteService_PhysicsKeys());
     return;
   }
   const race_physics_preset_descriptor_t *current =
@@ -645,12 +706,14 @@ void Race_VoteService_Init(void) {
   race_vote_next_connection_id = 0u;
   race_vote_pending_execute = false;
   race_vote_execute_time = 0u;
+  Race_VoteAdmission_Reset();
   Race_VoteService_ClearPresentation();
 }
 
 void Race_VoteService_Shutdown(void) {
   memset(&race_vote, 0, sizeof(race_vote));
   race_vote_pending_execute = false;
+  Race_VoteAdmission_Reset();
   Race_VoteService_ClearPresentation();
 }
 
@@ -660,10 +723,9 @@ void Race_VoteService_ConfigureLevel(void) {
   memset(race_vote_activity_connections, 0,
          sizeof(race_vote_activity_connections));
   memset(race_vote_activity_times, 0, sizeof(race_vote_activity_times));
+  Race_VoteAdmission_Reset();
   Race_VoteService_ClearPresentation();
   G_ForEachClient(cl, {
-    cl->persistent.race_vote_next_start_time = 0u;
-    cl->persistent.race_vote_starts = 0u;
     Race_VoteService_NoteActivity(cl);
   });
 }
@@ -762,7 +824,8 @@ void Race_VoteService_ClientCommand(g_client_t *cl) {
   } else if (gi.Argc() == 4 && !strcmp(gi.Argv(2), "physics")) {
     Race_VoteService_StartPhysics(
       cl, gi.Argv(3),
-      "Usage: race vote physics <" RACE_VOTE_PHYSICS_KEYS ">");
+      va("Usage: race vote physics <%s>",
+         Race_VoteService_PhysicsKeys()));
   } else if (gi.Argc() == 3 && !strcmp(gi.Argv(2), "yes")) {
     Race_VoteService_Cast(cl, RACE_VOTE_BALLOT_YES);
   } else if (gi.Argc() == 3 && !strcmp(gi.Argv(2), "no")) {
@@ -811,7 +874,7 @@ bool Race_VoteService_LegacyCommand(g_client_t *cl, const char *cmd) {
     } else if (gi.Argc() >= 3 && !q_strcmp(gi.Argv(1), "physics")) {
       Race_VoteService_StartPhysics(
         cl, gi.Argv(2),
-        "Usage: vote physics <" RACE_VOTE_PHYSICS_KEYS ">");
+        va("Usage: vote physics <%s>", Race_VoteService_PhysicsKeys()));
     } else {
       gi.ClientPrint(cl, PRINT_HIGH,
                      "Usage: vote <map|kick|physics|yes|no> [...]\n");

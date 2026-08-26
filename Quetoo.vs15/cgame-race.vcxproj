@@ -43,11 +43,13 @@
     <ClInclude Include="..\src\game\race\race_wire.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_hud.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_admin_command.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_client_file.h" />
     <ClInclude Include="..\src\cgame\race\cg_input_viewer.h" />
     <ClInclude Include="..\src\cgame\race\cg_input_viewer_math.h" />
     <ClInclude Include="..\src\cgame\race\cg_jump_viewer.h" />
     <ClInclude Include="..\src\cgame\race\cg_jump_viewer_math.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_finish_report.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_finish_report_math.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_markers.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_practice_markers.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_physics.h" />
@@ -73,6 +75,7 @@
     <ClInclude Include="..\src\game\race\race_leaderboard_wire.h" />
     <ClInclude Include="..\src\game\race\race_map_browser_wire.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_map_browser.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_message.h" />
     <ClInclude Include="..\src\cgame\race\ui\home\HomeViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\credits\CreditsViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\admin\AdminViewController.h" />
@@ -126,6 +129,8 @@
     <ClCompile Include="..\src\cgame\race\cg_race_map_browser.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_finish_report.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_hud.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_client_file.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_message.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_markers.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_practice_markers.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_physics.c" />

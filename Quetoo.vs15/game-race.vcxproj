@@ -95,6 +95,7 @@
     <ClInclude Include="..\src\game\race\race_types.h" />
     <ClInclude Include="..\src\game\race\race_wire.h" />
     <ClInclude Include="..\src\game\race\race_vote.h" />
+    <ClInclude Include="..\src\game\race\race_vote_admission.h" />
     <ClInclude Include="..\src\game\race\race_vote_menu.h" />
     <ClInclude Include="..\src\game\race\race_vote_menu_service.h" />
     <ClInclude Include="..\src\game\race\race_vote_service.h" />
@@ -174,6 +175,7 @@
     <ClCompile Include="..\src\game\race\race_trigger.c" />
     <ClCompile Include="..\src\game\race\race_training_service.c" />
     <ClCompile Include="..\src\game\race\race_vote.c" />
+    <ClCompile Include="..\src\game\race\race_vote_admission.c" />
     <ClCompile Include="..\src\game\race\race_vote_menu.c" />
     <ClCompile Include="..\src\game\race\race_vote_menu_service.c" />
     <ClCompile Include="..\src\game\race\race_vote_service.c" />

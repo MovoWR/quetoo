@@ -393,6 +393,11 @@
 		FB94C101302F300000000008 /* race_map_browser_wire.c in Sources */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000002 /* race_map_browser_wire.c */; };
 		FB94C101302F300000000009 /* cg_race_map_browser.h in Headers */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000007 /* cg_race_map_browser.h */; };
 		FB94C101302F30000000000A /* cg_race_map_browser.c in Sources */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000008 /* cg_race_map_browser.c */; };
+		FD21A101302F300000000001 /* cg_race_message.h in Headers */ = {isa = PBXBuildFile; fileRef = FD21A001302F300000000001 /* cg_race_message.h */; };
+		FD21A101302F300000000002 /* cg_race_message.c in Sources */ = {isa = PBXBuildFile; fileRef = FD21A001302F300000000002 /* cg_race_message.c */; };
+		FE26A101303A000000000001 /* cg_race_client_file.h in Headers */ = {isa = PBXBuildFile; fileRef = FE26A001303A000000000001 /* cg_race_client_file.h */; };
+		FE26A101303A000000000002 /* cg_race_client_file.c in Sources */ = {isa = PBXBuildFile; fileRef = FE26A001303A000000000002 /* cg_race_client_file.c */; };
+		FE26A101303A000000000003 /* cg_race_client_file.c in Sources */ = {isa = PBXBuildFile; fileRef = FE26A001303A000000000002 /* cg_race_client_file.c */; };
 		FE31A101303C000000000001 /* cg_race_admin_command.h in Headers */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000001 /* cg_race_admin_command.h */; };
 		FE31A101303C000000000002 /* cg_race_admin_command.c in Sources */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000002 /* cg_race_admin_command.c */; };
 		FE31A101303C000000000003 /* cg_race_admin_command.c in Sources */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000002 /* cg_race_admin_command.c */; };
@@ -474,6 +479,8 @@
 		FA99D1013029000000000002 /* race_actions.c in Sources */ = {isa = PBXBuildFile; fileRef = FA99D0013029000000000002 /* race_actions.c */; };
 		FA99D1013029000000000003 /* race_vote.h in Headers */ = {isa = PBXBuildFile; fileRef = FA99D0013029000000000003 /* race_vote.h */; };
 		FA99D1013029000000000004 /* race_vote.c in Sources */ = {isa = PBXBuildFile; fileRef = FA99D0013029000000000004 /* race_vote.c */; };
+		FD20A1013029000000000001 /* race_vote_admission.h in Headers */ = {isa = PBXBuildFile; fileRef = FD20A0013029000000000001 /* race_vote_admission.h */; };
+		FD20A1013029000000000002 /* race_vote_admission.c in Sources */ = {isa = PBXBuildFile; fileRef = FD20A0013029000000000002 /* race_vote_admission.c */; };
 		FA99D1013029000000000005 /* race_vote_service.h in Headers */ = {isa = PBXBuildFile; fileRef = FA99D0013029000000000005 /* race_vote_service.h */; };
 		FA99D1013029000000000006 /* race_vote_service.c in Sources */ = {isa = PBXBuildFile; fileRef = FA99D0013029000000000006 /* race_vote_service.c */; };
 		CE05B3F030224900C0DE0001 /* bg_item.c in Sources */ = {isa = PBXBuildFile; fileRef = CE05B23E302248070012862B /* bg_item.c */; };
@@ -2125,11 +2132,16 @@
 		FB94C001302F300000000006 /* race_map_browser_service.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_map_browser_service.c; sourceTree = "<group>"; };
 		FB94C001302F300000000007 /* cg_race_map_browser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_map_browser.h; sourceTree = "<group>"; };
 		FB94C001302F300000000008 /* cg_race_map_browser.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_map_browser.c; sourceTree = "<group>"; };
+		FD21A001302F300000000001 /* cg_race_message.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_message.h; sourceTree = "<group>"; };
+		FD21A001302F300000000002 /* cg_race_message.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_message.c; sourceTree = "<group>"; };
+		FE26A001303A000000000001 /* cg_race_client_file.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_client_file.h; sourceTree = "<group>"; };
+		FE26A001303A000000000002 /* cg_race_client_file.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_client_file.c; sourceTree = "<group>"; };
 		FE31A001303C000000000001 /* cg_race_admin_command.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_admin_command.h; sourceTree = "<group>"; };
 		FE31A001303C000000000002 /* cg_race_admin_command.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_admin_command.c; sourceTree = "<group>"; };
 		FB9AC0013031000000000001 /* race_finish_report.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_finish_report.h; sourceTree = "<group>"; };
 		FB9AC0013031000000000002 /* race_finish_report.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_finish_report.c; sourceTree = "<group>"; };
 		FB9AC0013031000000000003 /* cg_race_finish_report.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_finish_report.h; sourceTree = "<group>"; };
+		FB9AC001303100000000001A /* cg_race_finish_report_math.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_finish_report_math.h; sourceTree = "<group>"; };
 		FB9AC0013031000000000004 /* cg_race_finish_report.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_finish_report.c; sourceTree = "<group>"; };
 		FB94C001302F30000000000C /* MapBrowserViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MapBrowserViewController.h; sourceTree = "<group>"; };
 		FB94C001302F30000000000D /* MapBrowserViewController.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MapBrowserViewController.c; sourceTree = "<group>"; };
@@ -2237,6 +2249,8 @@
 		FA99D0013029000000000002 /* race_actions.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_actions.c; sourceTree = "<group>"; };
 		FA99D0013029000000000003 /* race_vote.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_vote.h; sourceTree = "<group>"; };
 		FA99D0013029000000000004 /* race_vote.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_vote.c; sourceTree = "<group>"; };
+		FD20A0013029000000000001 /* race_vote_admission.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_vote_admission.h; sourceTree = "<group>"; };
+		FD20A0013029000000000002 /* race_vote_admission.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_vote_admission.c; sourceTree = "<group>"; };
 		FA99D0013029000000000005 /* race_vote_service.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_vote_service.h; sourceTree = "<group>"; };
 		FA99D0013029000000000006 /* race_vote_service.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_vote_service.c; sourceTree = "<group>"; };
 		CE05B283302248070012862B /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
@@ -3677,6 +3691,8 @@
 				FA33C0013023000000000004 /* race_wire.h */,
 				FA99D0013029000000000003 /* race_vote.h */,
 				FA99D0013029000000000004 /* race_vote.c */,
+				FD20A0013029000000000001 /* race_vote_admission.h */,
+				FD20A0013029000000000002 /* race_vote_admission.c */,
 				FB95C001302F400000000001 /* race_vote_menu.h */,
 				FB95C001302F400000000002 /* race_vote_menu.c */,
 				FA99D0013029000000000005 /* race_vote_service.h */,
@@ -3724,10 +3740,15 @@
 				FAD0C001302D000000000006 /* cg_jump_viewer.c */,
 				FB94C001302F300000000007 /* cg_race_map_browser.h */,
 				FB94C001302F300000000008 /* cg_race_map_browser.c */,
+				FD21A001302F300000000001 /* cg_race_message.h */,
+				FD21A001302F300000000002 /* cg_race_message.c */,
+				FE26A001303A000000000001 /* cg_race_client_file.h */,
+				FE26A001303A000000000002 /* cg_race_client_file.c */,
 				FE31A001303C000000000001 /* cg_race_admin_command.h */,
 				FE31A001303C000000000002 /* cg_race_admin_command.c */,
 				FB9AC0013031000000000003 /* cg_race_finish_report.h */,
 				FB9AC0013031000000000004 /* cg_race_finish_report.c */,
+				FB9AC001303100000000001A /* cg_race_finish_report_math.h */,
 				FB95C001302F400000000005 /* cg_race_vote.h */,
 				FB95C001302F400000000006 /* cg_race_vote.c */,
 				FA33C0013023000000000007 /* cg_race_hud.h */,
@@ -5281,6 +5302,7 @@
 				FA88C1013028000000000003 /* race_admin_types.h in Headers */,
 				FA99D1013029000000000001 /* race_actions.h in Headers */,
 				FA99D1013029000000000003 /* race_vote.h in Headers */,
+				FD20A1013029000000000001 /* race_vote_admission.h in Headers */,
 				FB95C101302F400000000001 /* race_vote_menu.h in Headers */,
 				FA99D1013029000000000005 /* race_vote_service.h in Headers */,
 				FB95C101302F400000000003 /* race_vote_menu_service.h in Headers */,
@@ -5379,6 +5401,8 @@
 				FB93C101302F200000000002 /* SettingsViewController.h in Headers */,
 				FB93C101302F200000000007 /* StrafeHelperPreview.h in Headers */,
 				FB94C101302F300000000009 /* cg_race_map_browser.h in Headers */,
+				FD21A101302F300000000001 /* cg_race_message.h in Headers */,
+				FE26A101303A000000000001 /* cg_race_client_file.h in Headers */,
 				FE31A101303C000000000001 /* cg_race_admin_command.h in Headers */,
 				FB9AC1013031000000000003 /* cg_race_finish_report.h in Headers */,
 				FB94C101302F30000000000B /* MapBrowserViewController.h in Headers */,
@@ -6952,6 +6976,7 @@
 				FA22C1013023000000000006 /* race_trigger.c in Sources */,
 				FAD0C101302D000000000003 /* race_training_service.c in Sources */,
 				FA99D1013029000000000004 /* race_vote.c in Sources */,
+				FD20A1013029000000000002 /* race_vote_admission.c in Sources */,
 				FB95C101302F400000000002 /* race_vote_menu.c in Sources */,
 				FA99D1013029000000000006 /* race_vote_service.c in Sources */,
 				FB95C101302F400000000004 /* race_vote_menu_service.c in Sources */,
@@ -7151,6 +7176,8 @@
 				FAE0C101302E000000000003 /* cg_input_viewer.c in Sources */,
 				FAD0C101302D000000000006 /* cg_jump_viewer.c in Sources */,
 				FB94C101302F30000000000A /* cg_race_map_browser.c in Sources */,
+				FD21A101302F300000000002 /* cg_race_message.c in Sources */,
+				FE26A101303A000000000002 /* cg_race_client_file.c in Sources */,
 				FE31A101303C000000000002 /* cg_race_admin_command.c in Sources */,
 				FB9AC1013031000000000004 /* cg_race_finish_report.c in Sources */,
 				FB95C101302F400000000007 /* cg_race_vote.c in Sources */,
@@ -7377,6 +7404,7 @@
 				FB21E1013035000000000009 /* check_race_persistence_native.c in Sources */,
 				FB21E101303500000000000A /* race_persistence.c in Sources */,
 				FB21E1013035000000000003 /* cg_module.c in Sources */,
+				FE26A101303A000000000003 /* cg_race_client_file.c in Sources */,
 				FE31A101303C000000000003 /* cg_race_admin_command.c in Sources */,
 				FE30A101303B000000000005 /* race_hook.c in Sources */,
 				FBD1E1013036000000000001 /* cg_race_double_jump.c in Sources */,

@@ -10,9 +10,11 @@
 #include <errno.h>
 
 #include "cg_local.h"
+#include "cg_race_client_file.h"
 #include "cg_race_practice_markers.h"
 
-#define CG_MARKERS_FORMAT "RACE_MARKERS_V1"
+#define CG_MARKERS_FORMAT_V1 "RACE_MARKERS_V1"
+#define CG_MARKERS_FORMAT_V2 "RACE_MARKERS_V2"
 #define CG_MARKERS_MAX 128u
 #define CG_MARKERS_MAX_FILE_SIZE (64u * 1024u)
 #define CG_MARKERS_MIN_SIZE 4.f
@@ -43,6 +45,9 @@ typedef struct {
   uint32_t next_id;
   char map[MAX_QPATH];
   char path[MAX_OS_PATH];
+  uint64_t generation;
+  uint8_t active_slot;
+  bool has_active_slot;
   bool dirty;
   bool clear_pending;
   uint32_t clear_armed_at;
@@ -409,6 +414,28 @@ static bool Cg_Markers_ParseUint(char **cursor, uint32_t *value) {
 }
 
 /**
+ * @brief Parses one bounded 64-bit unsigned integer token.
+ */
+static bool Cg_Markers_ParseUint64(char **cursor, uint64_t *value) {
+  Cg_Markers_SkipSpace(cursor);
+  if (!**cursor || **cursor == '-' || **cursor == '+') {
+    return false;
+  }
+
+  errno = 0;
+  char *end;
+  const unsigned long long parsed = strtoull(*cursor, &end, 10);
+  if (end == *cursor || errno == ERANGE ||
+      (*end && *end != ' ' && *end != '\t')) {
+    return false;
+  }
+
+  *cursor = end;
+  *value = (uint64_t) parsed;
+  return true;
+}
+
+/**
  * @brief Parses one finite-range floating-point token.
  */
 static bool Cg_Markers_ParseFloat(char **cursor, float *value) {
@@ -474,12 +501,29 @@ static bool Cg_Markers_ValidateMarker(cg_marker_t *marker) {
  * @brief Parses a complete marker file transactionally into temporary storage.
  */
 static bool Cg_Markers_Parse(char *text, size_t length, const char *expected_map,
-                             cg_marker_t *markers, size_t *count, uint32_t *next_id) {
+                             cg_marker_t *markers, size_t *count,
+                             uint32_t *next_id, uint64_t *generation) {
   char *cursor = text;
   char *end = text + length;
   char *line = Cg_Markers_NextLine(&cursor, end);
 
-  if (!line || strcmp(line, CG_MARKERS_FORMAT) != 0) {
+  if (!line) {
+    return false;
+  }
+
+  if (strcmp(line, CG_MARKERS_FORMAT_V2) == 0) {
+    line = Cg_Markers_NextLine(&cursor, end);
+    if (!line || strncmp(line, "generation ", 11u) != 0) {
+      return false;
+    }
+    char *generation_cursor = line + 11u;
+    if (!Cg_Markers_ParseUint64(&generation_cursor, generation) ||
+        !*generation || !Cg_Markers_AtLineEnd(generation_cursor)) {
+      return false;
+    }
+  } else if (strcmp(line, CG_MARKERS_FORMAT_V1) == 0) {
+    *generation = 0u;
+  } else {
     return false;
   }
 
@@ -582,53 +626,102 @@ static bool Cg_Markers_LoadCurrent(void) {
     Cg_Markers_WarnDirty();
   }
 
-  void *loaded = NULL;
-  const int64_t loaded_length = cgi.LoadFile(path, &loaded);
-  if (loaded_length == -1) {
+  cg_marker_t best_markers[CG_MARKERS_MAX];
+  size_t best_count = 0u;
+  uint32_t best_next_id = 1u;
+  uint64_t best_generation = 0u;
+  int32_t best_slot = -1;
+  bool found_file = false;
+  bool found_valid = false;
+
+  for (int32_t candidate = -1; candidate < 2; candidate++) {
+    char candidate_path[MAX_OS_PATH];
+    if (candidate < 0) {
+      q_strlcpy(candidate_path, path, sizeof(candidate_path));
+    } else {
+      const int32_t candidate_length = snprintf(candidate_path,
+        sizeof(candidate_path), "%s.%d", path, candidate);
+      if (candidate_length <= 0 ||
+          (size_t) candidate_length >= sizeof(candidate_path)) {
+        continue;
+      }
+    }
+
+    void *loaded = NULL;
+    const int64_t loaded_length = cgi.LoadFile(candidate_path, &loaded);
+    if (loaded_length == -1) {
+      continue;
+    }
+    found_file = true;
+
+    cg_marker_t parsed_markers[CG_MARKERS_MAX];
+    size_t parsed_count = 0u;
+    uint32_t parsed_next_id = 1u;
+    uint64_t parsed_generation = 0u;
+    bool valid = loaded_length > 0 &&
+                 loaded_length <= (int64_t) CG_MARKERS_MAX_FILE_SIZE && loaded &&
+                 !memchr(loaded, '\0', (size_t) loaded_length);
+    if (valid) {
+      char text[CG_MARKERS_MAX_FILE_SIZE + 1u];
+      memcpy(text, loaded, (size_t) loaded_length);
+      text[(size_t) loaded_length] = '\0';
+      valid = Cg_Markers_Parse(text, (size_t) loaded_length, map,
+                               parsed_markers, &parsed_count, &parsed_next_id,
+                               &parsed_generation);
+    }
+    if (loaded) {
+      cgi.FreeFile(loaded);
+    }
+
+    if (!valid) {
+      Cg_Warn("Ignored invalid practice marker slot %s\n", candidate_path);
+      continue;
+    }
+
+    if (!found_valid || parsed_generation > best_generation ||
+        (parsed_generation == best_generation && candidate > best_slot)) {
+      memcpy(best_markers, parsed_markers,
+             parsed_count * sizeof(*parsed_markers));
+      best_count = parsed_count;
+      best_next_id = parsed_next_id;
+      best_generation = parsed_generation;
+      best_slot = candidate;
+      found_valid = true;
+    }
+  }
+
+  if (!found_file) {
     cg_markers_state.count = 0u;
     cg_markers_state.next_id = 1u;
+    cg_markers_state.generation = 0u;
+    cg_markers_state.has_active_slot = false;
     cg_markers_state.dirty = false;
     cg_markers_state.clear_pending = false;
     cgi.Print("No saved practice markers for %s.\n", map);
     return true;
   }
 
-  if (loaded_length <= 0 || loaded_length > (int64_t) CG_MARKERS_MAX_FILE_SIZE ||
-      !loaded || memchr(loaded, '\0', (size_t) loaded_length)) {
-    if (loaded) {
-      cgi.FreeFile(loaded);
-    }
-    Cg_Warn("Rejected invalid practice marker file %s\n", path);
-    return false;
-  }
-
-  char text[CG_MARKERS_MAX_FILE_SIZE + 1u];
-  memcpy(text, loaded, (size_t) loaded_length);
-  text[(size_t) loaded_length] = '\0';
-  cgi.FreeFile(loaded);
-
-  cg_marker_t parsed_markers[CG_MARKERS_MAX];
-  size_t parsed_count = 0u;
-  uint32_t parsed_next_id = 1u;
-  if (!Cg_Markers_Parse(text, (size_t) loaded_length, map,
-                        parsed_markers, &parsed_count, &parsed_next_id)) {
-    Cg_Warn("Rejected malformed practice marker file %s; %s\n", path,
+  if (!found_valid) {
+    Cg_Warn("Rejected all practice marker slots for %s; %s\n", path,
             map_changed ? "the marker set remains empty"
                         : "current markers were preserved");
     return false;
   }
 
-  memcpy(cg_markers_state.markers, parsed_markers,
-         parsed_count * sizeof(cg_marker_t));
-  cg_markers_state.count = parsed_count;
-  cg_markers_state.next_id = parsed_next_id;
+  memcpy(cg_markers_state.markers, best_markers,
+         best_count * sizeof(*best_markers));
+  cg_markers_state.count = best_count;
+  cg_markers_state.next_id = best_next_id;
+  cg_markers_state.generation = best_generation;
+  cg_markers_state.has_active_slot = best_slot >= 0;
+  cg_markers_state.active_slot = best_slot >= 0 ? (uint8_t) best_slot : 0u;
   cg_markers_state.dirty = false;
   cg_markers_state.clear_pending = false;
   q_strlcpy(cg_markers_state.map, map, sizeof(cg_markers_state.map));
   q_strlcpy(cg_markers_state.path, path, sizeof(cg_markers_state.path));
 
   cgi.Print("Loaded %zu practice marker%s for %s.\n",
-            parsed_count, parsed_count == 1u ? "" : "s", map);
+            best_count, best_count == 1u ? "" : "s", map);
   return true;
 }
 
@@ -651,6 +744,12 @@ static void Cg_MarkersSave_f(void) {
   char buffer[CG_MARKERS_MAX_FILE_SIZE + 1u];
   size_t offset = 0u;
 
+  if (cg_markers_state.generation == UINT64_MAX) {
+    Cg_Warn("Practice marker generation is exhausted for %s\n", path);
+    return;
+  }
+  const uint64_t generation = cg_markers_state.generation + 1u;
+
 #define CG_MARKERS_APPEND(...) \
   do { \
     const int32_t written = snprintf(buffer + offset, sizeof(buffer) - offset, __VA_ARGS__); \
@@ -661,8 +760,9 @@ static void Cg_MarkersSave_f(void) {
     offset += (size_t) written; \
   } while (0)
 
-  CG_MARKERS_APPEND("%s\nmap %s\ncount %zu\n",
-                    CG_MARKERS_FORMAT, map, cg_markers_state.count);
+  CG_MARKERS_APPEND("%s\ngeneration %" PRIu64 "\nmap %s\ncount %zu\n",
+                    CG_MARKERS_FORMAT_V2, generation, map,
+                    cg_markers_state.count);
 
   for (size_t i = 0; i < cg_markers_state.count; i++) {
     const cg_marker_t *marker = &cg_markers_state.markers[i];
@@ -678,19 +778,25 @@ static void Cg_MarkersSave_f(void) {
 
 #undef CG_MARKERS_APPEND
 
-  file_t *file = cgi.OpenFileWrite(path);
-  if (!file) {
-    Cg_Warn("Failed to open %s for writing\n", path);
+  const uint8_t slot = cg_markers_state.has_active_slot
+    ? (uint8_t) (cg_markers_state.active_slot ^ 1u) : 0u;
+  char candidate_path[MAX_OS_PATH];
+  const int32_t candidate_length = snprintf(candidate_path,
+    sizeof(candidate_path), "%s.%u", path, slot);
+  if (candidate_length <= 0 ||
+      (size_t) candidate_length >= sizeof(candidate_path)) {
+    Cg_Warn("Failed to construct the practice marker slot path; the previous slot was preserved\n");
+    return;
+  }
+  if (!Cg_RaceClientFile_WriteVerified(candidate_path, buffer, offset)) {
+    Cg_Warn("Failed to save practice markers to %s; the previous slot was preserved\n",
+            candidate_path);
     return;
   }
 
-  const bool wrote = cgi.WriteFile(file, buffer, 1u, offset) == (int64_t) offset;
-  const bool closed = cgi.CloseFile(file);
-  if (!wrote || !closed) {
-    Cg_Warn("Failed to save practice markers to %s; in-memory markers were preserved\n", path);
-    return;
-  }
-
+  cg_markers_state.generation = generation;
+  cg_markers_state.active_slot = slot;
+  cg_markers_state.has_active_slot = true;
   cg_markers_state.dirty = false;
   q_strlcpy(cg_markers_state.path, path, sizeof(cg_markers_state.path));
   cgi.Print("Saved %zu practice marker%s to %s.\n",

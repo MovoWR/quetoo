@@ -18,6 +18,7 @@
 #include "race_modes.h"
 #include "race_persistence.h"
 #include "race_physics.h"
+#include "race_physics_service.h"
 #include "race_projectile_compat.h"
 #include "race_publication.h"
 #include "race_replay_format.h"
@@ -80,17 +81,37 @@ static void Race_ReplayService_DestroyIndex(size_t index) {
   if (index >= MAX_CLIENTS) {
     return;
   }
-  if (race_replay_recordings[index].replay.samples) {
-    Race_ReplayRecording_Destroy(race_replay_recordings + index);
-    const size_t reservation = Race_ReplayRecording_ReservationBytes();
-    race_replay_reserved_bytes = race_replay_reserved_bytes >= reservation
-      ? race_replay_reserved_bytes - reservation
-      : 0u;
-  }
+  const size_t allocation = Race_ReplayRecording_AllocationBytes(
+    race_replay_recordings + index);
+  Race_ReplayRecording_Destroy(race_replay_recordings + index);
+  race_replay_reserved_bytes = race_replay_reserved_bytes >= allocation
+    ? race_replay_reserved_bytes - allocation
+    : 0u;
   race_replay_active_projectile_counts[index] = 0u;
   race_replay_next_projectile_ids[index] = 0u;
   memset(race_replay_active_projectiles[index], 0,
          sizeof(race_replay_active_projectiles[index]));
+}
+
+static size_t Race_ReplayService_AllocationLimit(
+    const race_replay_recording_t *recording) {
+  const size_t allocated = Race_ReplayRecording_AllocationBytes(recording);
+  return race_replay_reserved_bytes < RACE_REPLAY_RECORDING_MEMORY_BYTES
+    ? allocated + RACE_REPLAY_RECORDING_MEMORY_BYTES -
+                  race_replay_reserved_bytes
+    : allocated;
+}
+
+static void Race_ReplayService_AccountAllocation(
+    const race_replay_recording_t *recording, const size_t previous) {
+  const size_t current = Race_ReplayRecording_AllocationBytes(recording);
+  if (current >= previous) {
+    race_replay_reserved_bytes += current - previous;
+  } else {
+    race_replay_reserved_bytes = race_replay_reserved_bytes >= previous - current
+      ? race_replay_reserved_bytes - (previous - current)
+      : 0u;
+  }
 }
 
 static void Race_ReplayService_InvalidateProjectileCapture(
@@ -188,8 +209,13 @@ static void Race_ReplayService_ObserveProjectile(
     .velocity = observation->velocity,
     .normal = observation->normal
   };
-  if (!Race_ReplayRecording_CaptureProjectile(
-        race_replay_recordings + index, g_level.time, &event)) {
+  race_replay_recording_t *recording = race_replay_recordings + index;
+  const size_t previous = Race_ReplayRecording_AllocationBytes(recording);
+  const bool captured = Race_ReplayRecording_CaptureProjectile(
+    recording, g_level.time, &event,
+    Race_ReplayService_AllocationLimit(recording));
+  Race_ReplayService_AccountAllocation(recording, previous);
+  if (!captured) {
     Race_ReplayService_InvalidateProjectileCapture(index, cl);
     return;
   }
@@ -227,7 +253,7 @@ void Race_ReplayService_ConfigureLevel(const char *map) {
 
   const race_physics_config_t *physics = Race_Physics_Current();
   const char *ruleset = Race_Physics_ConfigRuleset(physics);
-  if (!Race_Physics_ConfigRankable(physics) ||
+  if (!Race_PhysicsService_Rankable() ||
       !Race_MapState_RulesetValid(ruleset)) {
     // Keep bounded capture available for unranked validation, but do not open
     // or create another ruleset's durable replay namespace.
@@ -298,30 +324,31 @@ bool Race_ReplayService_Start(g_client_t *cl) {
   const uint8_t physics_mode = physics &&
                                physics->family == RACE_PHYSICS_FAMILY_Q2
     ? 1u : 0u;
-  const size_t reservation = Race_ReplayRecording_ReservationBytes();
   if (race_replay_reserved_bytes > RACE_REPLAY_RECORDING_MEMORY_BYTES ||
-      reservation > RACE_REPLAY_RECORDING_MEMORY_BYTES -
-                    race_replay_reserved_bytes ||
       !physics ||
       (physics->family != RACE_PHYSICS_FAMILY_QUETOO &&
        physics->family != RACE_PHYSICS_FAMILY_Q2) ||
       !Race_Replay_ProfilePlayerUid(cl->persistent.race_profile.uid,
                                     &player_uid) ||
-      !Race_ReplayRecording_Start(race_replay_recordings + index,
-                                  g_level.name,
-                                  cl->persistent.race_profile.uid,
-                                  cl->persistent.net_name, player_uid,
-                                  physics_mode,
-                                  g_level.time)) {
+      !Race_ReplayRecording_Start(
+        race_replay_recordings + index, g_level.name,
+        cl->persistent.race_profile.uid, cl->persistent.net_name, player_uid,
+        physics_mode, g_level.time,
+        RACE_REPLAY_RECORDING_MEMORY_BYTES - race_replay_reserved_bytes)) {
     gi.ClientPrint(cl, PRINT_HIGH,
                    "Replay recording unavailable; this run cannot publish a record.\n");
     return false;
   }
-  race_replay_reserved_bytes += reservation;
+  race_replay_recording_t *recording = race_replay_recordings + index;
+  Race_ReplayService_AccountAllocation(recording, 0u);
 
   const race_replay_sample_t sample = Race_ReplayService_Sample(cl);
-  if (!Race_ReplayRecording_Capture(race_replay_recordings + index,
-                                    g_level.time, &sample)) {
+  const size_t previous = Race_ReplayRecording_AllocationBytes(recording);
+  const bool captured = Race_ReplayRecording_Capture(
+    recording, g_level.time, &sample,
+    Race_ReplayService_AllocationLimit(recording));
+  Race_ReplayService_AccountAllocation(recording, previous);
+  if (!captured) {
     Race_ReplayService_DestroyIndex(index);
     gi.ClientPrint(cl, PRINT_HIGH,
                    "Replay recording failed at start; this run cannot publish a record.\n");
@@ -350,7 +377,12 @@ void Race_ReplayService_Frame(void) {
     }
 
     const race_replay_sample_t sample = Race_ReplayService_Sample(cl);
-    if (!Race_ReplayRecording_Capture(recording, g_level.time, &sample)) {
+    const size_t previous = Race_ReplayRecording_AllocationBytes(recording);
+    const bool captured = Race_ReplayRecording_Capture(
+      recording, g_level.time, &sample,
+      Race_ReplayService_AllocationLimit(recording));
+    Race_ReplayService_AccountAllocation(recording, previous);
+    if (!captured) {
       gi.ClientPrint(cl, PRINT_HIGH,
                      "Replay recording limit reached; this run cannot publish a record.\n");
       Race_MarkInvalid(cl, RACE_INVALID_REPLAY_CAPACITY);
@@ -439,9 +471,12 @@ bool Race_ReplayService_Finish(g_client_t *cl,
 
   race_replay_recording_t *recording = race_replay_recordings + index;
   const race_replay_sample_t sample = Race_ReplayService_Sample(cl);
-  if (!Race_ReplayRecording_Finish(recording, g_level.time,
-                                   cl->race_run.elapsed_time,
-                                   &sample)) {
+  const size_t previous = Race_ReplayRecording_AllocationBytes(recording);
+  const bool finished = Race_ReplayRecording_Finish(
+    recording, g_level.time, cl->race_run.elapsed_time, &sample,
+    Race_ReplayService_AllocationLimit(recording));
+  Race_ReplayService_AccountAllocation(recording, previous);
+  if (!finished) {
     Race_ReplayService_DestroyIndex(index);
     gi.ClientPrint(cl, PRINT_HIGH,
                    "Record not published: replay finalization failed.\n");

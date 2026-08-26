@@ -21,6 +21,8 @@
 
 #include "cg_local.h"
 
+#include "cg_race_hud.h"
+
 #include "deps/discord-rpc/include/discord_register.h"
 #include "deps/discord-rpc/include/discord_rpc.h"
 
@@ -176,7 +178,10 @@ void Cg_UpdateDiscord(void) {
         presence.largeImageKey = "default";
         presence.state = "Playing";
 
-        q_snprintf(details, sizeof(details), "%s - %s", Cg_GetGameMode(), cgi.ConfigString(CS_MESSAGE));
+        char map_title[MAX_STRING_CHARS];
+        Cg_RaceHud_ResolveEscapes(cgi.ConfigString(CS_MESSAGE), map_title,
+                                  sizeof(map_title), false);
+        q_snprintf(details, sizeof(details), "%s - %s", Cg_GetGameMode(), map_title);
         presence.details = details;
 
         if (q_strcmp(cgi.server_name, "localhost")) {

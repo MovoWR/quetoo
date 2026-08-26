@@ -18,6 +18,7 @@
 #include "cg_race_hud.h"
 #include "cg_race_map_browser.h"
 #include "cg_race_markers.h"
+#include "cg_race_client_file.h"
 #include "cg_race_physics.h"
 #include "cg_race_practice_markers.h"
 #include "cg_race_profiles.h"
@@ -238,6 +239,61 @@ static cmd_t module_cmds[8];
 static size_t num_module_cmds;
 static uint32_t common_move_calls;
 
+typedef enum {
+  CLIENT_FILE_SUCCESS,
+  CLIENT_FILE_OPEN_FAILURE,
+  CLIENT_FILE_SHORT_WRITE,
+  CLIENT_FILE_CLOSE_FAILURE,
+  CLIENT_FILE_READBACK_MISMATCH
+} client_file_outcome_t;
+
+static client_file_outcome_t client_file_outcome;
+static uint8_t client_file_written[64];
+static uint8_t client_file_readback[64];
+static size_t client_file_written_length;
+
+static file_t *ClientFileOpen(const char *path) {
+  (void) path;
+  client_file_written_length = 0u;
+  return client_file_outcome == CLIENT_FILE_OPEN_FAILURE
+    ? NULL : (file_t *) client_file_written;
+}
+
+static int64_t ClientFileWrite(file_t *file, const void *buffer,
+                               size_t size, size_t count) {
+  (void) file;
+  const size_t write_count = client_file_outcome == CLIENT_FILE_SHORT_WRITE && count
+    ? count - 1u : count;
+  const size_t bytes = size * write_count;
+  if (bytes > sizeof(client_file_written)) {
+    return -1;
+  }
+  memcpy(client_file_written, buffer, bytes);
+  client_file_written_length = bytes;
+  return (int64_t) write_count;
+}
+
+static bool ClientFileClose(file_t *file) {
+  (void) file;
+  return client_file_outcome != CLIENT_FILE_CLOSE_FAILURE;
+}
+
+static int64_t ClientFileLoad(const char *path, void **buffer) {
+  (void) path;
+  memcpy(client_file_readback, client_file_written,
+         client_file_written_length);
+  if (client_file_outcome == CLIENT_FILE_READBACK_MISMATCH &&
+      client_file_written_length) {
+    client_file_readback[0] ^= 0xffu;
+  }
+  *buffer = client_file_readback;
+  return (int64_t) client_file_written_length;
+}
+
+static void ClientFileFree(void *buffer) {
+  (void) buffer;
+}
+
 static cvar_t *AddCvar(const char *name, const char *value,
                        const uint32_t flags, const char *description) {
   (void) name;
@@ -302,6 +358,34 @@ uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
   cgi.AddCmd = AddCmd;
   cgi.KeyDown = KeyDown;
   cgi.KeyUp = KeyUp;
+  cgi.OpenFileWrite = ClientFileOpen;
+  cgi.WriteFile = ClientFileWrite;
+  cgi.CloseFile = ClientFileClose;
+  cgi.LoadFile = ClientFileLoad;
+  cgi.FreeFile = ClientFileFree;
+
+  static const char persisted[] = "verified Race client data";
+  client_file_outcome = CLIENT_FILE_SUCCESS;
+  MODULE_CHECK(Cg_RaceClientFile_WriteVerified(
+                 "race/test.0", persisted, sizeof(persisted)) &&
+               client_file_written_length == sizeof(persisted),
+               "client file helper accepts exact verified persistence");
+  client_file_outcome = CLIENT_FILE_OPEN_FAILURE;
+  MODULE_CHECK(!Cg_RaceClientFile_WriteVerified(
+                 "race/test.0", persisted, sizeof(persisted)),
+               "client file helper rejects open failure");
+  client_file_outcome = CLIENT_FILE_SHORT_WRITE;
+  MODULE_CHECK(!Cg_RaceClientFile_WriteVerified(
+                 "race/test.0", persisted, sizeof(persisted)),
+               "client file helper rejects short write");
+  client_file_outcome = CLIENT_FILE_CLOSE_FAILURE;
+  MODULE_CHECK(!Cg_RaceClientFile_WriteVerified(
+                 "race/test.0", persisted, sizeof(persisted)),
+               "client file helper rejects close failure");
+  client_file_outcome = CLIENT_FILE_READBACK_MISMATCH;
+  MODULE_CHECK(!Cg_RaceClientFile_WriteVerified(
+                 "race/test.0", persisted, sizeof(persisted)),
+               "client file helper rejects readback mismatch");
 
   float hook_speed = -1.f;
   MODULE_CHECK(Race_HookPullSpeed_Parse("0", &hook_speed) &&
