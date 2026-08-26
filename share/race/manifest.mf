@@ -1,0 +1,7 @@
+9d0594fb7c61f0941accc54520a88d95 196 maps.lst
+16bf71cc66c5b38e6d9cdc25d05b0dc9 19494910 maps/mzc_dj.bsp
+21703effcc70d977966b58e861fc70bf 8206 maps/mzc_dj.mf
+0bff901e360552893f5f8d27d3f7c249 11007247 maps/potato.bsp
+37a8d5ed4a1bd991855f0d6da15235c0 1600 maps/potato.mf
+f1be932db864fae4a71072768eae3290 342760 maps/race-custom-entities.bsp
+4f9fa36622a8fd80a14882796c4d4ae2 614 maps/race-custom-entities.mf

@@ -1,0 +1,9 @@
+f1be932db864fae4a71072768eae3290 342760 maps/race-custom-entities.bsp
+c3c95e362ae53ceec4571095fd470c91 28 textures/common/clip.mat
+cca5a3baac61dd922ba6ac6dfbc19fae 1761 textures/common/clip.png
+a0feeecfbbb5815c43cfbdec4a7936d4 1972 textures/common/trigger.jpg
+d01cc0d7dd7fc37e18c6051d3d9e4ce3 31 textures/common/trigger.mat
+c1a5788b0fecc11080821daac881fa76 342136 textures/trak7/floor_tile1.jpg
+c9e524fb9fdb9e28e0b88dda30934f53 34 textures/trak7/floor_tile1.mat
+fb02c8e9506164a19350a0ef171d4094 538787 textures/trak7/floor_tile1_norm.png
+2dc74311d0a6e4c83ccc7cf469e5d0da 300970 textures/trak7/floor_tile1_spec.jpg

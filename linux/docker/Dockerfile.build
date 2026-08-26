@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 RUN apt-get update && apt-get install -y \
-    build-essential autoconf automake libtool pkg-config git curl \
+    build-essential autoconf automake libtool pkg-config git curl bzip2 unzip \
     libncurses-dev \
     libsndfile1-dev libphysfs-dev zlib1g-dev \
     libcurl4-openssl-dev \
@@ -16,12 +16,18 @@ RUN apt-get update && apt-get install -y \
     check \
     cmake \
     imagemagick \
+    patchelf \
     ruby ruby-dev rubygems rpm \
   && rm -rf /var/lib/apt/lists/*
 
-RUN gem install fpm --no-document
+RUN gem install fpm -v 1.17.0 --no-document
 
-RUN git clone --depth 1 --branch 1.25.2 https://github.com/kcat/openal-soft.git openal-soft \
+RUN curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+    -o openal-soft-1.25.2.tar.bz2 \
+    https://openal-soft.org/openal-releases/openal-soft-1.25.2.tar.bz2 \
+  && echo '1dbaac44e7579d5bc8847ca8db4b2e8b9fd3961041f35ee20def4958301e1089  openal-soft-1.25.2.tar.bz2' | sha256sum --check \
+  && tar xjf openal-soft-1.25.2.tar.bz2 \
+  && mv openal-soft-1.25.2 openal-soft \
   && cmake -S openal-soft -B openal-soft/build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
@@ -30,53 +36,83 @@ RUN git clone --depth 1 --branch 1.25.2 https://github.com/kcat/openal-soft.git 
     -DALSOFT_UTILS=OFF \
   && cmake --build openal-soft/build -j$(nproc) \
   && cmake --install openal-soft/build \
-  && rm -rf openal-soft
+  && rm -rf openal-soft openal-soft-1.25.2.tar.bz2
 
-RUN git clone --depth 1 --branch release-3.4.8 https://github.com/libsdl-org/SDL.git SDL3 \
+RUN curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+    -o SDL3-3.4.12.tar.gz \
+    https://github.com/libsdl-org/SDL/releases/download/release-3.4.12/SDL3-3.4.12.tar.gz \
+  && echo 'f07b958a9ac5020fb7a44cadb957f658b2149c3c8abb4f63145fac9303249db7  SDL3-3.4.12.tar.gz' | sha256sum --check \
+  && tar xzf SDL3-3.4.12.tar.gz \
+  && mv SDL3-3.4.12 SDL3 \
   && cmake -S SDL3 -B SDL3/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local \
   && cmake --build SDL3/build -j$(nproc) \
   && cmake --install SDL3/build \
-  && rm -rf SDL3
+  && rm -rf SDL3 SDL3-3.4.12.tar.gz
 
-RUN git clone --depth 1 --branch release-3.4.4 https://github.com/libsdl-org/SDL_image.git SDL3_image \
+RUN curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+    -o SDL3_image-3.4.4.tar.gz \
+    https://github.com/libsdl-org/SDL_image/releases/download/release-3.4.4/SDL3_image-3.4.4.tar.gz \
+  && echo '29751304a13d25ac513f24305fa25b06a6edd9607718c90129b8350d35fc5573  SDL3_image-3.4.4.tar.gz' | sha256sum --check \
+  && tar xzf SDL3_image-3.4.4.tar.gz \
+  && mv SDL3_image-3.4.4 SDL3_image \
   && cmake -S SDL3_image -B SDL3_image/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local \
   && cmake --build SDL3_image/build -j$(nproc) \
   && cmake --install SDL3_image/build \
-  && rm -rf SDL3_image
+  && rm -rf SDL3_image SDL3_image-3.4.4.tar.gz
 
-RUN git clone --depth 1 --branch release-3.2.2 https://github.com/libsdl-org/SDL_ttf.git SDL3_ttf \
+RUN curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+    -o SDL3_ttf-3.2.2.tar.gz \
+    https://github.com/libsdl-org/SDL_ttf/releases/download/release-3.2.2/SDL3_ttf-3.2.2.tar.gz \
+  && echo '63547d58d0185c833213885b635a2c0548201cc8f301e6587c0be1a67e1e045d  SDL3_ttf-3.2.2.tar.gz' | sha256sum --check \
+  && tar xzf SDL3_ttf-3.2.2.tar.gz \
+  && mv SDL3_ttf-3.2.2 SDL3_ttf \
   && cmake -S SDL3_ttf -B SDL3_ttf/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local \
   && cmake --build SDL3_ttf/build -j$(nproc) \
   && cmake --install SDL3_ttf/build \
-  && rm -rf SDL3_ttf
+  && rm -rf SDL3_ttf SDL3_ttf-3.2.2.tar.gz
 
-RUN git clone https://github.com/jdolan/Objectively.git \
+RUN curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+    -o Objectively.zip \
+    https://github.com/jdolan/Objectively/archive/9b9c27287e3c17b7005bb43a4244f90a81e41821.zip \
+  && echo '775e2948c602f49b6f230ad9087a9884927ba6442083efd39acb684f4f17e7df  Objectively.zip' | sha256sum --check \
+  && unzip -q Objectively.zip \
+  && mv Objectively-9b9c27287e3c17b7005bb43a4244f90a81e41821 Objectively \
   && cd Objectively \
   && autoreconf -i \
   && ./configure \
   && make -j$(nproc) \
   && make install \
-  && cd .. && rm -rf Objectively
+  && cd .. && rm -rf Objectively Objectively.zip
 
 RUN ldconfig
 
-RUN git clone https://github.com/jdolan/ObjectivelyGPU.git \
+RUN curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+    -o ObjectivelyGPU.zip \
+    https://github.com/jdolan/ObjectivelyGPU/archive/a1bc32eb8bf20e7fbbb31ffe43b4bcb188b70a63.zip \
+  && echo '32ada0c9e445b12fca7be95e1dbb2c34948b5a80ed65d18ade2dc57eacc668b8  ObjectivelyGPU.zip' | sha256sum --check \
+  && unzip -q ObjectivelyGPU.zip \
+  && mv ObjectivelyGPU-a1bc32eb8bf20e7fbbb31ffe43b4bcb188b70a63 ObjectivelyGPU \
   && cd ObjectivelyGPU \
   && autoreconf -i \
   && ./configure \
   && make -j$(nproc) \
   && make install \
-  && cd .. && rm -rf ObjectivelyGPU
+  && cd .. && rm -rf ObjectivelyGPU ObjectivelyGPU.zip
 
 RUN ldconfig
 
-RUN git clone https://github.com/jdolan/ObjectivelyMVC.git \
+RUN curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+    -o ObjectivelyMVC.zip \
+    https://github.com/jdolan/ObjectivelyMVC/archive/d5874a50a8f08d1afa94e6bdd4971a9639dc97a7.zip \
+  && echo 'c7322df836e07bd47412e47f1496322d63ffe8041aed3292e3378a383b4839c7  ObjectivelyMVC.zip' | sha256sum --check \
+  && unzip -q ObjectivelyMVC.zip \
+  && mv ObjectivelyMVC-d5874a50a8f08d1afa94e6bdd4971a9639dc97a7 ObjectivelyMVC \
   && cd ObjectivelyMVC \
   && autoreconf -i \
   && ./configure \
   && make -j$(nproc) \
   && make install \
-  && cd .. && rm -rf ObjectivelyMVC
+  && cd .. && rm -rf ObjectivelyMVC ObjectivelyMVC.zip
 
 RUN ldconfig
 

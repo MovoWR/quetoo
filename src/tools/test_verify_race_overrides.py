@@ -616,12 +616,14 @@ class StockTreeIntegrityTest(unittest.TestCase):
     self.write("src/game/race/race.c", self.RACE + " edited")
     self.assertEqual(self.run_check(), [])
 
-  def test_race_weapon_test_projects_are_shared_registration(self) -> None:
+  def test_race_delivery_files_are_shared_registration(self) -> None:
     for relative in (
+      "Quetoo.vs15/Smoke-QuetooRace.ps1",
       "Quetoo.vs15/check-race-weapon-movement.vcxproj",
       "Quetoo.vs15/check-race-weapon-movement.vcxproj.filters",
       "Quetoo.vs15/check-race-weapon-tuning.vcxproj",
       "Quetoo.vs15/check-race-weapon-tuning.vcxproj.filters",
+      "share/Makefile.am",
     ):
       with self.subTest(relative=relative):
         self.assertFalse(stock_owned(relative))

@@ -6835,7 +6835,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/race/ui/admin\" \"$BUILT_PRODUCTS_DIR/race/ui/home\" \"$BUILT_PRODUCTS_DIR/race/ui/controls\" \"$BUILT_PRODUCTS_DIR/race/ui/credits\" \"$BUILT_PRODUCTS_DIR/race/ui/fonts\" \"$BUILT_PRODUCTS_DIR/race/ui/main\" \"$BUILT_PRODUCTS_DIR/race/ui/maps\" \"$BUILT_PRODUCTS_DIR/race/ui/play\" \"$BUILT_PRODUCTS_DIR/race/ui/settings\" \"$BUILT_PRODUCTS_DIR/race/ui/voting\"\ncp \"$BUILT_PRODUCTS_DIR/cgame-race.so\" \"$BUILT_PRODUCTS_DIR/race/cgame.so\"\ncp \"$SRCROOT\"/src/cgame/race/ui/hud_input_*.png \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/DialogViewController.css \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/conback.png \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/fonts/Coda-Regular.ttf \"$BUILT_PRODUCTS_DIR/race/ui/fonts/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/admin/*.css \"$SRCROOT\"/src/cgame/race/ui/admin/*.json \"$BUILT_PRODUCTS_DIR/race/ui/admin/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/home/HomeViewController.css \"$SRCROOT\"/src/cgame/race/ui/home/HomeViewController.json \"$BUILT_PRODUCTS_DIR/race/ui/home/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/credits/*.css \"$SRCROOT\"/src/cgame/race/ui/credits/*.json \"$BUILT_PRODUCTS_DIR/race/ui/credits/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/play/*.css \"$SRCROOT\"/src/cgame/race/ui/play/*.json \"$BUILT_PRODUCTS_DIR/race/ui/play/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/controls/*.css \"$SRCROOT\"/src/cgame/race/ui/controls/*.json \"$BUILT_PRODUCTS_DIR/race/ui/controls/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/main/*.css \"$SRCROOT\"/src/cgame/race/ui/main/*.json \"$SRCROOT\"/src/cgame/race/ui/main/*.png \"$BUILT_PRODUCTS_DIR/race/ui/main/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/maps/*.css \"$SRCROOT\"/src/cgame/race/ui/maps/*.json \"$BUILT_PRODUCTS_DIR/race/ui/maps/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/settings/*.css \"$SRCROOT\"/src/cgame/race/ui/settings/*.json \"$BUILT_PRODUCTS_DIR/race/ui/settings/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/voting/*.css \"$SRCROOT\"/src/cgame/race/ui/voting/*.json \"$BUILT_PRODUCTS_DIR/race/ui/voting/\"\ncodesign --force --sign - \"$BUILT_PRODUCTS_DIR/race/cgame.so\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/race/ui/admin\" \"$BUILT_PRODUCTS_DIR/race/ui/backgrounds\" \"$BUILT_PRODUCTS_DIR/race/ui/home\" \"$BUILT_PRODUCTS_DIR/race/ui/controls\" \"$BUILT_PRODUCTS_DIR/race/ui/credits\" \"$BUILT_PRODUCTS_DIR/race/ui/fonts\" \"$BUILT_PRODUCTS_DIR/race/ui/main\" \"$BUILT_PRODUCTS_DIR/race/ui/maps\" \"$BUILT_PRODUCTS_DIR/race/ui/play\" \"$BUILT_PRODUCTS_DIR/race/ui/settings\" \"$BUILT_PRODUCTS_DIR/race/ui/voting\"\ncp \"$BUILT_PRODUCTS_DIR/cgame-race.so\" \"$BUILT_PRODUCTS_DIR/race/cgame.so\"\ncp \"$SRCROOT\"/src/cgame/race/ui/hud_input_*.png \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/DialogViewController.css \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/conback.png \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/fonts/Coda-Regular.ttf \"$BUILT_PRODUCTS_DIR/race/ui/fonts/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/admin/*.css \"$SRCROOT\"/src/cgame/race/ui/admin/*.json \"$BUILT_PRODUCTS_DIR/race/ui/admin/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/backgrounds/*.png \"$BUILT_PRODUCTS_DIR/race/ui/backgrounds/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/home/HomeViewController.css \"$SRCROOT\"/src/cgame/race/ui/home/HomeViewController.json \"$BUILT_PRODUCTS_DIR/race/ui/home/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/credits/*.css \"$SRCROOT\"/src/cgame/race/ui/credits/*.json \"$BUILT_PRODUCTS_DIR/race/ui/credits/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/play/*.css \"$SRCROOT\"/src/cgame/race/ui/play/*.json \"$BUILT_PRODUCTS_DIR/race/ui/play/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/controls/*.css \"$SRCROOT\"/src/cgame/race/ui/controls/*.json \"$BUILT_PRODUCTS_DIR/race/ui/controls/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/main/*.css \"$SRCROOT\"/src/cgame/race/ui/main/*.json \"$SRCROOT\"/src/cgame/race/ui/main/*.png \"$BUILT_PRODUCTS_DIR/race/ui/main/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/maps/*.css \"$SRCROOT\"/src/cgame/race/ui/maps/*.json \"$BUILT_PRODUCTS_DIR/race/ui/maps/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/settings/*.css \"$SRCROOT\"/src/cgame/race/ui/settings/*.json \"$BUILT_PRODUCTS_DIR/race/ui/settings/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/voting/*.css \"$SRCROOT\"/src/cgame/race/ui/voting/*.json \"$BUILT_PRODUCTS_DIR/race/ui/voting/\"\ncodesign --force --sign - \"$BUILT_PRODUCTS_DIR/race/cgame.so\"\n";
 		};
 		CE16439A2FF5D3BF00863996 /* Compile Shaders */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -8255,7 +8255,6 @@
 					G_HOOK,
 				);
 				LIBRARY_SEARCH_PATHS = "$(HOMEBREW_PREFIX)/lib";
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MACH_O_TYPE = mh_bundle;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -8316,7 +8315,6 @@
 					G_HOOK,
 				);
 				LIBRARY_SEARCH_PATHS = "$(HOMEBREW_PREFIX)/lib";
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MACH_O_TYPE = mh_bundle;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -8385,7 +8383,6 @@
 					G_HOOK,
 				);
 				LIBRARY_SEARCH_PATHS = "$(HOMEBREW_PREFIX)/lib";
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MACH_O_TYPE = mh_bundle;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -8471,7 +8468,6 @@
 					G_HOOK,
 				);
 				LIBRARY_SEARCH_PATHS = "$(HOMEBREW_PREFIX)/lib";
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MACH_O_TYPE = mh_bundle;
 				OTHER_CFLAGS = (
 					"$(inherited)",

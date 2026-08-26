@@ -55,6 +55,8 @@ SHARED_REGISTRATION_FILES = (
   "Makefile.am",
   "README.md",
   "configure.ac",
+  "share/Makefile.am",
+  "Quetoo.vs15/Smoke-QuetooRace.ps1",
   "Quetoo.vs15/quetoo.sln",
   "Quetoo.vs15/quetoo_all.sln",
   "Quetoo.vs15/cgame-race.vcxproj",

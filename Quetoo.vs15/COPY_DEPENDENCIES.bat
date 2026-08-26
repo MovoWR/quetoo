@@ -17,10 +17,11 @@ call ROBO "../src/cgame/common/ui/" "%quetoo_folder%/lib/default/ui/" *.wav
 
 call ROBO "../../Objectively/Objectively.vs15/bin/%build_platform%%build_configuration%/" "%quetoo_folder%/bin/" Objectively.*
 call ROBO "../../Objectively/Objectively.vs15/libs/dlfcn/%build_platform%/" "%quetoo_folder%/bin/" *.dll
+call ROBO "../../ObjectivelyGPU/ObjectivelyGPU.vs15/bin/%build_platform%%build_configuration%/" "%quetoo_folder%/bin/" ObjectivelyGPU.*
 call ROBO "../../ObjectivelyMVC/ObjectivelyMVC.vs15/bin/%build_platform%%build_configuration%/" "%quetoo_folder%/bin/" ObjectivelyMVC.*
 
-call ROBO "../../ObjectivelyGPU/ObjectivelyGPU.vs15/libs/SDL3-3.4.2/lib/x64/" "%quetoo_folder%/bin/" *.dll
-call ROBO "../../ObjectivelyMVC/ObjectivelyMVC.vs15/libs/SDL3_image-3.4.0/lib/x64/" "%quetoo_folder%/bin/" *.dll
+call ROBO "../../ObjectivelyGPU/ObjectivelyGPU.vs15/libs/SDL3-3.4.12/lib/x64/" "%quetoo_folder%/bin/" *.dll
+call ROBO "../../ObjectivelyMVC/ObjectivelyMVC.vs15/libs/SDL3_image-3.4.4/lib/x64/" "%quetoo_folder%/bin/" *.dll
 call ROBO "../../ObjectivelyMVC/ObjectivelyMVC.vs15/libs/SDL3_ttf-3.2.2/lib/x64/" "%quetoo_folder%/bin/" *.dll
 
 call ROBO "libs/openal/bin/%build_platform%/" "%quetoo_folder%/bin/" *.dll

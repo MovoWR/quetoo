@@ -1,0 +1,13 @@
+# Complete Race map rotation and Maps-screen catalog.
+
+{
+	name potato
+	message "Potato jumps"
+	author Mako
+	tags "source:custom"
+}
+{
+	name mzc_dj
+	message "Nothing at all"
+	tags "source:custom"
+}

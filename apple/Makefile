@@ -15,7 +15,7 @@
 CODESIGN_IDENTITY ?= "Developer ID Application: Jay Dolan (C5PXKE9CU5)"
 QUETOO_DATA_DIR   ?= ../../quetoo-data
 
-ARCH      = arm64
+ARCH      ?= $(shell uname -m)
 BUILD     = $(ARCH)-apple-darwin
 TARGET    = target
 INSTALL   = $(TARGET)/Quetoo.app
@@ -23,6 +23,10 @@ BINDIR    = $(INSTALL)/Contents/MacOS
 LIBDIR    = $(BINDIR)/lib
 MODULEDIR = $(LIBDIR)/quetoo
 DATADIR   = $(INSTALL)/Contents/Resources
+
+RACE_MODULEDIR   = $(MODULEDIR)/race
+RACE_RESOURCEDIR = $(DATADIR)/race
+RACE_INSTALLDATA = $(DATADIR)/quetoo/race
 
 SNAPSHOT        = $(TARGET)/Quetoo-$(BUILD).dmg
 BUNDLE_SNAPSHOT = $(TARGET)/Quetoo-bundle-$(BUILD).dmg
@@ -67,6 +71,9 @@ install-lib:
 # --verify --deep handles cleanly.
 move-resources:
 	@mkdir -p $(DATADIR)
+	@if [ -d "$(RACE_MODULEDIR)" ]; then \
+		find "$(RACE_MODULEDIR)" -maxdepth 1 -type f -name "*.la" -delete; \
+	fi
 	@if [ -d "$(MODULEDIR)" ]; then \
 		find "$(MODULEDIR)" -mindepth 1 -type f ! -name "*.so" ! -name "*.dylib" \
 			| while IFS= read -r src; do \
@@ -77,6 +84,15 @@ move-resources:
 			done; \
 		find "$(MODULEDIR)" -mindepth 1 -type d -empty -delete 2>/dev/null || true; \
 	fi
+	@if [ -d "$(RACE_INSTALLDATA)" ]; then \
+		mkdir -p "$(RACE_RESOURCEDIR)"; \
+		cp -R "$(RACE_INSTALLDATA)/." "$(RACE_RESOURCEDIR)/"; \
+		rm -rf "$(RACE_INSTALLDATA)"; \
+		find "$(DATADIR)/quetoo" -type d -empty -delete 2>/dev/null || true; \
+	fi
+
+verify-race:
+	bash ./Verify-QuetooRace.sh --app "$(INSTALL)" --architecture "$(ARCH)"
 
 # Sign all Mach-O code in the bundle, then seal the bundle.
 # lib/quetoo/default/ contains only .so plugins after move-resources, so
@@ -145,5 +161,5 @@ clean:
 	rm -rf $(TARGET)/*
 
 .PHONY: all configure compile pre-install install install-lib move-resources \
-        sign dmg-layout dmg notarize bundle-data bundle-sign \
+	verify-race sign dmg-layout dmg notarize bundle-data bundle-sign \
         bundle-dmg bundle-notarize clean

@@ -8,13 +8,16 @@ EXTRA_DIST = \
 	md32obj.py \
 	objfu.py \
 	pyproject.toml \
+	race_payload_files.json \
 	run_pty_commands.py \
 	skyfu.py \
 	symbolicate_dmp.py \
 	test_verify_race_overrides.py \
+	test_verify_race_payload.py \
 	verify_pristine_tree.py \
 	verify_projects.py \
 	verify_race_overrides.py \
+	verify_race_payload.py \
 	verify_race_ui.py
 
 .PHONY: install-tools

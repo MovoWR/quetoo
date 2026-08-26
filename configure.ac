@@ -220,7 +220,13 @@ if test "x${with_games}" != x; then
     GAME_MODULES="${with_games}"
 fi
 
+BUILD_RACE=no
+case " ${GAME_MODULES} " in
+  *" race "*) BUILD_RACE=yes ;;
+esac
+
 AC_SUBST(GAME_MODULES)
+AM_CONDITIONAL(BUILD_RACE, test "x$BUILD_RACE" = xyes)
 AC_MSG_RESULT($GAME_MODULES)
 
 dnl ---------------------------------
@@ -388,6 +394,8 @@ AC_CONFIG_FILES([
 	deps/rapidjson/rapidjson/error/Makefile
 	deps/rapidjson/rapidjson/internal/Makefile
 	deps/rapidjson/rapidjson/msinttypes/Makefile
+	share/Makefile
+	share/race/Makefile
 	src/Makefile
 	src/collision/Makefile
 	src/cgame/Makefile

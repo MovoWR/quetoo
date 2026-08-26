@@ -10,7 +10,7 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   resolve-deps:
@@ -20,12 +20,12 @@ jobs:
       objectivelygpu-sha: ${{ steps.resolve.outputs.objectivelygpu-sha }}
       objectivelymvc-sha: ${{ steps.resolve.outputs.objectivelymvc-sha }}
     steps:
-    - name: Resolve dependency versions
+    - name: Select current dependency versions
       id: resolve
       run: |
-        echo "objectively-sha=$(git ls-remote https://github.com/jdolan/Objectively.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-        echo "objectivelygpu-sha=$(git ls-remote https://github.com/jdolan/ObjectivelyGPU.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-        echo "objectivelymvc-sha=$(git ls-remote https://github.com/jdolan/ObjectivelyMVC.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+        echo "objectively-sha=9b9c27287e3c17b7005bb43a4244f90a81e41821" >> "$GITHUB_OUTPUT"
+        echo "objectivelygpu-sha=a1bc32eb8bf20e7fbbb31ffe43b4bcb188b70a63" >> "$GITHUB_OUTPUT"
+        echo "objectivelymvc-sha=d5874a50a8f08d1afa94e6bdd4971a9639dc97a7" >> "$GITHUB_OUTPUT"
 
   build-macos:
     needs: resolve-deps
@@ -65,16 +65,17 @@ jobs:
 
     - name: Cache Objectively and ObjectivelyMVC
       id: cache-deps
-      uses: actions/cache@v5
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
       with:
         path: /usr/local
         key: macos-deps-${{ matrix.arch }}-sdl3.4.12-${{ needs.resolve-deps.outputs.objectively-sha }}-${{ needs.resolve-deps.outputs.objectivelygpu-sha }}-${{ needs.resolve-deps.outputs.objectivelymvc-sha }}
 
     - name: Checkout Objectively
       if: steps.cache-deps.outputs.cache-hit != 'true'
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/Objectively
+        ref: ${{ needs.resolve-deps.outputs.objectively-sha }}
         path: Objectively
 
     - name: Build Objectively
@@ -91,9 +92,10 @@ jobs:
 
     - name: Checkout ObjectivelyGPU
       if: steps.cache-deps.outputs.cache-hit != 'true'
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/ObjectivelyGPU
+        ref: ${{ needs.resolve-deps.outputs.objectivelygpu-sha }}
         path: ObjectivelyGPU
 
     - name: Build ObjectivelyGPU
@@ -110,9 +112,10 @@ jobs:
 
     - name: Checkout ObjectivelyMVC
       if: steps.cache-deps.outputs.cache-hit != 'true'
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/ObjectivelyMVC
+        ref: ${{ needs.resolve-deps.outputs.objectivelymvc-sha }}
         path: ObjectivelyMVC
 
     - name: Build ObjectivelyMVC
@@ -128,7 +131,7 @@ jobs:
         sudo make install
 
     - name: Checkout Quetoo
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         path: quetoo
         fetch-depth: 0
@@ -137,8 +140,21 @@ jobs:
       working-directory: quetoo
       run: |
         autoreconf -i
-        ./configure --with-version=$(git rev-list --count HEAD) CFLAGS='-g -O2' --with-homebrew=${HOMEBREW_PREFIX} --prefix=/
+        ./configure --with-version=$(git rev-list --count HEAD) --with-tests CFLAGS='-g -O2' --with-homebrew=${HOMEBREW_PREFIX} --prefix=/
         make -j$(sysctl -n hw.logicalcpu)
+
+    - name: Verify and test Race
+      working-directory: quetoo
+      run: |
+        python3 src/tools/verify_race_overrides.py
+        python3 src/tools/verify_race_ui.py
+        python3 src/tools/verify_race_payload.py --root . --layout source
+        make -C src/tests check \
+          TESTS='check_race check_race_native check_race_game_landing check_race_jump_viewer check_race_pmove check_race_weapon_movement check_race_weapon_tuning'
+        portability="build/race-portability-${{ matrix.build }}"
+        mkdir -p "$portability"
+        src/tests/race_portability_fixture --write "$portability"
+        src/tests/race_portability_fixture --verify "$portability"
 
     - name: Install Quetoo
       working-directory: quetoo
@@ -152,6 +168,13 @@ jobs:
       working-directory: quetoo
       run: make -C apple move-resources
 
+    - name: Verify installed Race payload
+      working-directory: quetoo
+      run: |
+        python3 src/tools/verify_race_payload.py \
+          --root apple/target/Quetoo.app --layout macos-app
+        make -C apple verify-race ARCH=${{ matrix.arch }}
+
     - name: Create archive
       working-directory: quetoo
       run: |
@@ -159,7 +182,7 @@ jobs:
         zip -r ../../quetoo-${{ matrix.build }}.zip Quetoo.app
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-${{ matrix.build }}
         path: quetoo/quetoo-${{ matrix.build }}.zip
@@ -170,12 +193,12 @@ jobs:
 
     steps:
     - name: Download arm64 artifact
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: quetoo-arm64-apple-darwin
 
     - name: Download x86_64 artifact
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: quetoo-x86_64-apple-darwin
 
@@ -196,10 +219,17 @@ jobs:
         done
 
     - name: Checkout Quetoo
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         path: quetoo
         fetch-depth: 1
+
+    - name: Verify Universal Race payload
+      run: |
+        python3 quetoo/src/tools/verify_race_payload.py \
+          --root arm64/Quetoo.app --layout macos-app
+        make -C quetoo/apple verify-race \
+          INSTALL=$(pwd)/arm64/Quetoo.app ARCH=universal
 
     - name: Set up keychain
       env:
@@ -232,7 +262,7 @@ jobs:
              SNAPSHOT=$(pwd)/quetoo-universal-apple-darwin.dmg
 
     - name: Checkout quetoo-data
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/quetoo-data
         path: quetoo-data
@@ -265,13 +295,13 @@ jobs:
       run: security delete-keychain build.keychain
 
     - name: Upload binary DMG artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-universal-apple-darwin
         path: quetoo-universal-apple-darwin.dmg
 
     - name: Upload bundle artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-bundle-universal-apple-darwin
         path: quetoo-bundle-universal-apple-darwin.dmg
@@ -307,8 +337,9 @@ jobs:
           check \
           cmake \
           imagemagick \
+          patchelf \
           ruby ruby-dev rubygems rpm
-        sudo gem install fpm --no-document
+        sudo gem install fpm -v 1.17.0 --no-document
 
     - name: Build OpenAL Soft
       run: |
@@ -345,9 +376,10 @@ jobs:
         sudo cmake --install SDL3_ttf/build
 
     - name: Checkout Objectively
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/Objectively
+        ref: ${{ needs.resolve-deps.outputs.objectively-sha }}
         path: Objectively
 
     - name: Build Objectively
@@ -360,9 +392,10 @@ jobs:
         sudo make install
 
     - name: Checkout ObjectivelyGPU
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/ObjectivelyGPU
+        ref: ${{ needs.resolve-deps.outputs.objectivelygpu-sha }}
         path: ObjectivelyGPU
 
     - name: Build ObjectivelyGPU
@@ -375,9 +408,10 @@ jobs:
         sudo make install
 
     - name: Checkout ObjectivelyMVC
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/ObjectivelyMVC
+        ref: ${{ needs.resolve-deps.outputs.objectivelymvc-sha }}
         path: ObjectivelyMVC
 
     - name: Build ObjectivelyMVC
@@ -393,7 +427,7 @@ jobs:
       run: sudo ldconfig
 
     - name: Checkout Quetoo
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         path: quetoo
         fetch-depth: 0
@@ -403,8 +437,21 @@ jobs:
       run: |
         export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}"
         autoreconf -i
-        ./configure --with-version=$(git rev-list --count HEAD) CFLAGS='-g -O2' LDFLAGS='-Wl,-rpath=XORIGIN/../lib' --prefix=/
+        ./configure --with-version=$(git rev-list --count HEAD) --with-tests CFLAGS='-g -O2' LDFLAGS='-Wl,-rpath=XORIGIN/../lib' --prefix=/
         make -j$(nproc)
+
+    - name: Verify and test Race
+      working-directory: quetoo
+      run: |
+        python3 src/tools/verify_race_overrides.py
+        python3 src/tools/verify_race_ui.py
+        python3 src/tools/verify_race_payload.py --root . --layout source
+        make -C src/tests check \
+          TESTS='check_race check_race_native check_race_game_landing check_race_jump_viewer check_race_pmove check_race_weapon_movement check_race_weapon_tuning'
+        portability="build/race-portability-${{ matrix.build }}"
+        mkdir -p "$portability"
+        src/tests/race_portability_fixture --write "$portability"
+        src/tests/race_portability_fixture --verify "$portability"
 
     - name: Package Quetoo
       working-directory: quetoo/linux
@@ -414,20 +461,25 @@ jobs:
         export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}"
         make archive deb rpm VERSION=${VERSION#v}
 
+    - name: Verify installed Race payload
+      working-directory: quetoo
+      run: python3 src/tools/verify_race_payload.py \
+             --root linux/target/staging --layout linux
+
     - name: Upload archive artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-${{ matrix.build }}-archive
         path: quetoo/linux/target/quetoo-${{ matrix.build }}.tar.gz
 
     - name: Upload .deb artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-${{ matrix.build }}-deb
-        path: quetoo/linux/target/quetoo-*.deb
+        path: quetoo/linux/target/quetoo_*.deb
 
     - name: Upload .rpm artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-${{ matrix.build }}-rpm
         path: quetoo/linux/target/quetoo-*.rpm
@@ -439,40 +491,51 @@ jobs:
     env:
       SOLUTION_FILE_PATH: Quetoo.vs15/quetoo_all.sln
       BUILD_CONFIGURATION: Release
+      QUETOO_HOME: ${{ github.workspace }}\race-stage
 
     steps:
     - name: Checkout Objectively
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/Objectively
+        ref: ${{ needs.resolve-deps.outputs.objectively-sha }}
         path: Objectively
 
     # ObjectivelyMVC's sdl3.targets imports ObjectivelyGPU's for the SDL3 core
     # dependency, so GPU must be checked out alongside.
     - name: Checkout ObjectivelyGPU
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/ObjectivelyGPU
+        ref: ${{ needs.resolve-deps.outputs.objectivelygpu-sha }}
         path: ObjectivelyGPU
 
     - name: Checkout ObjectivelyMVC
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/ObjectivelyMVC
+        ref: ${{ needs.resolve-deps.outputs.objectivelymvc-sha }}
         path: ObjectivelyMVC
 
     - name: Checkout Quetoo
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         path: quetoo
         fetch-depth: 0
 
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v3
+      uses: microsoft/setup-msbuild@1f5e3af150dc644fb234617cb6d583262a2a6a25 # v2
 
     - name: Restore NuGet packages
       working-directory: ${{ github.workspace }}/quetoo
       run: nuget restore ${{ env.SOLUTION_FILE_PATH }}
+
+    - name: Verify Race source contracts
+      working-directory: ${{ github.workspace }}/quetoo
+      run: |
+        python src/tools/verify_race_overrides.py
+        python src/tools/verify_race_ui.py
+        python src/tools/verify_race_payload.py --root . --layout source
 
     - name: Build
       working-directory: ${{ github.workspace }}/quetoo
@@ -480,6 +543,45 @@ jobs:
       run: |
         $version = (git rev-list --count HEAD).Trim()
         msbuild /m /p:Configuration=$env:BUILD_CONFIGURATION /p:DebugSymbols=true /p:DebugType=full "/p:ExtraPreprocessorDefinitions=VERSION=`"$version`"" $env:SOLUTION_FILE_PATH
+
+    - name: Run native Race tests
+      working-directory: ${{ github.workspace }}/quetoo
+      shell: pwsh
+      run: |
+        $env:PATH = "$env:QUETOO_HOME\bin;$env:PATH"
+        $nativeOutput = & '.\Quetoo.vs15\bin\x64Release\check-race-native.exe' 2>&1
+        $nativeExit = $LASTEXITCODE
+        $nativeOutput | Write-Output
+        if ($nativeExit -ne 0) { throw 'Native Race integration test failed' }
+        if (-not ($nativeOutput -match 'RACE_NATIVE_TEST PASS assertions=100167 differential=100000')) {
+          throw 'Native Race integration marker is missing'
+        }
+        $weaponOutput = & '.\Quetoo.vs15\bin\x64Release\check-race-weapon-movement.exe' 2>&1
+        $weaponExit = $LASTEXITCODE
+        $weaponOutput | Write-Output
+        if ($weaponExit -ne 0) { throw 'Race weapon movement test failed' }
+        if ($weaponOutput -notcontains '100%: Checks: 7, Failures: 0, Errors: 0') {
+          throw 'Race weapon movement execution marker is missing'
+        }
+        $tuningOutput = & '.\Quetoo.vs15\bin\x64Release\check-race-weapon-tuning.exe' 2>&1
+        $tuningExit = $LASTEXITCODE
+        $tuningOutput | Write-Output
+        if ($tuningExit -ne 0) { throw 'Race weapon tuning service test failed' }
+        if ($tuningOutput -notcontains 'RACE_WEAPON_TUNING_TEST PASS assertions=862 values=22') {
+          throw 'Race weapon tuning service execution marker is missing'
+        }
+
+    - name: Verify portable persistence corpus
+      working-directory: ${{ github.workspace }}/quetoo
+      shell: pwsh
+      run: |
+        $env:PATH = "$env:QUETOO_HOME\bin;$env:PATH"
+        $output = Join-Path $env:RUNNER_TEMP 'race-portability-x86_64'
+        New-Item -ItemType Directory -Force -Path $output | Out-Null
+        & '.\Quetoo.vs15\bin\x64Release\race-portability-fixture.exe' --write $output
+        if ($LASTEXITCODE -ne 0) { throw 'Portability corpus generation failed' }
+        & '.\Quetoo.vs15\bin\x64Release\race-portability-fixture.exe' --verify $output
+        if ($LASTEXITCODE -ne 0) { throw 'Portability corpus verification failed' }
 
     - name: Install Quetoo
       working-directory: ${{ github.workspace }}/quetoo
@@ -491,6 +593,8 @@ jobs:
         New-Item -ItemType Directory -Force -Path "$staging\lib\default\ui" | Out-Null
         New-Item -ItemType Directory -Force -Path "$staging\lib\ctf" | Out-Null
         New-Item -ItemType Directory -Force -Path "$staging\lib\lithium" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$staging\lib\race\ui" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$staging\share\race\maps" | Out-Null
 
         # Executables and their PDBs
         Copy-Item "Quetoo.vs15\bin\x64Release\quetoo.exe" "$staging\bin\"
@@ -513,6 +617,10 @@ jobs:
         Copy-Item "Quetoo.vs15\bin\x64Release\lithium\cgame.pdb" "$staging\lib\lithium\"
         Copy-Item "Quetoo.vs15\bin\x64Release\lithium\game.dll" "$staging\lib\lithium\"
         Copy-Item "Quetoo.vs15\bin\x64Release\lithium\game.pdb" "$staging\lib\lithium\"
+        Copy-Item "Quetoo.vs15\bin\x64Release\race\cgame.dll" "$staging\lib\race\"
+        Copy-Item "Quetoo.vs15\bin\x64Release\race\cgame.pdb" "$staging\lib\race\"
+        Copy-Item "Quetoo.vs15\bin\x64Release\race\game.dll" "$staging\lib\race\"
+        Copy-Item "Quetoo.vs15\bin\x64Release\race\game.pdb" "$staging\lib\race\"
 
         # Objectively, ObjectivelyGPU, and ObjectivelyMVC and their PDBs
         Copy-Item "..\Objectively\Objectively.vs15\bin\x64Release\Objectively.dll" "$staging\bin\"
@@ -548,13 +656,29 @@ jobs:
           }
         }
 
+        $raceUiSource = "src\cgame\race\ui"
+        Get-ChildItem -Path $raceUiSource -Include "*.css","*.json","*.png","*.wav","*.ttf","*.txt" -Recurse | ForEach-Object {
+          $relativePath = $_.FullName.Substring((Resolve-Path $raceUiSource).Path.Length).TrimStart('\')
+          $destPath = Join-Path "$staging\lib\race\ui" $relativePath
+          $destDir = Split-Path $destPath -Parent
+          if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+          Copy-Item $_.FullName -Destination $destPath
+        }
+
+        Copy-Item "share\race\manifest.mf","share\race\maps.lst" "$staging\share\race\"
+        Copy-Item "share\race\maps\*.bsp","share\race\maps\*.mf" "$staging\share\race\maps\"
+
+    - name: Verify installed Race payload
+      working-directory: ${{ github.workspace }}/quetoo
+      run: python src/tools/verify_race_payload.py --root windows/target/quetoo --layout windows
+
     - name: Create archive
       working-directory: ${{ github.workspace }}/quetoo
       run: |
         Compress-Archive -Path windows\target\quetoo\* -DestinationPath quetoo-x86_64-pc-windows.zip
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-x86_64-pc-windows
         path: quetoo/quetoo-x86_64-pc-windows.zip
@@ -562,27 +686,31 @@ jobs:
   release:
     needs: [lipo-macos, build-linux, build-windows]
     runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v8
-
-    - name: Publish version to S3
+    - name: Verify release ref
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: us-east-1
+        VERSION: ${{ github.event.inputs.version || github.ref_name }}
       run: |
-        git rev-list --count HEAD > version
-        aws s3 cp version s3://quetoo/version
+        test -n "$VERSION"
+        tag_commit=$(git rev-parse --verify "refs/tags/$VERSION^{commit}")
+        source_commit=$(git rev-parse "$GITHUB_SHA^{commit}")
+        test "$tag_commit" = "$source_commit"
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+
 
     - name: Checkout quetoo-data
-      uses: actions/checkout@v6
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: jdolan/quetoo-data
         path: quetoo-data
@@ -613,13 +741,13 @@ jobs:
         cd ..
 
     - name: Upload Linux x86_64 bundle artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-bundle-x86_64-pc-linux
         path: quetoo-bundle-x86_64-pc-linux.tar.gz
 
     - name: Upload Windows bundle artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: quetoo-bundle-x86_64-pc-windows
         path: quetoo-bundle-x86_64-pc-windows.zip
@@ -630,14 +758,10 @@ jobs:
         GH_REPO: ${{ github.repository }}
         VERSION: ${{ github.event.inputs.version || github.ref_name }}
       run: |
-        cp quetoo-x86_64-pc-linux-deb/quetoo-client_*_amd64.deb quetoo-x86_64-pc-linux-deb/quetoo-client-x86_64-pc-linux.deb
-        cp quetoo-x86_64-pc-linux-deb/quetoo-server_*_amd64.deb quetoo-x86_64-pc-linux-deb/quetoo-server-x86_64-pc-linux.deb
-        cp quetoo-x86_64-pc-linux-rpm/quetoo-client-*.x86_64.rpm quetoo-x86_64-pc-linux-rpm/quetoo-client-x86_64-pc-linux.rpm
-        cp quetoo-x86_64-pc-linux-rpm/quetoo-server-*.x86_64.rpm quetoo-x86_64-pc-linux-rpm/quetoo-server-x86_64-pc-linux.rpm
-        cp quetoo-aarch64-pc-linux-deb/quetoo-client_*_arm64.deb quetoo-aarch64-pc-linux-deb/quetoo-client-aarch64-pc-linux.deb
-        cp quetoo-aarch64-pc-linux-deb/quetoo-server_*_arm64.deb quetoo-aarch64-pc-linux-deb/quetoo-server-aarch64-pc-linux.deb
-        cp quetoo-aarch64-pc-linux-rpm/quetoo-client-*.aarch64.rpm quetoo-aarch64-pc-linux-rpm/quetoo-client-aarch64-pc-linux.rpm
-        cp quetoo-aarch64-pc-linux-rpm/quetoo-server-*.aarch64.rpm quetoo-aarch64-pc-linux-rpm/quetoo-server-aarch64-pc-linux.rpm
+        cp quetoo-x86_64-pc-linux-deb/quetoo_*_amd64.deb quetoo-x86_64-pc-linux-deb/quetoo-x86_64-pc-linux.deb
+        cp quetoo-x86_64-pc-linux-rpm/quetoo-*.x86_64.rpm quetoo-x86_64-pc-linux-rpm/quetoo-x86_64-pc-linux.rpm
+        cp quetoo-aarch64-pc-linux-deb/quetoo_*_arm64.deb quetoo-aarch64-pc-linux-deb/quetoo-aarch64-pc-linux.deb
+        cp quetoo-aarch64-pc-linux-rpm/quetoo-*.aarch64.rpm quetoo-aarch64-pc-linux-rpm/quetoo-aarch64-pc-linux.rpm
 
         prev_tag=$(git describe --tags --abbrev=0 "$VERSION^" 2>/dev/null || true)
         if [ -n "$prev_tag" ]; then
@@ -672,10 +796,13 @@ jobs:
 
         | Type | x86-64 | arm64 |
         |---|---|---|
-        | Client .deb | [quetoo-client-x86_64-pc-linux.deb](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-client-x86_64-pc-linux.deb) | [quetoo-client-aarch64-pc-linux.deb](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-client-aarch64-pc-linux.deb) |
-        | Client .rpm | [quetoo-client-x86_64-pc-linux.rpm](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-client-x86_64-pc-linux.rpm) | [quetoo-client-aarch64-pc-linux.rpm](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-client-aarch64-pc-linux.rpm) |
-        | Server .deb | [quetoo-server-x86_64-pc-linux.deb](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-server-x86_64-pc-linux.deb) | [quetoo-server-aarch64-pc-linux.deb](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-server-aarch64-pc-linux.deb) |
-        | Server .rpm | [quetoo-server-x86_64-pc-linux.rpm](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-server-x86_64-pc-linux.rpm) | [quetoo-server-aarch64-pc-linux.rpm](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-server-aarch64-pc-linux.rpm) |
+        | Unified .deb | [quetoo-x86_64-pc-linux.deb](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-x86_64-pc-linux.deb) | [quetoo-aarch64-pc-linux.deb](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-aarch64-pc-linux.deb) |
+        | Unified .rpm | [quetoo-x86_64-pc-linux.rpm](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-x86_64-pc-linux.rpm) | [quetoo-aarch64-pc-linux.rpm](https://github.com/${{ github.repository }}/releases/download/$VERSION/quetoo-aarch64-pc-linux.rpm) |
+
+        ## Race
+
+        Race GAME, CGAME, UI, and data are included in every matching-source
+        archive and unified Linux package above. Start Race with `+game race`.
 
         ## Changelog
 
@@ -690,54 +817,67 @@ jobs:
           quetoo-bundle-x86_64-pc-windows.zip
           quetoo-universal-apple-darwin/quetoo-universal-apple-darwin.dmg
           quetoo-x86_64-pc-linux-archive/quetoo-x86_64-pc-linux.tar.gz
-          quetoo-x86_64-pc-linux-deb/quetoo-client-x86_64-pc-linux.deb
-          quetoo-x86_64-pc-linux-deb/quetoo-server-x86_64-pc-linux.deb
-          quetoo-x86_64-pc-linux-rpm/quetoo-client-x86_64-pc-linux.rpm
-          quetoo-x86_64-pc-linux-rpm/quetoo-server-x86_64-pc-linux.rpm
+          quetoo-x86_64-pc-linux-deb/quetoo-x86_64-pc-linux.deb
+          quetoo-x86_64-pc-linux-rpm/quetoo-x86_64-pc-linux.rpm
           quetoo-aarch64-pc-linux-archive/quetoo-aarch64-pc-linux.tar.gz
-          quetoo-aarch64-pc-linux-deb/quetoo-client-aarch64-pc-linux.deb
-          quetoo-aarch64-pc-linux-deb/quetoo-server-aarch64-pc-linux.deb
-          quetoo-aarch64-pc-linux-rpm/quetoo-client-aarch64-pc-linux.rpm
-          quetoo-aarch64-pc-linux-rpm/quetoo-server-aarch64-pc-linux.rpm
+          quetoo-aarch64-pc-linux-deb/quetoo-aarch64-pc-linux.deb
+          quetoo-aarch64-pc-linux-rpm/quetoo-aarch64-pc-linux.rpm
           quetoo-x86_64-pc-windows/quetoo-x86_64-pc-windows.zip
         )
 
         if gh release view "$VERSION" >/dev/null 2>&1; then
-          gh release edit "$VERSION" --title "Quetoo $VERSION" --notes "$notes"
-          gh release upload "$VERSION" --clobber "${assets[@]}"
-        else
-          gh release create "$VERSION" --title "Quetoo $VERSION" --notes "$notes" "${assets[@]}"
+          echo "Release $VERSION already exists; refusing to overwrite it" >&2
+          exit 1
         fi
+        gh release create "$VERSION" --verify-tag --title "Quetoo $VERSION" --notes "$notes" "${assets[@]}"
+
+    - name: Publish version to S3
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
+      run: |
+        git rev-list --count HEAD > version
+        aws s3 cp version s3://quetoo/version
 
   publish-itch:
     needs: release
     runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
 
     steps:
     - name: Download macOS bundle
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: quetoo-bundle-universal-apple-darwin
         path: itch/mac
 
     - name: Download Linux x86_64 bundle
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: quetoo-bundle-x86_64-pc-linux
         path: itch/linux
 
     - name: Download Windows bundle
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: quetoo-bundle-x86_64-pc-windows
         path: itch/windows
 
     - name: Install Butler
+      env:
+        BUTLER_SHA256: ${{ vars.BUTLER_LINUX_AMD64_15_21_0_SHA256 }}
       run: |
+        test "${#BUTLER_SHA256}" -eq 64
+        [[ "$BUTLER_SHA256" =~ ^[0-9a-f]{64}$ ]]
         curl --fail --location --retry 5 --retry-all-errors \
-          -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.21.0/archive/default
+        printf '%s  butler.zip\n' "$BUTLER_SHA256" | sha256sum --check
         unzip butler.zip
         chmod +x butler
+        ./butler -V | grep -F '15.21.0'
 
     - name: Push to itch.io
       env:

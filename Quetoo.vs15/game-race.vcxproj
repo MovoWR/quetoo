@@ -234,7 +234,7 @@
            is spelled out so that a toolset change cannot take it away quietly. -->
       <!-- Preserve the same intermediate movement rounding on x86-64 and arm64.
            The narrow suppression covers the intentional override of /fp:precise. -->
-      <AdditionalOptions>%(AdditionalOptions) -fms-extensions -Wno-microsoft-anon-tag -Wno-overriding-option /clang:-ffp-contract=off</AdditionalOptions>
+      <AdditionalOptions>%(AdditionalOptions) -fms-extensions -Wno-microsoft-anon-tag -Wno-overriding-option -Wno-unknown-warning-option /clang:-ffp-contract=off</AdditionalOptions>
       <PreprocessorDefinitions>ARGON2_NO_THREADS;G_HOOK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -243,7 +243,7 @@
       <AdditionalOptions>/Brepro %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>COPY_GAME_MODULE "$(QUETOO_HOME)" "$(Platform)$(Configuration)" "race"</Command>
+      <Command>ROBO_FLAT "bin/$(Platform)$(Configuration)/race" "$(QUETOO_HOME)/lib/race" game.dll &amp;&amp; ROBO_FLAT "bin/$(Platform)$(Configuration)/race" "$(QUETOO_HOME)/lib/race" game.pdb</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

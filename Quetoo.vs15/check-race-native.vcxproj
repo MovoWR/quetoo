@@ -49,7 +49,7 @@
       <PreprocessorDefinitions>G_HOOK;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\src\cgame\race;..\src\cgame\race\ui\admin;..\src\cgame\race\ui\controls;..\src\cgame\race\ui\credits;..\src\cgame\race\ui\home;..\src\cgame\race\ui\main;..\src\cgame\race\ui\maps;..\src\cgame\race\ui\play;..\src\cgame\race\ui\settings;..\src\cgame\race\ui\voting;..\src\cgame\common;..\src\cgame\common\ui;..\src\cgame\common\ui\controls;..\src\cgame\common\ui\credits;..\src\cgame\common\ui\editor;..\src\cgame\common\ui\home;..\src\cgame\common\ui\main;..\src\cgame\common\ui\play;..\src\cgame\common\ui\settings;..\src\cgame\common\ui\teams;..\src\cgame;..\src\game\race;..\src\game\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CLanguageStandard>gnu17</CLanguageStandard>
-      <AdditionalOptions>%(AdditionalOptions) -fms-extensions -Wno-microsoft-anon-tag -Wno-language-extension-token -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-overriding-option /clang:-ffp-contract=off</AdditionalOptions>
+      <AdditionalOptions>%(AdditionalOptions) -fms-extensions -Wno-microsoft-anon-tag -Wno-language-extension-token -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-overriding-option -Wno-unknown-warning-option /clang:-ffp-contract=off</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

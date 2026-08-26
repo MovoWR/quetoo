@@ -4,6 +4,10 @@ SUBDIRS = \
 	deps \
 	src
 
+if BUILD_RACE
+SUBDIRS += share
+endif
+
 html:
 	doxygen
 
