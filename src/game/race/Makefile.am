@@ -73,6 +73,7 @@ game_la_SOURCES = \
 	race_map_browser_service.c \
 	race_map_browser_wire.c \
 	race_map_catalog.c \
+	race_map_properties.c \
 	race_map_state.c \
 	race_map_state_service.c \
 	race_map_state_store.c \

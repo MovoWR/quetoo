@@ -147,8 +147,6 @@ static void Race_TriggerInit(g_entity_t *ent) {
 }
 
 static void Race_TriggerStart(g_entity_t *ent) {
-  Race_Course_AddStart(&g_level.race_course);
-
   const cm_entity_t *mode = gi.EntityValue(ent->def, "start_mode");
   if (!Race_StartMode_Parse(mode->nullable_string, &ent->race_start_mode)) {
     G_Warn("Invalid Race start at %s; start_mode must be touch, exit, or jump\n",
@@ -160,6 +158,7 @@ static void Race_TriggerStart(g_entity_t *ent) {
   Race_TriggerInit(ent);
   ent->Touch = Race_TriggerStart_Touch;
   gi.LinkEntity(ent);
+  Race_Course_AddStart(&g_level.race_course);
 }
 
 static bool Race_TriggerNumber(g_entity_t *ent, const char *key,
@@ -203,6 +202,7 @@ static void Race_TriggerFinish(g_entity_t *ent) {
   Race_TriggerInit(ent);
   ent->Touch = Race_TriggerFinish_Touch;
   gi.LinkEntity(ent);
+  Race_Course_AddFinish(&g_level.race_course);
 }
 
 static void Race_TriggerSplit(g_entity_t *ent) {
@@ -332,6 +332,7 @@ static float Race_BoundsClearance(const box3_t a, const box3_t b) {
 
 static void Race_ConfigureBarriers(void) {
   g_entity_t *barriers[RACE_MAX_CHECKPOINTS];
+  uint8_t model_indices[RACE_MAX_CHECKPOINTS];
   size_t count = 0u;
   const char *classnames[] = {
     "func_race_checkpoint_gate",
@@ -349,6 +350,16 @@ static void Race_ConfigureBarriers(void) {
                RACE_MAX_CHECKPOINTS, etos(ent));
         continue;
       }
+      if (!Race_ClipModelIndexUnique(ent->s.model1, model_indices, count)) {
+        Race_Course_InvalidateBarrier(&g_level.race_course);
+        ent->race_barrier_valid = false;
+        ent->solid = SOLID_NOT;
+        gi.LinkEntity(ent);
+        G_Warn("Race conditional brush %s reuses model index %u; disabling it and making the course non-rankable\n",
+               etos(ent), ent->s.model1);
+        continue;
+      }
+      model_indices[count] = ent->s.model1;
       barriers[count++] = ent;
     }
   }

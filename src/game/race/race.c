@@ -85,12 +85,14 @@ static void Race_ConfigureLevel(void) {
   gi.SetConfigString(CS_RACE_CHECKPOINT_TOTAL,
                      va("%u", g_level.race_course.checkpoint_count));
 
-  gi.Print("Race course: map=%s checkpoints=%u valid=%d\n",
-           g_level.name, g_level.race_course.checkpoint_count, g_level.race_course.valid);
+  gi.Print("Race course: map=%s checkpoints=%u starts=%u finishes=%u valid=%d\n",
+           g_level.name, g_level.race_course.checkpoint_count,
+           g_level.race_course.start_count, g_level.race_course.finish_count,
+           g_level.race_course.valid);
 
   if (!g_level.race_course.valid) {
     gi.Warn(__func__,
-            "Map %s has invalid Race checkpoints; use contiguous cp values 1 through N\n",
+            "Map %s has an invalid Race route; add a finish and use contiguous cp values 1 through N\n",
             g_level.name);
   }
 
@@ -215,7 +217,7 @@ bool Race_Start(g_client_t *cl) {
 
   if (!Race_Run_Start(&cl->race_run, g_level.race_course.valid, g_level.time)) {
     gi.ClientPrint(cl, PRINT_HIGH,
-                   "This map has an invalid Race route. Checkpoints must be contiguous from 1 through N.\n");
+                   "This map has an invalid Race route. A finish and contiguous checkpoints 1 through N are required.\n");
     return false;
   }
 
@@ -579,7 +581,7 @@ void Race_ClientThink(g_client_t *cl, const pm_cmd_t *cmd) {
 
   if (!g_level.race_course.start_count &&
       Race_Run_ShouldAutoStart(mode, &cl->race_run, g_level.race_course.valid,
-                               eligible, cmd->forward, cmd->right)) {
+                               eligible, cmd->forward, cmd->right, cmd->up)) {
     Race_Start(cl);
   }
 }

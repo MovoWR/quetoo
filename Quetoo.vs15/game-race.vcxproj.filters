@@ -114,6 +114,9 @@
     <ClInclude Include="..\src\game\race\race_map_catalog.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\game\race\race_map_properties.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\game\race\race_map_state.h">
       <Filter>src\race</Filter>
     </ClInclude>
@@ -417,6 +420,9 @@
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_map_catalog.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_map_properties.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_map_state.c">

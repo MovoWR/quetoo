@@ -45,6 +45,7 @@
     <ClInclude Include="..\src\game\race\race_map_browser_service.h" />
     <ClInclude Include="..\src\game\race\race_map_browser_wire.h" />
     <ClInclude Include="..\src\game\race\race_map_catalog.h" />
+    <ClInclude Include="..\src\game\race\race_map_properties.h" />
     <ClInclude Include="..\src\game\race\race_map_state.h" />
     <ClInclude Include="..\src\game\race\race_map_state_service.h" />
     <ClInclude Include="..\src\game\race\race_map_state_store.h" />
@@ -108,6 +109,7 @@
     <ClCompile Include="..\src\game\race\race_map_browser_service.c" />
     <ClCompile Include="..\src\game\race\race_map_browser_wire.c" />
     <ClCompile Include="..\src\game\race\race_map_catalog.c" />
+    <ClCompile Include="..\src\game\race\race_map_properties.c" />
     <ClCompile Include="..\src\game\race\race_map_state.c" />
     <ClCompile Include="..\src\game\race\race_map_state_service.c" />
     <ClCompile Include="..\src\game\race\race_map_state_store.c" />

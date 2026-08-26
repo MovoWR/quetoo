@@ -23,6 +23,7 @@ typedef struct {
   uint64_t split_layout;
   uint16_t stage_count;
   uint16_t start_count;
+  uint16_t finish_count;
   uint16_t barrier_count;
   bool malformed;
   bool splits_malformed;
@@ -70,6 +71,7 @@ bool Race_Course_AddCheckpoint(race_course_t *course, int32_t checkpoint);
 bool Race_Course_AddSplit(race_course_t *course, int32_t split);
 bool Race_Course_AddStage(race_course_t *course, int32_t stage);
 void Race_Course_AddStart(race_course_t *course);
+void Race_Course_AddFinish(race_course_t *course);
 void Race_Course_InvalidateSplits(race_course_t *course);
 void Race_Course_InvalidateStages(race_course_t *course);
 void Race_Course_InvalidateBarrier(race_course_t *course);
@@ -87,7 +89,8 @@ float Race_Run_AverageSpeed(const race_run_t *run);
 void Race_Run_MarkInvalid(race_run_t *run, race_invalid_flags_t flag);
 bool Race_Run_IsValid(const race_run_t *run);
 bool Race_Run_ShouldAutoStart(race_mode_t mode, const race_run_t *run, bool course_valid,
-                              bool client_eligible, int16_t forward, int16_t right);
+                              bool client_eligible, int16_t forward, int16_t right,
+                              int16_t up);
 
 bool Race_Mode_Transition(race_mode_t *mode, race_run_t *run, race_mode_t next);
 bool Race_Mode_AllowsHook(race_mode_t mode);

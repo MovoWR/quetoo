@@ -81,6 +81,12 @@ void Race_Course_AddStart(race_course_t *course) {
   }
 }
 
+void Race_Course_AddFinish(race_course_t *course) {
+  if (course->finish_count < UINT16_MAX) {
+    course->finish_count++;
+  }
+}
+
 void Race_Course_InvalidateSplits(race_course_t *course) {
   course->splits_malformed = true;
   course->splits_valid = false;
@@ -103,7 +109,8 @@ bool Race_Course_Validate(race_course_t *course) {
     course->split_mask, course->splits_malformed, 1, &course->split_count);
   course->stages_valid = Race_Course_ValidateSequence(
     course->stage_mask, course->stages_malformed, 2, &course->stage_count);
-  course->valid = checkpoints_valid && !course->barriers_malformed;
+  course->valid = checkpoints_valid && course->finish_count > 0u &&
+                  !course->barriers_malformed;
   return course->valid;
 }
 
@@ -214,10 +221,11 @@ bool Race_Run_IsValid(const race_run_t *run) {
 }
 
 bool Race_Run_ShouldAutoStart(race_mode_t mode, const race_run_t *run, bool course_valid,
-                              bool client_eligible, int16_t forward, int16_t right) {
+                              bool client_eligible, int16_t forward, int16_t right,
+                              int16_t up) {
   return (mode == RACE_MODE_RACE || mode == RACE_MODE_PRACTICE) &&
          run->state == RACE_RUN_IDLE && course_valid && client_eligible &&
-         (forward != 0 || right != 0);
+         (forward != 0 || right != 0 || up != 0);
 }
 
 bool Race_Mode_Transition(race_mode_t *mode, race_run_t *run, race_mode_t next) {

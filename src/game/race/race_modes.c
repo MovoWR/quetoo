@@ -11,6 +11,7 @@
 #include "race_modes.h"
 #include "race_replay_playback_service.h"
 #include "race_replay_service.h"
+#include "race_weapon_tuning_service.h"
 
 race_mode_t Race_Mode(const g_client_t *cl) {
 
@@ -142,6 +143,12 @@ static bool Race_SetMode(g_client_t *cl, race_mode_t mode) {
     return false;
   }
 
+  if (!Race_WeaponTuningService_Rankable() && mode == RACE_MODE_RACE) {
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "Weapon tuning is active; Practice mode is required.\n");
+    mode = RACE_MODE_PRACTICE;
+  }
+
   if (Race_Mode(cl) == mode && cl->persistent.spectator == (mode == RACE_MODE_SPECTATOR)) {
     return false;
   }
@@ -210,7 +217,9 @@ void Race_AssignClientMode(g_client_t *cl) {
   cl->race_stage_restart_trigger = NULL;
 
   const race_mode_t mode = cl->persistent.spectator
-    ? RACE_MODE_SPECTATOR : RACE_MODE_RACE;
+    ? RACE_MODE_SPECTATOR
+    : !Race_WeaponTuningService_Rankable()
+      ? RACE_MODE_PRACTICE : RACE_MODE_RACE;
   cl->persistent.race_mode = mode;
   cl->ps.stats[STAT_RACE_MODE] = (int16_t) mode;
 
@@ -219,6 +228,11 @@ void Race_AssignClientMode(g_client_t *cl) {
                    "You joined ^2Race Mode^7. Completed valid runs can set records.\n");
     gi.ClientPrint(cl, PRINT_HIGH,
                    "Use ^2mode practice^7 for unrestricted training.\n");
+  } else if (mode == RACE_MODE_PRACTICE) {
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "You joined ^3Practice Mode^7. Training runs are never submitted as records.\n");
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "Use ^2store^7 to save your position, ^2kill^7 to return.\n");
   } else {
     gi.ClientPrint(cl, PRINT_HIGH,
                    "You are spectating. Use ^2join^7 or ^2mode race^7 to race.\n");
@@ -232,6 +246,7 @@ void Race_DisconnectClient(g_client_t *cl) {
   }
 
   Race_ReplayPlaybackService_ClientRunStarted(cl);
+  Race_ReplayService_Reset(cl);
   Race_ClearStoredSpawn(cl);
   cl->race_start_trigger = NULL;
   cl->race_stage_trigger = NULL;

@@ -168,6 +168,7 @@ static void Race_TestPersistenceRead(const char *path,
 static race_course_t Race_TestCourse(const int32_t *checkpoints, size_t count) {
   race_course_t course;
   Race_Course_Reset(&course);
+  Race_Course_AddFinish(&course);
 
   for (size_t i = 0; i < count; i++) {
     Race_Course_AddCheckpoint(&course, checkpoints[i]);
@@ -866,6 +867,10 @@ static void Race_TestSettingsUpdateChecksum(char *data, size_t length) {
 }
 
 START_TEST(_Race_CourseValidation) {
+  race_course_t finishless;
+  Race_Course_Reset(&finishless);
+  ck_assert(!Race_Course_Validate(&finishless));
+
   race_course_t course = Race_TestCourse(NULL, 0);
   ck_assert(course.valid);
   ck_assert_uint_eq(course.checkpoint_count, 0);
@@ -911,6 +916,7 @@ START_TEST(_Race_CourseValidation) {
 START_TEST(_Race_MaximumCourse) {
   race_course_t course;
   Race_Course_Reset(&course);
+  Race_Course_AddFinish(&course);
 
   for (int32_t checkpoint = 1; checkpoint <= RACE_MAX_CHECKPOINTS; checkpoint++) {
     ck_assert(Race_Course_AddCheckpoint(&course, checkpoint));
@@ -920,6 +926,7 @@ START_TEST(_Race_MaximumCourse) {
   ck_assert_uint_eq(course.checkpoint_count, RACE_MAX_CHECKPOINTS);
 
   Race_Course_Reset(&course);
+  Race_Course_AddFinish(&course);
   ck_assert(!Race_Course_AddCheckpoint(&course, RACE_MAX_CHECKPOINTS + 1));
   ck_assert(!Race_Course_Validate(&course));
 } END_TEST
@@ -927,6 +934,9 @@ START_TEST(_Race_MaximumCourse) {
 START_TEST(_Race_OptionalCatalogValidation) {
   race_course_t course;
   Race_Course_Reset(&course);
+  Race_Course_AddFinish(&course);
+  Race_Course_AddFinish(&course);
+  ck_assert_uint_eq(course.finish_count, 2u);
 
   Race_Course_AddStart(&course);
   Race_Course_AddStart(&course);
@@ -943,12 +953,14 @@ START_TEST(_Race_OptionalCatalogValidation) {
   ck_assert_uint_eq(course.stage_count, 3u);
 
   Race_Course_Reset(&course);
+  Race_Course_AddFinish(&course);
   ck_assert(Race_Course_AddSplit(&course, 2));
   ck_assert(Race_Course_Validate(&course));
   ck_assert(!course.splits_valid);
   ck_assert(course.valid);
 
   Race_Course_Reset(&course);
+  Race_Course_AddFinish(&course);
   ck_assert(!Race_Course_AddStage(&course, 1));
   ck_assert(Race_Course_Validate(&course));
   ck_assert(!course.stages_valid);
@@ -1296,21 +1308,23 @@ START_TEST(_Race_AutoStart) {
   race_run_t run;
   Race_Run_Reset(&run);
 
-  ck_assert(Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 1, 0));
-  ck_assert(Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 0, -1));
-  ck_assert(Race_Run_ShouldAutoStart(RACE_MODE_PRACTICE, &run, true, true, 1, 0));
+  ck_assert(Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 1, 0, 0));
+  ck_assert(Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 0, -1, 0));
+  ck_assert(Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 0, 0, 1));
+  ck_assert(Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 0, 0, -1));
+  ck_assert(Race_Run_ShouldAutoStart(RACE_MODE_PRACTICE, &run, true, true, 1, 0, 0));
 
-  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_SPECTATOR, &run, true, true, 1, 0));
-  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 0, 0));
-  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, false, true, 1, 0));
-  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, false, 1, 0));
+  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_SPECTATOR, &run, true, true, 1, 0, 0));
+  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 0, 0, 0));
+  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, false, true, 1, 0, 0));
+  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, false, 1, 0, 0));
 
   ck_assert(Race_Run_Start(&run, true, 100));
-  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 1, 0));
+  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 1, 0, 0));
   ck_assert_uint_eq(run.start_time, 100);
 
   ck_assert(Race_Run_Finish(&run, 0, 125));
-  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 1, 0));
+  ck_assert(!Race_Run_ShouldAutoStart(RACE_MODE_RACE, &run, true, true, 1, 0, 0));
 } END_TEST
 
 START_TEST(_Race_Elapsed) {

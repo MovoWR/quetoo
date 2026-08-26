@@ -344,6 +344,8 @@
 		FB94C101302F300000000002 /* race_map_browser_wire.c in Sources */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000002 /* race_map_browser_wire.c */; };
 		FB94C101302F300000000003 /* race_map_catalog.h in Headers */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000003 /* race_map_catalog.h */; };
 		FB94C101302F300000000004 /* race_map_catalog.c in Sources */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000004 /* race_map_catalog.c */; };
+		FA78C1013027000000000001 /* race_map_properties.h in Headers */ = {isa = PBXBuildFile; fileRef = FA78C0013027000000000001 /* race_map_properties.h */; };
+		FA78C1013027000000000002 /* race_map_properties.c in Sources */ = {isa = PBXBuildFile; fileRef = FA78C0013027000000000002 /* race_map_properties.c */; };
 		FB94C101302F300000000005 /* race_map_browser_service.h in Headers */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000005 /* race_map_browser_service.h */; };
 		FB94C101302F300000000006 /* race_map_browser_service.c in Sources */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000006 /* race_map_browser_service.c */; };
 		FB94C101302F300000000007 /* race_map_browser_wire.h in Headers */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000001 /* race_map_browser_wire.h */; };
@@ -2025,6 +2027,8 @@
 		FB94C001302F300000000002 /* race_map_browser_wire.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_map_browser_wire.c; sourceTree = "<group>"; };
 		FB94C001302F300000000003 /* race_map_catalog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_map_catalog.h; sourceTree = "<group>"; };
 		FB94C001302F300000000004 /* race_map_catalog.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_map_catalog.c; sourceTree = "<group>"; };
+		FA78C0013027000000000001 /* race_map_properties.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_map_properties.h; sourceTree = "<group>"; };
+		FA78C0013027000000000002 /* race_map_properties.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_map_properties.c; sourceTree = "<group>"; };
 		FB94C001302F300000000005 /* race_map_browser_service.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_map_browser_service.h; sourceTree = "<group>"; };
 		FB94C001302F300000000006 /* race_map_browser_service.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_map_browser_service.c; sourceTree = "<group>"; };
 		FB94C001302F300000000007 /* cg_race_map_browser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_map_browser.h; sourceTree = "<group>"; };
@@ -3449,6 +3453,8 @@
 				FB94C001302F300000000002 /* race_map_browser_wire.c */,
 				FB94C001302F300000000003 /* race_map_catalog.h */,
 				FB94C001302F300000000004 /* race_map_catalog.c */,
+				FA78C0013027000000000001 /* race_map_properties.h */,
+				FA78C0013027000000000002 /* race_map_properties.c */,
 				FA66C0013026000000000003 /* race_map_state.h */,
 				FA66C0013026000000000004 /* race_map_state.c */,
 				FA66C0013026000000000007 /* race_map_state_service.h */,
@@ -5000,6 +5006,7 @@
 				FB94C101302F300000000005 /* race_map_browser_service.h in Headers */,
 				FB94C101302F300000000001 /* race_map_browser_wire.h in Headers */,
 				FB94C101302F300000000003 /* race_map_catalog.h in Headers */,
+				FA78C1013027000000000001 /* race_map_properties.h in Headers */,
 				FA66C1013026000000000001 /* race_leaderboard.h in Headers */,
 				FB90C101302F000000000001 /* race_leaderboard_wire.h in Headers */,
 				FA66C1013026000000000003 /* race_map_state.h in Headers */,
@@ -6614,6 +6621,7 @@
 				FB94C101302F300000000006 /* race_map_browser_service.c in Sources */,
 				FB94C101302F300000000002 /* race_map_browser_wire.c in Sources */,
 				FB94C101302F300000000004 /* race_map_catalog.c in Sources */,
+				FA78C1013027000000000002 /* race_map_properties.c in Sources */,
 				FA66C1013026000000000002 /* race_leaderboard.c in Sources */,
 				FB90C101302F000000000002 /* race_leaderboard_wire.c in Sources */,
 				FA66C1013026000000000004 /* race_map_state.c in Sources */,
