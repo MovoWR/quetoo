@@ -102,11 +102,15 @@
                       { "class": "Label", "classNames": [ "sectionHint" ], "text": { "text": "A successful physics vote reloads the current map under the selected fixed ruleset." } },
                       {
                         "class": "StackView",
-                        "classNames": [ "physicsButtons" ],
+                        "classNames": [ "proposalActionRow" ],
                         "subviews": [
-                          { "class": "Button", "identifier": "vote_physics_quetoo", "title": { "text": "Quetoo" } },
-                          { "class": "Button", "identifier": "vote_physics_quetoo_fix", "title": { "text": "Quetoo Fix" } },
-                          { "class": "Button", "identifier": "vote_physics_q2", "title": { "text": "Q2" } }
+                          {
+                            "class": "Input",
+                            "classNames": [ "proposalInput" ],
+                            "label": { "text": { "text": "PHYSICS PRESET" } },
+                            "control": { "class": "Select", "identifier": "vote_physics_target" }
+                          },
+                          { "class": "Button", "identifier": "vote_physics_start", "classNames": [ "primaryButton", "proposalButton" ], "title": { "text": "Call physics vote" } }
                         ]
                       }
                     ]

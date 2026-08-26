@@ -40,6 +40,7 @@ static char race_native_models[MAX_MODELS][MAX_STRING_CHARS];
 
 uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count);
 uint32_t Race_NativeTestPersistence(uint32_t *assertion_count);
+uint32_t Race_NativeTestUi(uint32_t *assertion_count);
 
 #define RACE_NATIVE_CHECK(condition, label) do { \
   race_native_assertions++; \
@@ -716,6 +717,9 @@ int main(void) {
   uint32_t persistenceAssertions = 0u;
   race_native_failures += Race_NativeTestPersistence(&persistenceAssertions);
   race_native_assertions += persistenceAssertions;
+  uint32_t uiAssertions = 0u;
+  race_native_failures += Race_NativeTestUi(&uiAssertions);
+  race_native_assertions += uiAssertions;
 
   if (race_native_failures) {
     fprintf(stderr, "RACE_NATIVE_TEST FAILED assertions=%" PRIu32

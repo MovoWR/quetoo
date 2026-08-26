@@ -252,12 +252,15 @@ check_race_native_SOURCES = \
 	check_race_native.c \
 	check_race_cgame_module.c \
 	check_race_persistence_native.c \
+	check_race_ui_native.c \
 	$(top_srcdir)/src/cgame/race/cg_module.c \
 	$(top_srcdir)/src/cgame/race/cg_race_admin_command.c \
 	$(top_srcdir)/src/cgame/race/cg_race_client_file.c \
+	$(top_srcdir)/src/cgame/race/cg_race_dashboard_layout.c \
 	$(top_srcdir)/src/cgame/race/cg_race_double_jump.c \
 	$(top_srcdir)/src/cgame/race/cg_score_model.c \
 	$(top_srcdir)/src/cgame/race/cg_team_mode.c \
+	$(top_srcdir)/src/cgame/race/ui/main/QuickSettingsHostView.c \
 	$(top_srcdir)/src/game/race/race_clip.c \
 	$(top_srcdir)/src/game/race/race_hook.c \
 	$(top_srcdir)/src/game/race/race_kick_broker.c \
@@ -267,6 +270,7 @@ check_race_native_CFLAGS = \
 	-fms-extensions \
 	-ffunction-sections \
 	-fdata-sections \
+	@OBJECTIVELYMVC_CFLAGS@ \
 	-I$(top_srcdir)/src/cgame/race \
 	-I$(top_srcdir)/src/cgame/common \
 	-I$(top_srcdir)/src/game/race \
@@ -275,7 +279,9 @@ check_race_native_CFLAGS = \
 check_race_native_LDFLAGS = \
 	$(RACE_TEST_GC_FLAGS)
 check_race_native_LDADD = \
-	@BASE_LIBS@
+	@BASE_LIBS@ \
+	@OBJECTIVELY_LIBS@ \
+	@OBJECTIVELYMVC_LIBS@
 
 race_portability_fixture_SOURCES = \
 	race_portability_fixture.c \

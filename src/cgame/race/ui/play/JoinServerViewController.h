@@ -59,7 +59,7 @@ struct JoinServerViewController {
   /**
    * @brief A copy of the client's servers list, for sorting, filtering, etc.
    */
-  List *servers;
+  PointerArray *servers;
 
   /**
    * @brief The servers TableView.
@@ -80,7 +80,7 @@ struct JoinServerViewController {
    * @brief The details pane.
    */
   Label *hostnameLabel, *addressLabel, *hintLabel, *motdLabel, *sourceLabel;
-  Label *mapLabel, *gameplayLabel, *physicsLabel, *playersLabel, *pingLabel;
+  Label *mapLabel, *gameplayLabel, *playersLabel, *pingLabel;
   Label *rosterCountLabel, *rosterEmptyLabel;
 
   /**

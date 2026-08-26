@@ -375,8 +375,6 @@
 		FB92C101302F100000000007 /* MovementCombatViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = FB92C001302F100000000007 /* MovementCombatViewController.h */; };
 		FB92C101302F100000000010 /* RaceBindTextView.c in Sources */ = {isa = PBXBuildFile; fileRef = FB92C001302F100000000010 /* RaceBindTextView.c */; };
 		FB92C101302F100000000011 /* RaceBindTextView.h in Headers */ = {isa = PBXBuildFile; fileRef = FB92C001302F100000000011 /* RaceBindTextView.h */; };
-		FB92C101302F100000000008 /* ResponseServiceViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = FB92C001302F100000000008 /* ResponseServiceViewController.c */; };
-		FB92C101302F100000000009 /* ResponseServiceViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = FB92C001302F100000000009 /* ResponseServiceViewController.h */; };
 		FB93C101302F200000000001 /* SettingsViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = FB93C001302F200000000001 /* SettingsViewController.c */; };
 		FB93C101302F200000000006 /* StrafeHelperPreview.c in Sources */ = {isa = PBXBuildFile; fileRef = FB93C001302F200000000006 /* StrafeHelperPreview.c */; };
 		FB93C101302F200000000007 /* StrafeHelperPreview.h in Headers */ = {isa = PBXBuildFile; fileRef = FB93C001302F200000000007 /* StrafeHelperPreview.h */; };
@@ -398,6 +396,9 @@
 		FE26A101303A000000000001 /* cg_race_client_file.h in Headers */ = {isa = PBXBuildFile; fileRef = FE26A001303A000000000001 /* cg_race_client_file.h */; };
 		FE26A101303A000000000002 /* cg_race_client_file.c in Sources */ = {isa = PBXBuildFile; fileRef = FE26A001303A000000000002 /* cg_race_client_file.c */; };
 		FE26A101303A000000000003 /* cg_race_client_file.c in Sources */ = {isa = PBXBuildFile; fileRef = FE26A001303A000000000002 /* cg_race_client_file.c */; };
+		FE25A101303E000000000001 /* cg_race_dashboard_layout.h in Headers */ = {isa = PBXBuildFile; fileRef = FE25A001303E000000000001 /* cg_race_dashboard_layout.h */; };
+		FE25A101303E000000000002 /* cg_race_dashboard_layout.c in Sources */ = {isa = PBXBuildFile; fileRef = FE25A001303E000000000002 /* cg_race_dashboard_layout.c */; };
+		FE25A101303E000000000003 /* cg_race_dashboard_layout.c in Sources */ = {isa = PBXBuildFile; fileRef = FE25A001303E000000000002 /* cg_race_dashboard_layout.c */; };
 		FE31A101303C000000000001 /* cg_race_admin_command.h in Headers */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000001 /* cg_race_admin_command.h */; };
 		FE31A101303C000000000002 /* cg_race_admin_command.c in Sources */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000002 /* cg_race_admin_command.c */; };
 		FE31A101303C000000000003 /* cg_race_admin_command.c in Sources */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000002 /* cg_race_admin_command.c */; };
@@ -425,15 +426,24 @@
 		FBA2C1013033000000000002 /* RosterSelect.c in Sources */ = {isa = PBXBuildFile; fileRef = FBA2C0013033000000000002 /* RosterSelect.c */; };
 		FB97C101302F600000000001 /* AdminViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = FB97C001302F600000000001 /* AdminViewController.h */; };
 		FB97C101302F600000000002 /* AdminViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = FB97C001302F600000000002 /* AdminViewController.c */; };
+		FB97C101302F600000000A01 /* WeaponLabViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = FB97C001302F600000000A01 /* WeaponLabViewController.h */; };
+		FB97C101302F600000000A02 /* WeaponLabViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = FB97C001302F600000000A02 /* WeaponLabViewController.c */; };
 		FB98C101302F700000000001 /* MainView.h in Headers */ = {isa = PBXBuildFile; fileRef = FB98C001302F700000000001 /* MainView.h */; };
+		FBA1C1013033000000000001 /* LoadingViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = FBA1C0013033000000000001 /* LoadingViewController.h */; };
+		FBA1C1013033000000000006 /* LoadingGridView.h in Headers */ = {isa = PBXBuildFile; fileRef = FBA1C0013033000000000006 /* LoadingGridView.h */; };
+		FBA1C1013033000000000007 /* LoadingGridView.c in Sources */ = {isa = PBXBuildFile; fileRef = FBA1C0013033000000000007 /* LoadingGridView.c */; };
 		FB98C101302F700000000002 /* MainView.c in Sources */ = {isa = PBXBuildFile; fileRef = FB98C001302F700000000002 /* MainView.c */; };
 		FB98C101302F700000000003 /* MainViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = FB98C001302F700000000005 /* MainViewController.h */; };
+		FE29A101303D000000000001 /* QuickSettingsHostView.h in Headers */ = {isa = PBXBuildFile; fileRef = FE29A001303D000000000001 /* QuickSettingsHostView.h */; };
+		FE29A101303D000000000002 /* QuickSettingsHostView.c in Sources */ = {isa = PBXBuildFile; fileRef = FE29A001303D000000000002 /* QuickSettingsHostView.c */; };
 		FB98C101302F700000000004 /* QuickSettingsViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = FB98C001302F700000000006 /* QuickSettingsViewController.h */; };
 		FB98C101302F700000000005 /* QuickSettingsViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = FB98C001302F700000000007 /* QuickSettingsViewController.c */; };
 		FBA0C1013032000000000001 /* ColumnsView.h in Headers */ = {isa = PBXBuildFile; fileRef = FBA0C0013032000000000001 /* ColumnsView.h */; };
 		FBA0C1013032000000000002 /* ColumnsView.c in Sources */ = {isa = PBXBuildFile; fileRef = FBA0C0013032000000000002 /* ColumnsView.c */; };
 		FBA0C1013032000000000003 /* RaceSlider.h in Headers */ = {isa = PBXBuildFile; fileRef = FBA0C0013032000000000003 /* RaceSlider.h */; };
 		FBA0C1013032000000000004 /* RaceSlider.c in Sources */ = {isa = PBXBuildFile; fileRef = FBA0C0013032000000000004 /* RaceSlider.c */; };
+		FBA0C1013032000000000005 /* SpeedGridView.h in Headers */ = {isa = PBXBuildFile; fileRef = FBA0C0013032000000000005 /* SpeedGridView.h */; };
+		FBA0C1013032000000000006 /* SpeedGridView.c in Sources */ = {isa = PBXBuildFile; fileRef = FBA0C0013032000000000006 /* SpeedGridView.c */; };
 		FA66C1013026000000000003 /* race_map_state.h in Headers */ = {isa = PBXBuildFile; fileRef = FA66C0013026000000000003 /* race_map_state.h */; };
 		FA66C1013026000000000004 /* race_map_state.c in Sources */ = {isa = PBXBuildFile; fileRef = FA66C0013026000000000004 /* race_map_state.c */; };
 		FA66C1013026000000000005 /* race_map_state_store.h in Headers */ = {isa = PBXBuildFile; fileRef = FA66C0013026000000000005 /* race_map_state_store.h */; };
@@ -538,6 +548,11 @@
 		FB21F1013035000000000002 /* cg_score_model.h in Headers */ = {isa = PBXBuildFile; fileRef = FB21F0013035000000000002 /* cg_score_model.h */; };
 		FB21E1013035000000000001 /* check_race_native.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21E0013035000000000001 /* check_race_native.c */; };
 		FB21E1013035000000000002 /* check_race_cgame_module.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21E0013035000000000002 /* check_race_cgame_module.c */; };
+		FE29A101303D000000000003 /* check_race_ui_native.c in Sources */ = {isa = PBXBuildFile; fileRef = FE29A001303D000000000003 /* check_race_ui_native.c */; };
+		FE29A101303D000000000004 /* QuickSettingsHostView.c in Sources */ = {isa = PBXBuildFile; fileRef = FE29A001303D000000000002 /* QuickSettingsHostView.c */; };
+		FE29A101303D000000000005 /* Objectively.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CEF601BA2FE60508005C680C /* Objectively.framework */; };
+		FE29A101303D000000000006 /* ObjectivelyMVC.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CEF601BD2FE6083F005C680C /* ObjectivelyMVC.framework */; };
+		FE29A101303D000000000007 /* SDL3.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE1643982FF5D14900863996 /* SDL3.xcframework */; };
 		FB21E1013035000000000009 /* check_race_persistence_native.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21E0013035000000000004 /* check_race_persistence_native.c */; };
 		FB21E101303500000000000A /* race_persistence.c in Sources */ = {isa = PBXBuildFile; fileRef = FA55C0013025000000000004 /* race_persistence.c */; };
 		FB21E1013035000000000003 /* cg_module.c in Sources */ = {isa = PBXBuildFile; fileRef = FA11C3FC30224E3E0012870A /* cg_module.c */; };
@@ -595,7 +610,7 @@
 		CE05B3F030224900C0DE002D /* LeaderboardViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = CEA9B3B16C6E4B3A9F010001 /* LeaderboardViewController.c */; };
 		FA11C3F030224900C0DE002D /* LeaderboardViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = CEA9B3B16C6E4B3A9F010001 /* LeaderboardViewController.c */; };
 		CE05B3F030224900C0DE002E /* LoadingViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = CE5870961F5CE7D2004CAAB2 /* LoadingViewController.c */; };
-		FA11C3F030224900C0DE002E /* LoadingViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = CE5870961F5CE7D2004CAAB2 /* LoadingViewController.c */; };
+		FA11C3F030224900C0DE002E /* LoadingViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = FBA1C0013033000000000002 /* LoadingViewController.c */; };
 		CE05B3F030224900C0DE002F /* MainView.c in Sources */ = {isa = PBXBuildFile; fileRef = CE5870AC1F5CE98D004CAAB2 /* MainView.c */; };
 		FA11C3F030224900C0DE002F /* MainView.c in Sources */ = {isa = PBXBuildFile; fileRef = CE5870AC1F5CE98D004CAAB2 /* MainView.c */; };
 		CE05B3F030224900C0DE0030 /* MainViewController.c in Sources */ = {isa = PBXBuildFile; fileRef = CE5870981F5CE7D2004CAAB2 /* MainViewController.c */; };
@@ -2086,6 +2101,12 @@
 		FAE0C001302E000000000002 /* cg_input_viewer_math.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_input_viewer_math.h; sourceTree = "<group>"; };
 		FAE0C001302E000000000003 /* cg_input_viewer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_input_viewer.c; sourceTree = "<group>"; };
 		FAE0C001302E000000000004 /* hud_input_attack.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = hud_input_attack.png; sourceTree = "<group>"; };
+		FB97C001302F600000000B00 /* 0.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "0.png"; path = ui/backgrounds/0.png; sourceTree = "<group>"; };
+		FB97C001302F600000000B01 /* 1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "1.png"; path = ui/backgrounds/1.png; sourceTree = "<group>"; };
+		FB97C001302F600000000B02 /* 2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "2.png"; path = ui/backgrounds/2.png; sourceTree = "<group>"; };
+		FB97C001302F600000000B03 /* 3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "3.png"; path = ui/backgrounds/3.png; sourceTree = "<group>"; };
+		FB97C001302F600000000B04 /* 4.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "4.png"; path = ui/backgrounds/4.png; sourceTree = "<group>"; };
+		FB97C001302F600000000B05 /* 5.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "5.png"; path = ui/backgrounds/5.png; sourceTree = "<group>"; };
 		FAE0C001302E000000000005 /* hud_input_crouch.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = hud_input_crouch.png; sourceTree = "<group>"; };
 		FAE0C001302E000000000006 /* hud_input_down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = hud_input_down.png; sourceTree = "<group>"; };
 		FAE0C001302E000000000007 /* hud_input_jump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = hud_input_jump.png; sourceTree = "<group>"; };
@@ -2109,13 +2130,9 @@
 		FB92C001302F100000000007 /* MovementCombatViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MovementCombatViewController.h; sourceTree = "<group>"; };
 		FB92C001302F100000000010 /* RaceBindTextView.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = RaceBindTextView.c; sourceTree = "<group>"; };
 		FB92C001302F100000000011 /* RaceBindTextView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RaceBindTextView.h; sourceTree = "<group>"; };
-		FB92C001302F100000000008 /* ResponseServiceViewController.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ResponseServiceViewController.c; sourceTree = "<group>"; };
-		FB92C001302F100000000009 /* ResponseServiceViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ResponseServiceViewController.h; sourceTree = "<group>"; };
 		FB92C001302F10000000000A /* ControlsViewController.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ControlsViewController.json; sourceTree = "<group>"; };
 		FB92C001302F10000000000B /* MovementCombatViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = MovementCombatViewController.css; sourceTree = "<group>"; };
 		FB92C001302F10000000000C /* MovementCombatViewController.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MovementCombatViewController.json; sourceTree = "<group>"; };
-		FB92C001302F10000000000D /* ResponseServiceViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = ResponseServiceViewController.css; sourceTree = "<group>"; };
-		FB92C001302F10000000000E /* ResponseServiceViewController.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ResponseServiceViewController.json; sourceTree = "<group>"; };
 		FB93C001302F200000000001 /* SettingsViewController.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SettingsViewController.c; sourceTree = "<group>"; };
 		FB93C001302F200000000002 /* SettingsViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SettingsViewController.h; sourceTree = "<group>"; };
 		FB93C001302F200000000006 /* StrafeHelperPreview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = StrafeHelperPreview.c; sourceTree = "<group>"; };
@@ -2136,6 +2153,8 @@
 		FD21A001302F300000000002 /* cg_race_message.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_message.c; sourceTree = "<group>"; };
 		FE26A001303A000000000001 /* cg_race_client_file.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_client_file.h; sourceTree = "<group>"; };
 		FE26A001303A000000000002 /* cg_race_client_file.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_client_file.c; sourceTree = "<group>"; };
+		FE25A001303E000000000001 /* cg_race_dashboard_layout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_dashboard_layout.h; sourceTree = "<group>"; };
+		FE25A001303E000000000002 /* cg_race_dashboard_layout.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_dashboard_layout.c; sourceTree = "<group>"; };
 		FE31A001303C000000000001 /* cg_race_admin_command.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_admin_command.h; sourceTree = "<group>"; };
 		FE31A001303C000000000002 /* cg_race_admin_command.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_admin_command.c; sourceTree = "<group>"; };
 		FB9AC0013031000000000001 /* race_finish_report.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_finish_report.h; sourceTree = "<group>"; };
@@ -2168,11 +2187,17 @@
 		FB97C001302F600000000002 /* AdminViewController.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = AdminViewController.c; sourceTree = "<group>"; };
 		FB97C001302F600000000003 /* AdminViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = AdminViewController.css; sourceTree = "<group>"; };
 		FB97C001302F600000000004 /* AdminViewController.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AdminViewController.json; sourceTree = "<group>"; };
+		FB97C001302F600000000A01 /* WeaponLabViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WeaponLabViewController.h; sourceTree = "<group>"; };
+		FB97C001302F600000000A02 /* WeaponLabViewController.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = WeaponLabViewController.c; sourceTree = "<group>"; };
+		FB97C001302F600000000A03 /* WeaponLabViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = WeaponLabViewController.css; sourceTree = "<group>"; };
+		FB97C001302F600000000A04 /* WeaponLabViewController.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = WeaponLabViewController.json; sourceTree = "<group>"; };
 		FB98C001302F700000000001 /* MainView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainView.h; sourceTree = "<group>"; };
 		FB98C001302F700000000002 /* MainView.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MainView.c; sourceTree = "<group>"; };
 		FB98C001302F700000000003 /* MainView.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = MainView.css; sourceTree = "<group>"; };
 		FB98C001302F700000000004 /* MainView.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MainView.json; sourceTree = "<group>"; };
 		FB98C001302F700000000005 /* MainViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainViewController.h; sourceTree = "<group>"; };
+		FE29A001303D000000000001 /* QuickSettingsHostView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QuickSettingsHostView.h; sourceTree = "<group>"; };
+		FE29A001303D000000000002 /* QuickSettingsHostView.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = QuickSettingsHostView.c; sourceTree = "<group>"; };
 		FB98C001302F700000000006 /* QuickSettingsViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QuickSettingsViewController.h; sourceTree = "<group>"; };
 		FB98C001302F700000000007 /* QuickSettingsViewController.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = QuickSettingsViewController.c; sourceTree = "<group>"; };
 		FB98C001302F700000000008 /* QuickSettingsViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = QuickSettingsViewController.css; sourceTree = "<group>"; };
@@ -2181,6 +2206,8 @@
 		FBA0C0013032000000000002 /* ColumnsView.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ColumnsView.c; sourceTree = "<group>"; };
 		FBA0C0013032000000000003 /* RaceSlider.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RaceSlider.h; sourceTree = "<group>"; };
 		FBA0C0013032000000000004 /* RaceSlider.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = RaceSlider.c; sourceTree = "<group>"; };
+		FBA0C0013032000000000005 /* SpeedGridView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SpeedGridView.h; sourceTree = "<group>"; };
+		FBA0C0013032000000000006 /* SpeedGridView.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SpeedGridView.c; sourceTree = "<group>"; };
 		FB99D001302F800000000001 /* DialogViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = DialogViewController.css; sourceTree = "<group>"; };
 		FB99D001302F800000000003 /* JoinServerViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = JoinServerViewController.css; sourceTree = "<group>"; };
 		FB99D001302F800000000004 /* CreateServerViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = CreateServerViewController.css; sourceTree = "<group>"; };
@@ -2197,6 +2224,14 @@
 		FB99D001302F800000000012 /* CreditsViewController.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = CreditsViewController.c; sourceTree = "<group>"; };
 		FB99D001302F800000000013 /* CreditsViewController.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = CreditsViewController.json; sourceTree = "<group>"; };
 		FB99D001302F800000000008 /* LoadingViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = LoadingViewController.css; sourceTree = "<group>"; };
+		FBA1C0013033000000000001 /* LoadingViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LoadingViewController.h; sourceTree = "<group>"; };
+		FBA1C0013033000000000002 /* LoadingViewController.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = LoadingViewController.c; sourceTree = "<group>"; };
+		FBA1C0013033000000000006 /* LoadingGridView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LoadingGridView.h; sourceTree = "<group>"; };
+		FBA1C0013033000000000007 /* LoadingGridView.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = LoadingGridView.c; sourceTree = "<group>"; };
+		FBA1C0013033000000000003 /* LoadingViewController.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = LoadingViewController.json; sourceTree = "<group>"; };
+		FBA1C0013033000000000004 /* loading_lockup.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = loading_lockup.png; sourceTree = "<group>"; };
+		FBA1C0013033000000000005 /* menu_lockup.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = menu_lockup.png; sourceTree = "<group>"; };
+		FBA1C0013033000000000099 /* menu_mark.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = menu_mark.png; sourceTree = "<group>"; };
 		FB99D001302F800000000009 /* UpdateViewController.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = UpdateViewController.css; sourceTree = "<group>"; };
 		FA66C0013026000000000003 /* race_map_state.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_map_state.h; sourceTree = "<group>"; };
 		FA66C0013026000000000004 /* race_map_state.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_map_state.c; sourceTree = "<group>"; };
@@ -2532,6 +2567,7 @@
 		FA77000131E9000000000001 /* race_portability_fixture.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_portability_fixture.c; sourceTree = "<group>"; };
 		FB21E0013035000000000001 /* check_race_native.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_native.c; sourceTree = "<group>"; };
 		FB21E0013035000000000002 /* check_race_cgame_module.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_cgame_module.c; sourceTree = "<group>"; };
+		FE29A001303D000000000003 /* check_race_ui_native.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_ui_native.c; sourceTree = "<group>"; };
 		FB21E0013035000000000004 /* check_race_persistence_native.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_persistence_native.c; sourceTree = "<group>"; };
 		FB21E0013035000000000003 /* check-race-native */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "check-race-native"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1240824000000000000000A /* check_race_weapon_tuning.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_weapon_tuning.c; sourceTree = "<group>"; };
@@ -3250,6 +3286,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE29A101303D000000000005 /* Objectively.framework in Frameworks */,
+				FE29A101303D000000000006 /* ObjectivelyMVC.framework in Frameworks */,
+				FE29A101303D000000000007 /* SDL3.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3744,6 +3783,8 @@
 				FD21A001302F300000000002 /* cg_race_message.c */,
 				FE26A001303A000000000001 /* cg_race_client_file.h */,
 				FE26A001303A000000000002 /* cg_race_client_file.c */,
+				FE25A001303E000000000001 /* cg_race_dashboard_layout.h */,
+				FE25A001303E000000000002 /* cg_race_dashboard_layout.c */,
 				FE31A001303C000000000001 /* cg_race_admin_command.h */,
 				FE31A001303C000000000002 /* cg_race_admin_command.c */,
 				FB9AC0013031000000000003 /* cg_race_finish_report.h */,
@@ -3795,6 +3836,12 @@
 				FB96C001302F500000000005 /* voting */,
 				FB99D001302F800000000001 /* DialogViewController.css */,
 				FAE0C001302E000000000004 /* hud_input_attack.png */,
+				FB97C001302F600000000B00 /* 0.png */,
+				FB97C001302F600000000B01 /* 1.png */,
+				FB97C001302F600000000B02 /* 2.png */,
+				FB97C001302F600000000B03 /* 3.png */,
+				FB97C001302F600000000B04 /* 4.png */,
+				FB97C001302F600000000B05 /* 5.png */,
 				FAE0C001302E000000000005 /* hud_input_crouch.png */,
 				FAE0C001302E000000000006 /* hud_input_down.png */,
 				FAE0C001302E000000000007 /* hud_input_jump.png */,
@@ -3819,10 +3866,6 @@
 				FB92C001302F10000000000C /* MovementCombatViewController.json */,
 				FB92C001302F100000000011 /* RaceBindTextView.h */,
 				FB92C001302F100000000010 /* RaceBindTextView.c */,
-				FB92C001302F100000000009 /* ResponseServiceViewController.h */,
-				FB92C001302F100000000008 /* ResponseServiceViewController.c */,
-				FB92C001302F10000000000D /* ResponseServiceViewController.css */,
-				FB92C001302F10000000000E /* ResponseServiceViewController.json */,
 			);
 			path = controls;
 			sourceTree = "<group>";
@@ -3847,12 +3890,16 @@
 				FBA0C0013032000000000002 /* ColumnsView.c */,
 				FBA0C0013032000000000003 /* RaceSlider.h */,
 				FBA0C0013032000000000004 /* RaceSlider.c */,
+				FBA0C0013032000000000005 /* SpeedGridView.h */,
+				FBA0C0013032000000000006 /* SpeedGridView.c */,
 				FB98C001302F700000000001 /* MainView.h */,
 				FB98C001302F700000000002 /* MainView.c */,
 				FB98C001302F700000000003 /* MainView.css */,
 				FB98C001302F700000000004 /* MainView.json */,
 				FB98C001302F700000000005 /* MainViewController.h */,
 				FB94C001302F300000000010 /* MainViewController.c */,
+				FE29A001303D000000000001 /* QuickSettingsHostView.h */,
+				FE29A001303D000000000002 /* QuickSettingsHostView.c */,
 				FB98C001302F700000000006 /* QuickSettingsViewController.h */,
 				FB98C001302F700000000007 /* QuickSettingsViewController.c */,
 				FB98C001302F700000000008 /* QuickSettingsViewController.css */,
@@ -3861,7 +3908,15 @@
 				FB95C001302F400000000008 /* ActiveVoteViewController.c */,
 				FB95C001302F400000000009 /* ActiveVoteViewController.css */,
 				FB95C001302F40000000000A /* ActiveVoteViewController.json */,
+				FBA1C0013033000000000001 /* LoadingViewController.h */,
+				FBA1C0013033000000000002 /* LoadingViewController.c */,
+				FBA1C0013033000000000006 /* LoadingGridView.h */,
+				FBA1C0013033000000000007 /* LoadingGridView.c */,
 				FB99D001302F800000000008 /* LoadingViewController.css */,
+				FBA1C0013033000000000003 /* LoadingViewController.json */,
+				FBA1C0013033000000000004 /* loading_lockup.png */,
+				FBA1C0013033000000000005 /* menu_lockup.png */,
+				FBA1C0013033000000000099 /* menu_mark.png */,
 				FB99D001302F800000000009 /* UpdateViewController.css */,
 			);
 			path = main;
@@ -3898,6 +3953,10 @@
 				FB97C001302F600000000002 /* AdminViewController.c */,
 				FB97C001302F600000000003 /* AdminViewController.css */,
 				FB97C001302F600000000004 /* AdminViewController.json */,
+				FB97C001302F600000000A01 /* WeaponLabViewController.h */,
+				FB97C001302F600000000A02 /* WeaponLabViewController.c */,
+				FB97C001302F600000000A03 /* WeaponLabViewController.css */,
+				FB97C001302F600000000A04 /* WeaponLabViewController.json */,
 			);
 			path = admin;
 			sourceTree = "<group>";
@@ -4453,6 +4512,7 @@
 				FB21E0013035000000000001 /* check_race_native.c */,
 				FB21E0013035000000000002 /* check_race_cgame_module.c */,
 				FB21E0013035000000000004 /* check_race_persistence_native.c */,
+				FE29A001303D000000000003 /* check_race_ui_native.c */,
 				A1240824000000000000000A /* check_race_weapon_tuning.c */,
 				A1240824000000000000000C /* check_race_weapon_tuning_service.c */,
 				E53D0B6E0000000000000001 /* check_race_weapon_movement.c */,
@@ -5390,19 +5450,23 @@
 				FBC100013034000000000005 /* race_clip.h in Headers */,
 				FBA0C1013032000000000001 /* ColumnsView.h in Headers */,
 				FBA0C1013032000000000003 /* RaceSlider.h in Headers */,
+				FBA0C1013032000000000005 /* SpeedGridView.h in Headers */,
+				FBA1C1013033000000000001 /* LoadingViewController.h in Headers */,
+				FBA1C1013033000000000006 /* LoadingGridView.h in Headers */,
 				FB98C101302F700000000001 /* MainView.h in Headers */,
 				FB98C101302F700000000003 /* MainViewController.h in Headers */,
+				FE29A101303D000000000001 /* QuickSettingsHostView.h in Headers */,
 				FB98C101302F700000000004 /* QuickSettingsViewController.h in Headers */,
 				FB92C101302F100000000003 /* ControlsViewController.h in Headers */,
 				FB92C101302F100000000005 /* CrosshairView.h in Headers */,
 				FB92C101302F100000000007 /* MovementCombatViewController.h in Headers */,
 				FB92C101302F100000000011 /* RaceBindTextView.h in Headers */,
-				FB92C101302F100000000009 /* ResponseServiceViewController.h in Headers */,
 				FB93C101302F200000000002 /* SettingsViewController.h in Headers */,
 				FB93C101302F200000000007 /* StrafeHelperPreview.h in Headers */,
 				FB94C101302F300000000009 /* cg_race_map_browser.h in Headers */,
 				FD21A101302F300000000001 /* cg_race_message.h in Headers */,
 				FE26A101303A000000000001 /* cg_race_client_file.h in Headers */,
+				FE25A101303E000000000001 /* cg_race_dashboard_layout.h in Headers */,
 				FE31A101303C000000000001 /* cg_race_admin_command.h in Headers */,
 				FB9AC1013031000000000003 /* cg_race_finish_report.h in Headers */,
 				FB94C101302F30000000000B /* MapBrowserViewController.h in Headers */,
@@ -5412,6 +5476,7 @@
 				FBA2C1013033000000000001 /* RosterSelect.h in Headers */,
 				FB96C101302F500000000001 /* VotingViewController.h in Headers */,
 				FB97C101302F600000000001 /* AdminViewController.h in Headers */,
+				FB97C101302F600000000A01 /* WeaponLabViewController.h in Headers */,
 				A1240824100000000000000B /* cg_race_weapon_tuning.h in Headers */,
 				FB95C101302F400000000005 /* race_vote_menu.h in Headers */,
 				FA33C1013023000000000007 /* cg_race_hud.h in Headers */,
@@ -6770,7 +6835,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/race/ui/admin\" \"$BUILT_PRODUCTS_DIR/race/ui/home\" \"$BUILT_PRODUCTS_DIR/race/ui/controls\" \"$BUILT_PRODUCTS_DIR/race/ui/credits\" \"$BUILT_PRODUCTS_DIR/race/ui/fonts\" \"$BUILT_PRODUCTS_DIR/race/ui/main\" \"$BUILT_PRODUCTS_DIR/race/ui/maps\" \"$BUILT_PRODUCTS_DIR/race/ui/play\" \"$BUILT_PRODUCTS_DIR/race/ui/settings\" \"$BUILT_PRODUCTS_DIR/race/ui/voting\"\ncp \"$BUILT_PRODUCTS_DIR/cgame-race.so\" \"$BUILT_PRODUCTS_DIR/race/cgame.so\"\ncp \"$SRCROOT\"/src/cgame/race/ui/hud_input_*.png \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/DialogViewController.css \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/fonts/Coda-Regular.ttf \"$BUILT_PRODUCTS_DIR/race/ui/fonts/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/admin/*.css \"$SRCROOT\"/src/cgame/race/ui/admin/*.json \"$BUILT_PRODUCTS_DIR/race/ui/admin/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/home/HomeViewController.css \"$SRCROOT\"/src/cgame/race/ui/home/HomeViewController.json \"$BUILT_PRODUCTS_DIR/race/ui/home/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/credits/*.css \"$SRCROOT\"/src/cgame/race/ui/credits/*.json \"$BUILT_PRODUCTS_DIR/race/ui/credits/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/play/*.css \"$SRCROOT\"/src/cgame/race/ui/play/*.json \"$BUILT_PRODUCTS_DIR/race/ui/play/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/controls/*.css \"$SRCROOT\"/src/cgame/race/ui/controls/*.json \"$BUILT_PRODUCTS_DIR/race/ui/controls/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/main/*.css \"$SRCROOT\"/src/cgame/race/ui/main/*.json \"$BUILT_PRODUCTS_DIR/race/ui/main/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/maps/*.css \"$SRCROOT\"/src/cgame/race/ui/maps/*.json \"$BUILT_PRODUCTS_DIR/race/ui/maps/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/settings/*.css \"$SRCROOT\"/src/cgame/race/ui/settings/*.json \"$BUILT_PRODUCTS_DIR/race/ui/settings/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/voting/*.css \"$SRCROOT\"/src/cgame/race/ui/voting/*.json \"$BUILT_PRODUCTS_DIR/race/ui/voting/\"\ncodesign --force --sign - \"$BUILT_PRODUCTS_DIR/race/cgame.so\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/race/ui/admin\" \"$BUILT_PRODUCTS_DIR/race/ui/home\" \"$BUILT_PRODUCTS_DIR/race/ui/controls\" \"$BUILT_PRODUCTS_DIR/race/ui/credits\" \"$BUILT_PRODUCTS_DIR/race/ui/fonts\" \"$BUILT_PRODUCTS_DIR/race/ui/main\" \"$BUILT_PRODUCTS_DIR/race/ui/maps\" \"$BUILT_PRODUCTS_DIR/race/ui/play\" \"$BUILT_PRODUCTS_DIR/race/ui/settings\" \"$BUILT_PRODUCTS_DIR/race/ui/voting\"\ncp \"$BUILT_PRODUCTS_DIR/cgame-race.so\" \"$BUILT_PRODUCTS_DIR/race/cgame.so\"\ncp \"$SRCROOT\"/src/cgame/race/ui/hud_input_*.png \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/DialogViewController.css \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/conback.png \"$BUILT_PRODUCTS_DIR/race/ui/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/fonts/Coda-Regular.ttf \"$BUILT_PRODUCTS_DIR/race/ui/fonts/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/admin/*.css \"$SRCROOT\"/src/cgame/race/ui/admin/*.json \"$BUILT_PRODUCTS_DIR/race/ui/admin/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/home/HomeViewController.css \"$SRCROOT\"/src/cgame/race/ui/home/HomeViewController.json \"$BUILT_PRODUCTS_DIR/race/ui/home/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/credits/*.css \"$SRCROOT\"/src/cgame/race/ui/credits/*.json \"$BUILT_PRODUCTS_DIR/race/ui/credits/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/play/*.css \"$SRCROOT\"/src/cgame/race/ui/play/*.json \"$BUILT_PRODUCTS_DIR/race/ui/play/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/controls/*.css \"$SRCROOT\"/src/cgame/race/ui/controls/*.json \"$BUILT_PRODUCTS_DIR/race/ui/controls/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/main/*.css \"$SRCROOT\"/src/cgame/race/ui/main/*.json \"$SRCROOT\"/src/cgame/race/ui/main/*.png \"$BUILT_PRODUCTS_DIR/race/ui/main/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/maps/*.css \"$SRCROOT\"/src/cgame/race/ui/maps/*.json \"$BUILT_PRODUCTS_DIR/race/ui/maps/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/settings/*.css \"$SRCROOT\"/src/cgame/race/ui/settings/*.json \"$BUILT_PRODUCTS_DIR/race/ui/settings/\"\ncp \"$SRCROOT\"/src/cgame/race/ui/voting/*.css \"$SRCROOT\"/src/cgame/race/ui/voting/*.json \"$BUILT_PRODUCTS_DIR/race/ui/voting/\"\ncodesign --force --sign - \"$BUILT_PRODUCTS_DIR/race/cgame.so\"\n";
 		};
 		CE16439A2FF5D3BF00863996 /* Compile Shaders */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -7111,16 +7176,20 @@
 				FB99D101302F80000000000E /* JoinServerViewController.c in Sources */,
 				FA11C3F030224900C0DE002D /* LeaderboardViewController.c in Sources */,
 				FA11C3F030224900C0DE002E /* LoadingViewController.c in Sources */,
+				FBA1C1013033000000000007 /* LoadingGridView.c in Sources */,
 				FBA0C1013032000000000002 /* ColumnsView.c in Sources */,
 				FBA0C1013032000000000004 /* RaceSlider.c in Sources */,
+				FBA0C1013032000000000006 /* SpeedGridView.c in Sources */,
 				FB98C101302F700000000002 /* MainView.c in Sources */,
 				FB94C101302F30000000000D /* MainViewController.c in Sources */,
+				FE29A101303D000000000002 /* QuickSettingsHostView.c in Sources */,
 				FB98C101302F700000000005 /* QuickSettingsViewController.c in Sources */,
 				FB95C101302F400000000009 /* ActiveVoteViewController.c in Sources */,
 				FB94C101302F30000000000C /* MapBrowserViewController.c in Sources */,
 				FBA2C1013033000000000002 /* RosterSelect.c in Sources */,
 				FB96C101302F500000000002 /* VotingViewController.c in Sources */,
 				FB97C101302F600000000002 /* AdminViewController.c in Sources */,
+				FB97C101302F600000000A02 /* WeaponLabViewController.c in Sources */,
 				FA11C3F030224900C0DE0031 /* MapListCollectionItemView.c in Sources */,
 				FA11C3F030224900C0DE0032 /* MapListCollectionView.c in Sources */,
 				FA11C3F030224900C0DE0033 /* MaterialViewController.c in Sources */,
@@ -7130,7 +7199,6 @@
 				FA11C3F030224900C0DE0036 /* PlayerModelView.c in Sources */,
 				FA11C3F030224900C0DE0037 /* PlayerSetupViewController.c in Sources */,
 				FA11C3F030224900C0DE0038 /* PlayViewController.c in Sources */,
-				FB92C101302F100000000008 /* ResponseServiceViewController.c in Sources */,
 				FB93C101302F200000000001 /* SettingsViewController.c in Sources */,
 				FB93C101302F200000000006 /* StrafeHelperPreview.c in Sources */,
 				FA11C3F030224900C0DE003B /* StatsViewController.c in Sources */,
@@ -7178,6 +7246,7 @@
 				FB94C101302F30000000000A /* cg_race_map_browser.c in Sources */,
 				FD21A101302F300000000002 /* cg_race_message.c in Sources */,
 				FE26A101303A000000000002 /* cg_race_client_file.c in Sources */,
+				FE25A101303E000000000002 /* cg_race_dashboard_layout.c in Sources */,
 				FE31A101303C000000000002 /* cg_race_admin_command.c in Sources */,
 				FB9AC1013031000000000004 /* cg_race_finish_report.c in Sources */,
 				FB95C101302F400000000007 /* cg_race_vote.c in Sources */,
@@ -7402,9 +7471,12 @@
 				FB21E1013035000000000001 /* check_race_native.c in Sources */,
 				FB21E1013035000000000002 /* check_race_cgame_module.c in Sources */,
 				FB21E1013035000000000009 /* check_race_persistence_native.c in Sources */,
+				FE29A101303D000000000003 /* check_race_ui_native.c in Sources */,
 				FB21E101303500000000000A /* race_persistence.c in Sources */,
 				FB21E1013035000000000003 /* cg_module.c in Sources */,
+				FE29A101303D000000000004 /* QuickSettingsHostView.c in Sources */,
 				FE26A101303A000000000003 /* cg_race_client_file.c in Sources */,
+				FE25A101303E000000000003 /* cg_race_dashboard_layout.c in Sources */,
 				FE31A101303C000000000003 /* cg_race_admin_command.c in Sources */,
 				FE30A101303B000000000005 /* race_hook.c in Sources */,
 				FBD1E1013036000000000001 /* cg_race_double_jump.c in Sources */,

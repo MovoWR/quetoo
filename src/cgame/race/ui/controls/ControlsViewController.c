@@ -26,6 +26,8 @@
 
 #include "BindTextView.h"
 #include "ControlsViewController.h"
+
+#include "MainViewController.h"
 #include "DialogViewController.h"
 #include "MovementCombatViewController.h"
 
@@ -42,19 +44,6 @@ static View *controlsRoot(View *view) {
   }
 
   return view;
-}
-
-static void setControlFlag(Control *control, ControlState flag, bool enabled) {
-
-  const unsigned int previous = control->state;
-  if (enabled) {
-    control->state |= flag;
-  } else {
-    control->state &= ~flag;
-  }
-  if (control->state != previous) {
-    $(control, stateDidChange);
-  }
 }
 
 void ControlsViewController_RefreshBindings(View *view) {
@@ -80,24 +69,18 @@ void ControlsViewController_UpdateStatus(View *view, size_t dirtyCount) {
 
   View *root = controlsRoot(view);
 
-  Label *status = (Label *) $(root, descendantWithIdentifier, "controlsDirtyStatus");
-  if (status) {
-    if (dirtyCount == 0) {
-      $(status->text, setText, "");
-    } else {
-      $(status->text, setTextWithFormat, "%zu binding%s changed",
-        dirtyCount, dirtyCount == 1 ? "" : "s");
-    }
-  }
+  (void) root;
 
-  // The commit pair is only reachable while there is something to commit, so a
-  // stale count cannot survive a revert or a page change.
-  static const char *commitIdentifiers[] = { "revertChanges", "applyChanges" };
-  for (size_t i = 0; i < lengthof(commitIdentifiers); i++) {
-    View *button = $(root, descendantWithIdentifier, commitIdentifiers[i]);
-    if (button) {
-      setControlFlag((Control *) button, ControlStateDisabled, dirtyCount == 0);
-    }
+  // The design has one footer, and the commit pair and its count live in it.
+  // Bindings are written the moment they are captured, so no binding change
+  // needs a restart - the count is never the gold warning state.
+  if (dirtyCount == 0) {
+    MainViewController_SetCommitStatus(NULL, false);
+  } else {
+    char status[64];
+    snprintf(status, sizeof(status), "%zu binding%s changed",
+             dirtyCount, dirtyCount == 1 ? "" : "s");
+    MainViewController_SetCommitStatus(status, false);
   }
 }
 
@@ -150,9 +133,9 @@ static void didClickRestoreDefaults(Button *button) {
 /**
  * @brief ButtonDelegate for restoring the values held at route entry.
  */
-static void didClickRevertChanges(Button *button) {
+static void didRevertChanges(ident sender) {
 
-  ControlsViewController *this = button->delegate.self;
+  ControlsViewController *this = sender;
 
   MovementCombatViewController_RevertChanges(this->bindingsViewController);
 }
@@ -160,41 +143,11 @@ static void didClickRevertChanges(Button *button) {
 /**
  * @brief ButtonDelegate for accepting the current values as the new baseline.
  */
-static void didClickApply(Button *button) {
+static void didApplyChanges(ident sender) {
 
-  ControlsViewController *this = button->delegate.self;
+  ControlsViewController *this = sender;
 
   MovementCombatViewController_ApplyChanges(this->bindingsViewController);
-}
-
-/**
- * @brief Quits the game.
- */
-static void quit(ident data) {
-  cgi.Cbuf("quit\n");
-}
-
-/**
- * @brief ButtonDelegate for the route-local Quit confirmation.
- */
-static void didClickQuit(Button *button) {
-
-  ControlsViewController *this = button->delegate.self;
-  const Dialog dialog = {
-    .message = "Are you sure you want to quit to the desktop?",
-    .ok = "Quit",
-    .cancel = "Cancel",
-    .okFunction = quit
-  };
-
-  ViewController *viewController =
-    (ViewController *) $(alloc(DialogViewController), initWithDialog, &dialog);
-  $((ViewController *) this, addChildViewController, viewController);
-
-  View *confirmButton = $(viewController->view, descendantWithIdentifier, "ok");
-  if (confirmButton) {
-    $(confirmButton, addClassName, "dangerButton");
-  }
 }
 
 #pragma mark - ViewController
@@ -219,34 +172,14 @@ static void loadView(ViewController *self) {
   release(view);
 
   Outlet outlets[] = MakeOutlets(
-    MakeOutlet("controlsDirtyStatus", &this->dirtyStatus),
-    MakeOutlet("revertChanges", &this->revertChanges),
-    MakeOutlet("applyChanges", &this->apply),
-    MakeOutlet("restoreDefaults", &this->restoreDefaults),
-    MakeOutlet("quit", &this->quit)
+    MakeOutlet("restoreDefaults", &this->restoreDefaults)
   );
   $(self->view, resolve, outlets);
-  assert(this->dirtyStatus);
-  assert(this->revertChanges);
-  assert(this->apply);
   assert(this->restoreDefaults);
-  assert(this->quit);
 
-  this->revertChanges->delegate = (ButtonDelegate) {
-    .self = this,
-    .didClick = didClickRevertChanges
-  };
-  this->apply->delegate = (ButtonDelegate) {
-    .self = this,
-    .didClick = didClickApply
-  };
   this->restoreDefaults->delegate = (ButtonDelegate) {
     .self = this,
     .didClick = didClickRestoreDefaults
-  };
-  this->quit->delegate = (ButtonDelegate) {
-    .self = this,
-    .didClick = didClickQuit
   };
 
   // Every binding lives on one flowed page behind a page strip, so the route
@@ -267,7 +200,26 @@ static void loadView(ViewController *self) {
 static void viewWillAppear(ViewController *self) {
 
   super(ViewController, self, viewWillAppear);
+
+  MainViewController_SetCommitDelegate(&(const RaceCommitDelegate) {
+    .self = self,
+    .didApply = didApplyChanges,
+    .didRevert = didRevertChanges
+  });
+
   ControlsViewController_RefreshBindings(self->view);
+}
+
+/**
+ * @see ViewController::viewWillDisappear(ViewController *)
+ * @details The footer's commit pair is on loan for as long as this route is on
+ * top. The shell drops it on every navigation as well.
+ */
+static void viewWillDisappear(ViewController *self) {
+
+  super(ViewController, self, viewWillDisappear);
+
+  MainViewController_SetCommitDelegate(NULL);
 }
 
 #pragma mark - Class lifecycle
@@ -279,6 +231,7 @@ static void initialize(Class *clazz) {
 
   ((ViewControllerInterface *) clazz->interface)->loadView = loadView;
   ((ViewControllerInterface *) clazz->interface)->viewWillAppear = viewWillAppear;
+  ((ViewControllerInterface *) clazz->interface)->viewWillDisappear = viewWillDisappear;
 }
 
 /**

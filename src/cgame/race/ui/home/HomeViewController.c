@@ -11,10 +11,11 @@
 
 #include "HomeViewController.h"
 
+#include "cg_race_hud.h"
+
 #include "DialogViewController.h"
 #include "race_wire.h"
 
-#include <ctype.h>
 #include <inttypes.h>
 
 #define _Class _HomeViewController
@@ -235,64 +236,16 @@ static const char *rosterStatusText(const HomeViewController *this,
   }
 }
 
-/**
- * @brief Folds `src` into `dst` the way the filter compares text: lowercased,
- * with Quetoo's `^N` color escapes dropped. A roster name carries its escapes
- * inline (`^2sata`), and the Runner cell renders them rather than printing
- * them, so the visible name and the stored name are not the same string.
- */
-static const char *rosterPlainText(const char *src, char *dst,
-                                   const size_t size) {
-  size_t out = 0;
-  for (const char *p = src ? src : ""; *p && out < size - 1; p++) {
-    if (p[0] == '^' && p[1] >= '0' && p[1] <= '9') {
-      p++;
-      continue;
-    }
-    dst[out++] = (char) tolower((unsigned char) *p);
-  }
-  dst[out] = '\0';
-  return dst;
-}
-
-/**
- * @brief Decides whether a roster entry survives the route's filter. `this->
- * filter` is already folded by rosterPlainText, and is never empty here.
- *
- * The filter matches the Runner column alone, exactly as the "Filter runners"
- * placeholder promises. Local entries follow the same rule as every other
- * entry so every visible result has an explicit name match.
- */
-static bool rosterMatchesFilter(const HomeViewController *this,
-                                const cg_roster_entry_t *entry) {
-  char name[sizeof(entry->name)];
-  rosterPlainText(entry->name, name, sizeof(name));
-  return strstr(name, this->filter) != NULL;
-}
-
-/**
- * @brief Rebuilds the surviving row map. An empty filter admits everything, so
- * the table's default state costs no comparisons.
- */
-static void applyRosterFilter(HomeViewController *this) {
-  this->numMatches = 0;
-  for (size_t i = 0; i < this->numPlayers; i++) {
-    if (!*this->filter || rosterMatchesFilter(this, this->players + i)) {
-      this->matches[this->numMatches++] = i;
-    }
-  }
-}
-
 static size_t numberOfRosterRows(const TableView *tableView) {
   const HomeViewController *this = tableView->dataSource.self;
-  return this->numMatches;
+  return this->numPlayers;
 }
 
 static TableCellView *rosterCellForColumnAndRow(const TableView *tableView,
                                                 const TableColumn *column,
                                                 const size_t row) {
   const HomeViewController *this = tableView->dataSource.self;
-  const cg_roster_entry_t *entry = this->players + this->matches[row];
+  const cg_roster_entry_t *entry = this->players + row;
   TableCellView *cell = $(alloc(TableCellView), initWithFrame, NULL);
   if (isLocalRosterEntry(entry)) {
     $((View *) cell, addClassName, "rosterLocal");
@@ -332,17 +285,15 @@ static const char *configStringOr(const int32_t index, const char *fallback) {
 }
 
 /**
- * @brief Reflects the filter over the roster: the surviving rows, the header
- * count, and the empty state that stands in for a table with nothing in it.
+ * @brief Reflects the roster snapshot in the table, count, and empty state.
  */
-static void refreshRosterFilter(HomeViewController *this) {
-  applyRosterFilter(this);
+static void refreshRosterTable(HomeViewController *this) {
   $(this->rosterTable, reloadData);
   alignTableHeader(this->rosterTable);
 
-  // A filtered-out roster shows the empty state alone: no rows, and no column
-  // header band above them. The section head keeps its label and count.
-  const bool empty = this->numMatches == 0;
+  // An empty roster shows the empty state alone: no rows, and no column header
+  // band above them. The section head keeps its label and count.
+  const bool empty = this->numPlayers == 0;
   if (this->rosterEmpty->view.hidden == empty) {
     this->rosterEmpty->view.hidden = !empty;
     this->rosterTable->control.view.hidden = empty;
@@ -350,31 +301,41 @@ static void refreshRosterFilter(HomeViewController *this) {
     this->rosterPanel->needsLayout = true;
   }
 
-  // Only blame the filter when there is one. An unfiltered roster comes up
-  // empty until the server sends scores, which it only does while a client
-  // holds the scoreboard open (G_ClientScores), so this is the common case.
-  setLabelText(this->rosterEmpty, *this->filter
-    ? "No runners match that filter."
-    : "No runners to show yet.");
-
-  // The design counts what the filter admits against the server's capacity,
-  // so the section metric moves as the runner types.
-  setLabelText(this->rosterCount, va("%zu / %d", this->numMatches,
+  setLabelText(this->rosterEmpty, "No runners to show yet.");
+  setLabelText(this->rosterCount, va("%zu / %d", this->numPlayers,
                                      cg_state.max_clients));
 }
 
-static void didEditRosterFilter(TextView *textView) {
-  HomeViewController *this = textView->delegate.self;
-  rosterPlainText(textView->attributedText->chars, this->filter,
-                  sizeof(this->filter));
-  refreshRosterFilter(this);
+/**
+ * @brief The current map's title, with the mapper's escapes resolved.
+ * @details A mapper writes line breaks into the worldspawn message as the two
+ * characters backslash and `n`. The Home heading is the one Race surface with
+ * room to honour them, so it does - and the layout has to know, because a
+ * second line needs a taller section than a one-line title.
+ */
+static const char *resolvedMapTitle(char *output, const size_t size) {
+
+  Cg_RaceHud_ResolveEscapes(configStringOr(CS_MESSAGE, "Unknown map"),
+                            output, size, true);
+
+  return *output ? output : "Unknown map";
 }
 
-static void layoutConnectedDashboard(HomeViewController *this) {
+static bool layoutConnectedDashboard(HomeViewController *this) {
   View *page = this->viewController.view;
   const SDL_Rect bounds = $(page, bounds);
   const int32_t width = Maxi(1, bounds.w);
   const int32_t height = Maxi(1, bounds.h);
+  char resolvedTitle[MAX_STRING_CHARS];
+  resolvedMapTitle(resolvedTitle, sizeof(resolvedTitle));
+  const bool titleWraps = strchr(resolvedTitle, '\n') != NULL;
+
+  View *dashboard = (View *) this->dashboardRoot;
+  if (!Cg_RaceDashboardLayout_ShouldRun(
+        &this->dashboardLayout, dashboard, MakeSize(width, height),
+        titleWraps)) {
+    return false;
+  }
 
   View *container = this->dashboardRoot->view.superview;
   while (container && container != page) {
@@ -386,7 +347,6 @@ static void layoutConnectedDashboard(HomeViewController *this) {
     container = container->superview;
   }
 
-  View *dashboard = (View *) this->dashboardRoot;
   View *session = (View *) this->sessionDashboard;
   dashboard->frame = MakeRect(0, 0, width, height);
   dashboard->minSize = MakeSize(width, height);
@@ -408,27 +368,23 @@ static void layoutConnectedDashboard(HomeViewController *this) {
   const int32_t sectionGap = Mini(Maxi(height * 24 / 1000, 16), 32);
   const int32_t columnGap = Mini(Maxi(width / 25, 24), 64);
 
-  // The route's one filter slot: a 34px field on the left, the route hint on
-  // the right, separated from the first section by clamp(8px, 1.2vh, 14px).
-  const int32_t filterHeight = 34;
-  const int32_t filterGap = Mini(Maxi(height * 12 / 1000, 8), 14);
-  const int32_t filterFieldWidth = Mini(260, width);
-  const int32_t hintX = filterFieldWidth + 16;
-  const int32_t hintWidth = Maxi(0, width - hintX);
-  this->routeFilter->frame = MakeRect(0, 0, width, filterHeight);
-  this->routeFilter->minSize = MakeSize(width, filterHeight);
-  this->routeFilter->maxSize = MakeSize(width, filterHeight);
-  this->rosterFilter->control.view.frame = MakeRect(0, 0, filterFieldWidth,
-                                                    filterHeight);
-  this->rosterFilter->control.view.minSize = MakeSize(filterFieldWidth,
-                                                      filterHeight);
-  this->rosterFilter->control.view.maxSize = this->rosterFilter->control.view.minSize;
-  this->routeHint->view.frame = MakeRect(hintX, 0, hintWidth, filterHeight);
-  this->routeHint->view.minSize = MakeSize(hintWidth, filterHeight);
+  // The route hint occupies the former filter row and stays separated from
+  // the first section by clamp(8px, 1.2vh, 14px).
+  const int32_t hintHeight = 34;
+  const int32_t hintGap = Mini(Maxi(height * 12 / 1000, 8), 14);
+  this->routeFilter->frame = MakeRect(0, 0, width, hintHeight);
+  this->routeFilter->minSize = MakeSize(width, hintHeight);
+  this->routeFilter->maxSize = MakeSize(width, hintHeight);
+  this->routeHint->view.frame = MakeRect(0, 0, width, hintHeight);
+  this->routeHint->view.minSize = MakeSize(width, hintHeight);
   this->routeHint->view.maxSize = this->routeHint->view.minSize;
 
-  const int32_t mapY = filterHeight + filterGap;
-  const int32_t mapHeight = 102;
+  const int32_t mapY = hintHeight + hintGap;
+
+  // 102 fits the 41pt heading over its 20pt path. A title the mapper broke onto
+  // a second line needs one more heading line, and the section grows rather
+  // than the heading clipping - everything below hangs off `overviewY`.
+  const int32_t mapHeight = titleWraps ? 143 : 102;
   const int32_t overviewY = mapY + mapHeight + sectionGap;
   const int32_t overviewHeight = Maxi(0, height - overviewY);
   this->sessionColumn->frame = MakeRect(0, 0, width, height);
@@ -448,9 +404,29 @@ static void layoutConnectedDashboard(HomeViewController *this) {
   this->mapHeadingRow->view.minSize = MakeSize(width, mapContentHeight);
   this->mapHeadingRow->view.maxSize = MakeSize(width, mapContentHeight);
 
+  // One line or two, decided by a class rather than by a frame. The heights
+  // have to reach the Text as well as the Label - Renderer::drawView scissors
+  // every view to its own clipping frame, and a Text sizes itself from the
+  // unwrapped string, so a wrapped title renders both lines into one texture
+  // and then has the second cut away at the height the first asked for. They
+  // are stated in the stylesheet because View::applyStyle re-establishes a
+  // view's size constraints on every restyle, which quietly undoes anything
+  // the route pins here.
+  const bool wrapped = $((View *) this->mapTitle, hasClassName, "wrapped");
+  if (wrapped != titleWraps) {
+    if (titleWraps) {
+      $((View *) this->mapTitle, addClassName, "wrapped");
+    } else {
+      $((View *) this->mapTitle, removeClassName, "wrapped");
+    }
+  }
+
   const int32_t modeWidth = Mini(Maxi(0, width - 24), 300);
   const int32_t mapCopyWidth = Maxi(0, width - modeWidth - 24);
-  const int32_t modeHeight = 41;
+  // 40 for the SegmentedControl's own segment height, plus the 5 points of top
+  // padding .modePanel puts above them. A clamp shorter than the sum would
+  // crop the strip rather than move it, because the panel is bottom-aligned.
+  const int32_t modeHeight = 45;
   this->mapCopy->view.minSize = MakeSize(mapCopyWidth, mapContentHeight);
   this->mapCopy->view.maxSize = MakeSize(mapCopyWidth, mapContentHeight);
   this->modePanel->view.minSize = MakeSize(modeWidth, modeHeight);
@@ -573,8 +549,8 @@ static void layoutConnectedDashboard(HomeViewController *this) {
   this->rosterFooter->view.minSize = MakeSize(rosterWidth, rosterFooterHeight);
   this->rosterFooter->view.maxSize = MakeSize(rosterWidth, rosterFooterHeight);
 
-  // The empty state stands where the header band and rows would be, so a
-  // filtered-out roster reads as one line of copy under the section rule.
+  // The empty state stands where the header band and rows would be, so an
+  // empty roster reads as one line of copy under the section rule.
   const int32_t emptyHeight = Mini(36, rosterTableHeight);
   this->rosterEmpty->view.frame = MakeRect(0, rosterHeaderHeight, rosterWidth,
                                            emptyHeight);
@@ -592,6 +568,7 @@ static void layoutConnectedDashboard(HomeViewController *this) {
 
   dashboard->needsLayout = session->needsLayout = true;
   $(dashboard, layoutIfNeeded);
+  return true;
 }
 
 static void refreshPlayerActions(HomeViewController *this,
@@ -606,10 +583,25 @@ static void refreshPlayerActions(HomeViewController *this,
     return;
   }
 
-  layoutConnectedDashboard(this);
-  alignTableHeader(this->summaryRecordsTable);
-  alignTableHeader(this->rosterTable);
-  setLabelText(this->mapTitle, configStringOr(CS_MESSAGE, "Unknown map"));
+  if (wasHidden) {
+    this->dashboardRoot->view.needsLayout = true;
+  }
+  if (layoutConnectedDashboard(this)) {
+    alignTableHeader(this->summaryRecordsTable);
+    alignTableHeader(this->rosterTable);
+  }
+  char mapTitle[MAX_STRING_CHARS];
+  resolvedMapTitle(mapTitle, sizeof(mapTitle));
+
+  // Never on width either. A Text that wraps takes its measure from its own
+  // frame, and the page's strict width pass narrows that frame to whatever its
+  // parent was measured at - which broke "Potato jumps by Mako" after the
+  // first word and then clipped the rest. MainView::collapsePageWidths exempts
+  // a Text that does not wrap for exactly this reason: it carries its whole
+  // string in one texture, so its frame is not a measure and narrowing it
+  // means nothing.
+  this->mapTitle->text->lineWrap = false;
+  setLabelText(this->mapTitle, mapTitle);
   setLabelText(this->mapIdentifier, configStringOr(CS_BSP, "unknown_map"));
 
   const race_mode_t mode = currentMode(ps);
@@ -642,10 +634,6 @@ static void refreshPlayerActions(HomeViewController *this,
   }
 
   setLabelText(this->modeStatus, status);
-
-  if (wasHidden) {
-    this->viewController.view->needsLayout = true;
-  }
 }
 
 static void refreshRoster(HomeViewController *this) {
@@ -678,7 +666,7 @@ static void refreshRoster(HomeViewController *this) {
   setLabelText(this->rosterSpectatorSummary,
                rosterSummaryText("Spectate",
                                  countRosterGroup(this, CG_ROSTER_SPECTATOR)));
-  refreshRosterFilter(this);
+  refreshRosterTable(this);
   this->dashboardRoot->view.needsLayout = true;
   refreshPlayerActions(this, cgi.client ? &cgi.client->frame.ps : NULL);
 }
@@ -707,7 +695,6 @@ static void loadView(ViewController *self) {
     MakeOutlet("sessionDashboard", &this->sessionDashboard),
     MakeOutlet("sessionColumn", &this->sessionColumn),
     MakeOutlet("routeFilter", &this->routeFilter),
-    MakeOutlet("rosterFilter", &this->rosterFilter),
     MakeOutlet("routeHint", &this->routeHint),
     MakeOutlet("mapSummary", &this->mapSummary),
     MakeOutlet("mapSectionTitle", &this->mapSectionTitle),
@@ -748,9 +735,6 @@ static void loadView(ViewController *self) {
   this->sessionDashboard->view.hidden = false;
   this->modeStatus->view.hidden = true;
   this->rosterEmpty->view.hidden = true;
-  this->rosterFilter->delegate = (TextViewDelegate) {
-    .self = this, .didEdit = didEditRosterFilter
-  };
   $(this->summaryRecordsTable, addColumnWithIdentifier, recordRankColumn);
   $(this->summaryRecordsTable, addColumnWithIdentifier, recordPlayerColumn);
   $(this->summaryRecordsTable, addColumnWithIdentifier, recordTimeColumn);

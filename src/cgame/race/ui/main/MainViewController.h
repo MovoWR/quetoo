@@ -35,6 +35,22 @@
  * @brief The MainViewController.
  */
 
+/**
+ * @brief What a staged route hands the shell so the footer can commit for it.
+ * @details The design has one footer, carrying the commit pair for whichever
+ * route is staged. A route registers on appear and the shell drops the
+ * registration on every navigation, so the pair can never outlive the
+ * controller it points at.
+ */
+typedef struct {
+  ident self;
+  void (*didApply)(ident self);
+  void (*didRevert)(ident self);
+} RaceCommitDelegate;
+
+/**
+ * @brief Registers, or with NULL clears, the footer's commit pair.
+ */
 typedef struct MainViewController MainViewController;
 typedef struct MainViewControllerInterface MainViewControllerInterface;
 
@@ -82,6 +98,13 @@ struct MainViewController {
   ActiveVoteViewController *activeVoteViewController;
   QuickSettingsViewController *quickSettingsViewController;
   Button *quickSettingsButton;
+
+  /**
+   * @brief The footer's commit pair, and the route it currently acts for.
+   */
+  Button *applyButton;
+  Button *revertButton;
+  RaceCommitDelegate commitDelegate;
 
   /**
    * @brief Active-game actions whose state follows the connection lifecycle.
@@ -204,4 +227,23 @@ struct MainViewControllerInterface {
 void MainViewController_RefreshAdmin(const player_state_t *ps);
 void MainViewController_ClearState(void);
 void MainViewController_RefreshEscState(void);
+void MainViewController_CloseQuickSettings(void);
 void MainViewController_RefreshVote(void);
+
+void MainViewController_SetCommitDelegate(const RaceCommitDelegate *delegate);
+
+/**
+ * @brief Paints the footer's dirty count and enables the commit pair.
+ * @param status The count, or NULL/"" for a route holding nothing.
+ * @param warn True when a staged change needs a restart, which the design
+ * turns gold.
+ */
+void MainViewController_SetCommitStatus(const char *status, bool warn);
+
+/**
+ * @brief Overrides the shell eyebrow for the route currently on top.
+ * @param text The eyebrow, or NULL to restore the session default.
+ * @param offline True to paint it in brand red, which the design reserves for
+ * "No administrator session".
+ */
+void MainViewController_SetRouteEyebrow(const char *text, bool offline);

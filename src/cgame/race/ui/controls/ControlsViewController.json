@@ -44,54 +44,7 @@
             "classNames": [
               "controlsHint"
             ],
-            "text": {
-              "text": ""
-            }
-          },
-          {
-            "class": "Label",
-            "identifier": "controlsDirtyStatus",
-            "classNames": [
-              "controlsDirtyStatus"
-            ],
-            "text": {
-              "text": ""
-            }
-          }
-        ]
-      },
-      {
-        "class": "StackView",
-        "classNames": [
-          "controlsFooterActions"
-        ],
-        "subviews": [
-          {
-            "class": "Button",
-            "identifier": "revertChanges",
-            "title": {
-              "text": "Revert changes"
-            }
-          },
-          {
-            "class": "Button",
-            "identifier": "applyChanges",
-            "classNames": [
-              "primaryButton"
-            ],
-            "title": {
-              "text": "Apply"
-            }
-          },
-          {
-            "class": "Button",
-            "identifier": "quit",
-            "classNames": [
-              "dangerButton"
-            ],
-            "title": {
-              "text": "Quit"
-            }
+            "text": {}
           }
         ]
       }

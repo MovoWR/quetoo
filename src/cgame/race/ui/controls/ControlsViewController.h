@@ -58,21 +58,9 @@ struct ControlsViewController {
   ViewController *bindingsViewController;
 
   /**
-   * @brief The footer commit pair, measured against route entry.
-   */
-  Label *dirtyStatus;
-  Button *revertChanges;
-  Button *apply;
-
-  /**
    * @brief Restores the client-shipped defaults for bindings in this route.
    */
   Button *restoreDefaults;
-
-  /**
-   * @brief Opens the quit confirmation dialog.
-   */
-  Button *quit;
 };
 
 /**

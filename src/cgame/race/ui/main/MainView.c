@@ -23,8 +23,12 @@
 
 #include "ColumnsView.h"
 #include "MainView.h"
+#include "MainViewController.h"
+#include "QuickSettingsHostView.h"
+#include "SpeedGridView.h"
 #include "cg_module_compat.h"
 #include "cg_race_physics.h"
+#include "cg_race_weapon_tuning.h"
 #include "cg_score.h"
 #include "race_physics.h"
 
@@ -58,13 +62,16 @@ enum {
   MAIN_BOTTOM_BAR_HEIGHT = 58,
   MAIN_WINDOW_HORIZONTAL_INSET_MIN = 16,
   MAIN_WINDOW_HORIZONTAL_INSET_MAX = 56,
-  MAIN_WINDOW_HEADER_HEIGHT = 95,
+  MAIN_WINDOW_HEADER_HEIGHT = 150,
+  MAIN_TUNING_WARNING_HEIGHT = 30,
   MAIN_WINDOW_CONTENT_INSET = 0,
   MAIN_WINDOW_MAX_WIDTH = 2240,
   MAIN_WINDOW_MAX_HEIGHT = 1400,
   MAIN_BRAND_WIDTH = 132,
   MAIN_TOP_ACTIONS_WIDTH = 196,
-  MAIN_BOTTOM_ACTIONS_WIDTH = 164,
+  /* Disconnect and Quit, plus the staged routes' Revert and Apply. */
+  MAIN_BOTTOM_ACTIONS_WIDTH = 380,
+  MAIN_COMMIT_STATUS_WIDTH = 260,
   MAIN_SHELL_GAP = 12,
   MAIN_HEADER_GAP_MIN = 12,
   MAIN_HEADER_GAP_MAX = 40,
@@ -82,7 +89,9 @@ enum {
      conditional would change the document width every time content crossed the
      scrolling threshold, and re-flow the columns with it. */
   MAIN_PAGE_SCROLL_RAIL = 12,
-  MAIN_DRAWER_WIDTH = 460,
+  MAIN_DRAWER_WIDTH = 380,
+  MAIN_KEY_HINT_BREAKPOINT = 1180,
+  MAIN_KEY_HINT_WIDTH = 360,
   MAIN_DIALOG_WIDTH = 520,
   MAIN_CLIPPED_BORDER_INSET = 1,
   /* The design's session metrics are separated by clamp(16px, 2.2vw, 40px). */
@@ -676,9 +685,27 @@ static void collapsePageWidths(View *view, int32_t width, bool strict) {
     // a child holding the width the design composed it at rather than the width
     // its column actually got. That is the residue these routes kept showing: a
     // caption row still 701 wide inside a 660 column, right-aligned, its last
-    // glyph under the window edge. Nothing here may be wider than what contains
-    // it, whatever it was authored as.
-    if (strict && !unwrappedText && subviewWidth > subviewLimit) {
+    // glyph under the window edge. Nothing flexible here may be wider than what
+    // contains it.
+    //
+    // The exception is the one case that residue never described. A view the
+    // design composed at a fixed width below the pin threshold is
+    // not a structure that gives way - it is a slider, a numeric field, a unit
+    // cell, and the row holding it already fits the column it was authored
+    // for. Releasing its floor here is what let a transient limit collapse it:
+    // a `contain` parent measures zero before its children are laid out, so on
+    // the pass that runs first every fixed-width cell under one looks too wide
+    // for a limit that is not real yet. The floor came back on the next
+    // restyle and went again on the next collapse, which is the flicker the
+    // Weapons rows showed under a live drag. Leave those alone. Anything at or
+    // above the threshold is a desktop structure and still gives way exactly
+    // as before, so the caption-wider-than-its-column case this guards is
+    // unaffected.
+    const bool responsiveStructure =
+      subview->maxSize.w >= MAIN_RESPONSIVE_WIDTH_PIN_MIN;
+
+    if (strict && !unwrappedText && subviewWidth > subviewLimit &&
+        (subview->minSize.w <= subviewLimit || responsiveStructure)) {
       if (subview->minSize.w > subviewLimit) {
         if (!responsivePin) {
           $(subview, addClassName, "esc-responsive-width-pin");
@@ -714,10 +741,21 @@ static void collapsePageWidths(View *view, int32_t width, bool strict) {
     // wider than the viewport it shows through, and a CollectionView's grid is
     // the same shape - squeezing either one's contents to the column would
     // collapse the very geometry the list scrolls to reveal.
+    //
+    // Not merely non-strict - not at all. A TableRowView is a `fill` stack, so
+    // every layout pass rescales its cells to span the row; recursing in here
+    // still ran the flexible-mask clamp over those same cells and wrote them a
+    // second, different answer whenever this pass's limit was transient. Two
+    // authorities alternating over one width was the Home roster's flicker -
+    // the status cell snapping between the row's edge and its content width.
+    // The interior already tracks the widget through the scroll view's own
+    // autoresizing, so the collapse pass has nothing to add below this node.
     const bool nativeList = $((Object *) subview, isKindOfClass, _TableView()) ||
                             $((Object *) subview, isKindOfClass, _CollectionView());
 
-    collapsePageWidths(subview, min(subviewWidth, available), strict && !nativeList);
+    if (!nativeList) {
+      collapsePageWidths(subview, min(subviewWidth, available), strict);
+    }
   }
 }
 
@@ -981,6 +1019,11 @@ static void respondToEvent(View *self, const SDL_Event *event) {
   super(View, self, respondToEvent, event);
 }
 
+static void didDismissQuickSettings(ident self) {
+  (void) self;
+  MainViewController_CloseQuickSettings();
+}
+
 #pragma mark - View
 
 /**
@@ -1010,6 +1053,10 @@ static void layoutSubviews(View *self) {
   this->activeBackground->frame = MakeRect(0, planeTop, bounds.w,
                                            planeBottom - planeTop);
 
+  // Same frame as the gradient. The grid derives its whole geometry from
+  // its own frame, so this is all it needs at any window size.
+  this->speedGrid->frame = this->activeBackground->frame;
+
   // The plane's last row, so the lit seam sits directly above the footer's own
   // hairline rather than under it.
   this->footerHairline->frame = MakeRect(0, max(0, planeBottom - 1), bounds.w, 1);
@@ -1020,11 +1067,8 @@ static void layoutSubviews(View *self) {
                                     bounds.w, bottomPaintHeight);
 
   if (!isActive) {
-    // Keep the disconnected branding above the bottom action rail. At the
-    // supported 1024-wide floor the old bottom-right alignment put the logo
-    // directly behind Quit, while the version label sat under the same rail.
-    this->logo->view.frame.y = max(MAIN_TOP_BAR_HEIGHT,
-      bounds.h - MAIN_BOTTOM_BAR_HEIGHT - this->logo->view.frame.h);
+    // Keep the version label above the bottom action rail; at the supported
+    // 1024-wide floor it otherwise sits under the same rail as Quit.
     this->version->view.frame.y = max(MAIN_TOP_BAR_HEIGHT,
       bounds.h - MAIN_BOTTOM_BAR_HEIGHT - this->version->view.frame.h);
   }
@@ -1068,17 +1112,38 @@ static void layoutSubviews(View *self) {
   const int32_t windowHeight = min(availableWindowHeight, MAIN_WINDOW_MAX_HEIGHT);
   const int32_t windowX = max(0, (bounds.w - windowWidth) / 2);
   const int32_t windowY = MAIN_TOP_BAR_HEIGHT;
+  const bool tuningWarningVisible = isActive && this->weaponTuningWarning &&
+    !this->weaponTuningWarning->view.hidden;
+  const int32_t tuningWarningHeight = tuningWarningVisible
+    ? MAIN_TUNING_WARNING_HEIGHT
+    : 0;
+  const int32_t windowHeaderHeight = MAIN_WINDOW_HEADER_HEIGHT +
+                                     tuningWarningHeight;
 
   this->menuWindow->frame = MakeRect(windowX, windowY, windowWidth, windowHeight);
-  this->windowHeader->frame = MakeRect(0, 0, windowWidth, MAIN_WINDOW_HEADER_HEIGHT);
+  this->windowHeader->frame = MakeRect(0, 0, windowWidth, windowHeaderHeight);
+  if (this->weaponTuningWarning) {
+    this->weaponTuningWarning->view.frame = tuningWarningVisible
+      ? MakeRect(0, 0, windowWidth, tuningWarningHeight)
+      : MakeRect(0, 0, 0, 0);
+    this->weaponTuningWarning->view.minSize =
+      MakeSize(this->weaponTuningWarning->view.frame.w,
+               this->weaponTuningWarning->view.frame.h);
+    this->weaponTuningWarning->view.maxSize =
+      this->weaponTuningWarning->view.minSize;
+  }
 
   const int32_t metricsWidth = isActive ? min(420, max(0, windowWidth / 2)) : 0;
   const int32_t routeSummaryWidth = max(0, windowWidth - metricsWidth);
-  this->routeSummary->view.frame = MakeRect(0, 0, routeSummaryWidth, MAIN_WINDOW_HEADER_HEIGHT);
-  this->routeSummary->view.minSize = MakeSize(routeSummaryWidth, MAIN_WINDOW_HEADER_HEIGHT);
-  this->routeSummary->view.maxSize = MakeSize(routeSummaryWidth, MAIN_WINDOW_HEADER_HEIGHT);
+  this->routeSummary->view.frame = MakeRect(0, tuningWarningHeight,
+    routeSummaryWidth, MAIN_WINDOW_HEADER_HEIGHT);
+  this->routeSummary->view.minSize = MakeSize(routeSummaryWidth,
+    MAIN_WINDOW_HEADER_HEIGHT);
+  this->routeSummary->view.maxSize = MakeSize(routeSummaryWidth,
+    MAIN_WINDOW_HEADER_HEIGHT);
   this->sessionMetrics->view.hidden = !isActive;
-  this->sessionMetrics->view.frame = MakeRect(routeSummaryWidth, 0,
+  this->sessionMetrics->view.frame = MakeRect(routeSummaryWidth,
+                                              tuningWarningHeight,
                                               metricsWidth, MAIN_WINDOW_HEADER_HEIGHT);
   this->sessionMetrics->view.minSize = MakeSize(metricsWidth, MAIN_WINDOW_HEADER_HEIGHT);
   this->sessionMetrics->view.maxSize = MakeSize(metricsWidth, MAIN_WINDOW_HEADER_HEIGHT);
@@ -1103,7 +1168,8 @@ static void layoutSubviews(View *self) {
 
     const int32_t packedMetricsWidth = min(metricsWidth, metricsTotal);
     const int32_t packedMetricsX = max(0, windowWidth - packedMetricsWidth);
-    this->sessionMetrics->view.frame = MakeRect(packedMetricsX, 0,
+    this->sessionMetrics->view.frame = MakeRect(packedMetricsX,
+      tuningWarningHeight,
       packedMetricsWidth, MAIN_WINDOW_HEADER_HEIGHT);
     this->sessionMetrics->view.minSize = MakeSize(packedMetricsWidth,
       MAIN_WINDOW_HEADER_HEIGHT);
@@ -1147,8 +1213,8 @@ static void layoutSubviews(View *self) {
 
   const int32_t innerX = windowX + MAIN_WINDOW_CONTENT_INSET;
   const int32_t innerWidth = max(0, windowWidth - MAIN_WINDOW_CONTENT_INSET * 2);
-  int32_t contentY = windowY + MAIN_WINDOW_HEADER_HEIGHT + MAIN_WINDOW_CONTENT_INSET;
-  int32_t contentHeight = max(0, windowHeight - MAIN_WINDOW_HEADER_HEIGHT -
+  int32_t contentY = windowY + windowHeaderHeight + MAIN_WINDOW_CONTENT_INSET;
+  int32_t contentHeight = max(0, windowHeight - windowHeaderHeight -
                                   MAIN_WINDOW_CONTENT_INSET * 2);
 
   if (this->activeVoteHost) {
@@ -1198,8 +1264,36 @@ static void layoutSubviews(View *self) {
   sizeNavigation(this, innerWidth, contentHeight);
 
   const int32_t bottomActionsWidth = isActive ? MAIN_BOTTOM_ACTIONS_WIDTH : 60;
-  const int32_t statusWidth = isActive ? max(0, bounds.w -
-    horizontalInset * 2 - bottomActionsWidth - MAIN_SHELL_GAP) : 0;
+
+  // `.m-keys`. The design drops the keyboard hint under 1180px so it cannot
+  // crowd the session line, which is the one footer element that must stay
+  // readable; the dialect has no media query, so the breakpoint lives here.
+  const bool keysVisible = isActive && bounds.w >= MAIN_KEY_HINT_BREAKPOINT;
+  const int32_t keysWidth = keysVisible ? MAIN_KEY_HINT_WIDTH : 0;
+
+  // `.m-dirty` sits between the keyboard hint and the footer actions, and takes
+  // no room at all on a route that is holding nothing.
+  const bool commitVisible = isActive && this->commitStatus &&
+    this->commitStatus->text->text && *this->commitStatus->text->text;
+  const int32_t commitWidth = commitVisible ? MAIN_COMMIT_STATUS_WIDTH : 0;
+
+  const int32_t actionsX = max(0, bounds.w - horizontalInset - bottomActionsWidth);
+  const int32_t commitX = max(0, actionsX - MAIN_SHELL_GAP - commitWidth);
+
+  // Center the keyboard hint until the commit/actions rail forces it left.
+  // The session line then owns only the space before that final position, so
+  // its labels can ellipsize without ever drawing under the hint.
+  const int32_t keysMax = max(horizontalInset,
+    (commitVisible ? commitX : actionsX) - MAIN_SHELL_GAP - keysWidth);
+  const int32_t keysX = keysVisible
+    ? clamp((bounds.w - keysWidth) / 2, horizontalInset, keysMax)
+    : 0;
+  const int32_t statusRight = keysVisible
+    ? keysX
+    : (commitVisible ? commitX : actionsX);
+  const int32_t statusWidth = isActive
+    ? max(0, statusRight - horizontalInset - MAIN_SHELL_GAP)
+    : 0;
   this->serverInfo->view.hidden = !isActive;
   this->serverInfo->view.frame = MakeRect(horizontalInset, 0, statusWidth,
                                           bottomPaintHeight);
@@ -1213,34 +1307,56 @@ static void layoutSubviews(View *self) {
     setEllipsizedLabelText(this->serverName, "", server,
                            this->serverName->view.frame.w);
   }
-  this->secondaryMenu->view.frame = MakeRect(
-    max(0, bounds.w - horizontalInset - bottomActionsWidth), 0,
+  if (this->commitStatus) {
+    this->commitStatus->view.hidden = !commitVisible;
+    this->commitStatus->view.frame = commitVisible
+      ? MakeRect(commitX, 0, commitWidth, bottomPaintHeight)
+      : MakeRect(0, 0, 0, 0);
+    this->commitStatus->view.minSize = MakeSize(this->commitStatus->view.frame.w,
+                                                this->commitStatus->view.frame.h);
+    this->commitStatus->view.maxSize = this->commitStatus->view.minSize;
+  }
+
+  this->secondaryMenu->view.frame = MakeRect(actionsX, 0,
                                               bottomActionsWidth, bottomPaintHeight);
   this->secondaryMenu->view.minSize = MakeSize(bottomActionsWidth, bottomPaintHeight);
   this->secondaryMenu->view.maxSize = MakeSize(bottomActionsWidth, bottomPaintHeight);
   this->secondaryMenu->view.needsLayout = true;
   $((View *) this->secondaryMenu, layoutIfNeeded);
-  this->contextHint->view.frame = MakeRect(0, 0, 0, 0);
-  this->contextHint->view.hidden = true;
+  this->contextHint->view.hidden = !keysVisible;
+  this->contextHint->view.frame = keysVisible
+    ? MakeRect(keysX, 0, keysWidth, bottomPaintHeight)
+    : MakeRect(0, 0, 0, 0);
+  this->contextHint->view.minSize = MakeSize(this->contextHint->view.frame.w,
+                                             this->contextHint->view.frame.h);
+  this->contextHint->view.maxSize = this->contextHint->view.minSize;
+  this->contextHint->view.needsLayout = true;
+  $((View *) this->contextHint, layoutIfNeeded);
 
   if (this->quickSettingsHost) {
-    // Both clamps matter, and contentHeight has to be the first of the two: a
-    // drawer sized only to 520 overruns the footer at 720p.
-    const int32_t drawerWidth = min(innerWidth, MAIN_DRAWER_WIDTH);
-    const int32_t drawerHeight = min(contentHeight, 520);
-    this->quickSettingsHost->frame = MakeRect(
-      innerX + innerWidth - drawerWidth - MAIN_CLIPPED_BORDER_INSET,
-      contentY - MAIN_CLIPPED_BORDER_INSET,
-      drawerWidth + MAIN_CLIPPED_BORDER_INSET * 2,
-      drawerHeight + MAIN_CLIPPED_BORDER_INSET * 2);
+    // The design's tier-1 drawer is not a floating panel inside the content
+    // plane: it is `min(380px, 100%)` wide, flush to the *viewport* edge and
+    // full viewport height, over a scrim that covers everything including both
+    // chrome bars. So the host is the scrim - it takes the whole bounds - and
+    // the panel is pinned inside it.
+    this->quickSettingsHost->frame = bounds;
 
+    const int32_t drawerWidth = min(bounds.w, MAIN_DRAWER_WIDTH);
+
+    // Only the drawer's left hairline is meant to land on screen. The dialect's
+    // border-width is uniform, so the other three edges are pushed past the
+    // viewport and the host clips them, the same trick the header and footer
+    // bars use for their single inboard rule.
     const Array *drawerViews = (Array *) this->quickSettingsHost->subviews;
     for (size_t i = 0; i < drawerViews->count; i++) {
       View *drawer = drawerViews->elements[i];
-      drawer->frame = MakeRect(MAIN_CLIPPED_BORDER_INSET, MAIN_CLIPPED_BORDER_INSET,
-                               drawerWidth, drawerHeight);
-      drawer->minSize = MakeSize(drawerWidth, drawerHeight);
-      drawer->maxSize = MakeSize(drawerWidth, drawerHeight);
+      const int32_t drawerHeight = bounds.h + MAIN_CLIPPED_BORDER_INSET * 2;
+      drawer->frame = MakeRect(bounds.w - drawerWidth,
+                               -MAIN_CLIPPED_BORDER_INSET,
+                               drawerWidth + MAIN_CLIPPED_BORDER_INSET,
+                               drawerHeight);
+      drawer->minSize = MakeSize(drawer->frame.w, drawerHeight);
+      drawer->maxSize = MakeSize(drawer->frame.w, drawerHeight);
       drawer->needsLayout = true;
     }
   }
@@ -1312,25 +1428,52 @@ static void updateBindings(View *self) {
   MainView *this = (MainView *) self;
   const bool isActive = *cgi.state == CL_ACTIVE;
 
-  this->background->view.hidden = isActive;
-  this->activeBackground->hidden = !isActive;
-  this->footerHairline->hidden = !isActive;
+  // The content plane is this menu's backdrop in both states. It was
+  // connected-only, and the disconnected route fell back to a random
+  // screenshot out of `ui/backgrounds` - two different rooms for one menu, and
+  // the seam showed the moment a player opened the route before connecting.
+  // The plane is procedural, so it costs the same either way.
+  this->activeBackground->hidden = false;
+  this->speedGrid->hidden = !SpeedGridView_Enabled();
+  this->footerHairline->hidden = false;
 
   // The design's recessed chrome bars belong to the connected shell. The
-  // disconnected menu is a full-bleed screenshot with the logo and the version
-  // string sitting in its bottom corners, which an opaque footer would cover -
-  // so there the bars stay the transparent rails they have always been.
+  // disconnected menu still puts its version string in the bottom-left corner,
+  // which an opaque footer would cover - so there the bars stay the transparent
+  // rails they have always been.
   setClassName(this->topBar, "connectedChrome", isActive);
   setClassName(this->bottomBar, "connectedChrome", isActive);
-  this->logo->view.hidden = isActive;
   this->version->view.hidden = isActive;
-  this->overlayShade->hidden = !isActive;
+  this->overlayShade->hidden = false;
   this->serverInfo->view.hidden = !isActive;
   this->sessionMetrics->view.hidden = !isActive;
+  const char *weaponTuningWarning = isActive
+    ? Cg_RaceWeaponTuning_Warning()
+    : NULL;
+  $(this->weaponTuningWarning->text, setText,
+    weaponTuningWarning ? weaponTuningWarning : "");
+  this->weaponTuningWarning->view.hidden = weaponTuningWarning == NULL;
 
   $(this->menuHeading->text, setText, isActive ? "ESC MENU" : "MAIN MENU");
+  const bool eyebrowOverridden = this->eyebrowOverride[0] != 0;
   $(this->connectionLabel->text, setText,
-    isActive ? "Connected session" : "Race menu");
+    eyebrowOverridden ? this->eyebrowOverride
+                      : (isActive ? "Connected session" : "Race menu"));
+
+  // Guarded, because adding or removing a class name re-applies the stylesheet
+  // to the whole subtree and this runs on every layout pass.
+  {
+    View *eyebrow = (View *) this->connectionLabel;
+    const bool offline = eyebrowOverridden && this->eyebrowOffline;
+    const bool wasOffline = $(eyebrow, hasClassName, "offline");
+    if (offline != wasOffline) {
+      if (offline) {
+        $(eyebrow, addClassName, "offline");
+      } else {
+        $(eyebrow, removeClassName, "offline");
+      }
+    }
+  }
 
   if (isActive) {
     const char *bsp = configStringOr(CS_BSP, "unknown_map");
@@ -1380,9 +1523,7 @@ static MainView *initWithFrame(MainView *self, const SDL_Rect *frame) {
   self = (MainView *) super(View, self, initWithFrame, frame);
   if (self) {
     Outlet outlets[] = MakeOutlets(
-      MakeOutlet("background", &self->background),
       MakeOutlet("overlayShade", &self->overlayShade),
-      MakeOutlet("logo", &self->logo),
       MakeOutlet("version", &self->version),
       MakeOutlet("topBar", &self->topBar),
       MakeOutlet("brand", &self->brand),
@@ -1392,7 +1533,10 @@ static MainView *initWithFrame(MainView *self, const SDL_Rect *frame) {
       MakeOutlet("windowHeader", &self->windowHeader),
       MakeOutlet("routeSummary", &self->routeSummary),
       MakeOutlet("connectionLabel", &self->connectionLabel),
+      MakeOutlet("weaponTuningWarning", &self->weaponTuningWarning),
       MakeOutlet("windowTitle", &self->windowTitle),
+      MakeOutlet("windowLockup", &self->windowLockup),
+      MakeOutlet("commitStatus", &self->commitStatus),
       MakeOutlet("sessionMetrics", &self->sessionMetrics),
       MakeOutlet("topPlayers", &self->topPlayers),
       MakeOutlet("topTime", &self->topTime),
@@ -1437,6 +1581,21 @@ static MainView *initWithFrame(MainView *self, const SDL_Rect *frame) {
     self->activeBackground = (View *) activeBackground;
     release(activeBackground);
 
+    // The moving half of the same plane: the gradient is still, this is
+    // the floor of the room it lights. Above the gradient and below the
+    // scrim, so the scrim still calms it under route content.
+    SpeedGridView *speedGrid = (SpeedGridView *) $((View *) alloc(SpeedGridView),
+      init);
+    assert(speedGrid);
+    speedGrid->view.identifier = q_strdup("speedGrid");
+    assert(speedGrid->view.identifier);
+    speedGrid->view.hidden = true;
+
+    $(this, addSubviewRelativeTo, (View *) speedGrid, self->overlayShade,
+      ViewPositionBefore);
+    self->speedGrid = (View *) speedGrid;
+    release(speedGrid);
+
     // Above the plane and below everything else, so the seam reads against the
     // plane it terminates rather than over the footer's contents.
     ImageView *footerHairline = $(alloc(ImageView), initWithImage, NULL);
@@ -1479,18 +1638,21 @@ static MainView *initWithFrame(MainView *self, const SDL_Rect *frame) {
     self->activeVoteHost = activeVoteHost;
     release(activeVoteHost);
 
-    View *quickSettingsHost = $(alloc(View), initWithFrame, NULL);
+    QuickSettingsHostView *quickSettingsHost =
+      (QuickSettingsHostView *) $((View *) alloc(QuickSettingsHostView),
+        initWithFrame, NULL);
     assert(quickSettingsHost);
-    quickSettingsHost->identifier = q_strdup("quickSettingsHost");
-    assert(quickSettingsHost->identifier);
-    quickSettingsHost->hidden = true;
-    quickSettingsHost->clipsSubviews = true;
-    $(this, addSubview, quickSettingsHost);
-    self->quickSettingsHost = quickSettingsHost;
+    quickSettingsHost->view.identifier = q_strdup("quickSettingsHost");
+    assert(quickSettingsHost->view.identifier);
+    quickSettingsHost->view.hidden = true;
+    quickSettingsHost->view.clipsSubviews = true;
+    quickSettingsHost->delegate = (QuickSettingsHostViewDelegate) {
+      .didDismiss = didDismissQuickSettings
+    };
+    $(this, addSubview, (View *) quickSettingsHost);
+    self->quickSettingsHost = (View *) quickSettingsHost;
     release(quickSettingsHost);
 
-    $(self->background, setImageWithResourceName, va("ui/backgrounds/%u.png", RandomRangeu(0, 6)));
-    $(self->logo, setImageWithResourceName, "ui/logo.png");
     $(self->version->text, setText, va("Quetoo %s", cgi.GetCvarString("version")));
 
     $(this, updateBindings);

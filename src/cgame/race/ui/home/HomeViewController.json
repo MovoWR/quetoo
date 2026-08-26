@@ -24,7 +24,6 @@
                     "identifier": "routeFilter",
                     "classNames": [ "routeFilter" ],
                     "subviews": [
-                      { "class": "TextView", "identifier": "rosterFilter", "defaultText": "Filter runners" },
                       { "class": "Label", "identifier": "routeHint", "classNames": [ "routeHint" ], "text": { "text": "Choose Play to join a server or create a private local session." } }
                     ]
                   },
@@ -45,7 +44,7 @@
                             "identifier": "mapCopy",
                             "classNames": [ "mapCopy" ],
                             "subviews": [
-                              { "class": "Label", "identifier": "mapTitle", "classNames": [ "mapTitle" ], "text": { "text": "Unknown map" } },
+                              { "class": "Label", "identifier": "mapTitle", "classNames": [ "mapTitle" ], "text": { "lineWrap": true, "text": "Unknown map" } },
                               { "class": "Label", "identifier": "mapIdentifier", "classNames": [ "mapIdentifier" ], "text": { "text": "unknown_map" } }
                             ]
                           },
@@ -111,7 +110,7 @@
                           },
                           { "class": "View", "identifier": "rosterHeaderBand", "classNames": [ "tableHeaderBand" ] },
                           { "class": "TableView", "identifier": "rosterTable" },
-                          { "class": "Label", "identifier": "rosterEmpty", "classNames": [ "emptyState" ], "text": { "text": "No runners match that filter." } },
+                          { "class": "Label", "identifier": "rosterEmpty", "classNames": [ "emptyState" ], "text": { "text": "No runners to show yet." } },
                           {
                             "class": "StackView",
                             "identifier": "rosterFooter",

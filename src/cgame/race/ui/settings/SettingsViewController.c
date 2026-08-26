@@ -16,6 +16,8 @@
 #include "CvarSlider.h"
 #include "RaceSlider.h"
 #include "SettingsViewController.h"
+
+#include "MainViewController.h"
 #include "StrafeHelperPreview.h"
 
 #include <ctype.h>
@@ -42,7 +44,6 @@ typedef enum {
 } SettingsPage;
 
 typedef enum {
-  SettingsSectionPreset,
   SettingsSectionWindow,
   SettingsSectionOutput,
   SettingsSectionShadows,
@@ -72,7 +73,6 @@ typedef struct {
  * @brief Sections, in flow order, which is also the page strip order.
  */
 static const SettingsSectionDescriptor settingsSections[SETTINGS_SECTION_COUNT] = {
-  { SettingsPageDisplay, "Quality preset" },
   { SettingsPageDisplay, "Window & scaling" },
   { SettingsPageDisplay, "Performance & output" },
   { SettingsPageLighting, "Shadows" },
@@ -149,7 +149,6 @@ typedef enum {
   SettingRowSelect,
   SettingRowToggle,
   SettingRowValue,
-  SettingRowPreset,
   SettingRowStrafeColors,
   SettingRowStrafePreset,
   SettingRowStrafePreview
@@ -232,9 +231,6 @@ typedef struct {
  */
 static const SettingDescriptor settingDescriptors[SETTINGS_ROW_COUNT] = {
 
-  { SettingsSectionPreset, "Preset", NULL, NULL, SettingRowPreset,
-    SettingRestartLive, SettingSelectNone, 0, 0, 0, NULL, false, NULL },
-
   { SettingsSectionWindow, "Window mode", "r_fullscreen", NULL, SettingRowSelect,
     SettingRestartRenderer, SettingSelectWindowMode, 0, 0, 0, NULL, true, NULL },
   { SettingsSectionWindow, "Fullscreen resolution", "r_fullscreen_width", "r_fullscreen_height",
@@ -256,6 +252,8 @@ static const SettingDescriptor settingDescriptors[SETTINGS_ROW_COUNT] = {
     SettingRestartLive, SettingSelectAnisotropy, 0, 0, 0, NULL, true, NULL },
   { SettingsSectionOutput, "Screenshot format", "r_screenshot_format", NULL, SettingRowSelect,
     SettingRestartLive, SettingSelectScreenshot, 0, 0, 0, NULL, true, NULL },
+  { SettingsSectionOutput, "Menu speed grid", "cg_race_menu_grid", NULL, SettingRowToggle,
+    SettingRestartLive, SettingSelectNone, 0, 0, 0, NULL, true, NULL },
   { SettingsSectionOutput, "GPU backend", "r_gpu_driver", NULL, SettingRowValue,
     SettingRestartLive, SettingSelectNone, 0, 0, 0, NULL, false, NULL },
 
@@ -317,10 +315,10 @@ static const SettingDescriptor settingDescriptors[SETTINGS_ROW_COUNT] = {
   { SettingsSectionMouse, "Sensitivity", "m_sensitivity", NULL, SettingRowSlider,
     SettingRestartLive, SettingSelectNone, 0.5, 10, 0.1, "%0.1f", true, NULL },
   { SettingsSectionMouse, "Zoom sensitivity", "m_sensitivity_zoom", NULL, SettingRowSlider,
-    SettingRestartLive, SettingSelectNone, 0.1, 5, 0.1, "%0.1f", true, NULL },
+    SettingRestartLive, SettingSelectNone, 0.1, 2, 0.05, "%0.2f", true, NULL },
   { SettingsSectionMouse, "Invert mouse", "m_invert", NULL, SettingRowToggle,
     SettingRestartLive, SettingSelectNone, 0, 0, 0, NULL, true, NULL },
-  { SettingsSectionMouse, "Interpolate mouse", "m_interpolate", NULL, SettingRowToggle,
+  { SettingsSectionMouse, "Smooth mouse", "m_interpolate", NULL, SettingRowToggle,
     SettingRestartLive, SettingSelectNone, 0, 0, 0, NULL, true, NULL },
   { SettingsSectionMouse, "Zoomed field of view", "cg_fov_zoom", NULL, SettingRowSlider,
     SettingRestartLive, SettingSelectNone, 40, 110, 1, NULL, true, NULL },
@@ -1222,8 +1220,8 @@ static void refreshStrafeColors(SettingsViewController *self) {
   const double effective = strafeColorEffectiveAlpha(rgba[3]);
 
   setTextIfChanged(self->strafeColorMeta->text,
-                   va("%s   %.0f%% on screen",
-                       cvarString(settingsStrafeColorTargets[target].var),
+                   va("%d %d %d %d · %.0f%% on screen",
+                      rgba[0], rgba[1], rgba[2], rgba[3],
                       effective * 100.0));
 
   // The whole HSV space is reachable, which is what a free picker buys and also
@@ -1365,17 +1363,11 @@ static void refreshRows(SettingsViewController *self) {
     }
   }
 
-  // Every touch that can change the commit group's width is tracked, because
-  // the footer bar has to be told to re-place the group afterwards; see below.
-  bool commitDidResize = self->dirtyStatus->view.hidden != (dirtyCount == 0);
-
-  // Hidden rather than merely emptied: the commit group hugs its contents, and
-  // a blank label still costs the group one span of spacing - which is a gap
-  // opening between the cost caption and the buttons for no stated reason.
-  self->dirtyStatus->view.hidden = dirtyCount == 0;
-
+  // The design has one footer, and the commit pair lives in it. The route still
+  // owns the arithmetic - only it knows which of its rows are dirty and which
+  // of those need a restart - and hands the shell the sentence to print.
   if (dirtyCount == 0) {
-    commitDidResize |= setTextIfChanged(self->dirtyStatus->text, "");
+    MainViewController_SetCommitStatus(NULL, false);
   } else {
     const char *restart = rendererRestart && soundRestart
       ? " · Renderer and sound restart required"
@@ -1385,25 +1377,8 @@ static void refreshRows(SettingsViewController *self) {
     char status[128];
     snprintf(status, sizeof(status), "%zu setting%s changed%s",
                dirtyCount, dirtyCount == 1 ? "" : "s", restart);
-    commitDidResize |= setTextIfChanged(self->dirtyStatus->text, status);
+    MainViewController_SetCommitStatus(status, rendererRestart || soundRestart);
   }
-
-  // The commit group hugs its contents and pins to the footer's right edge, so
-  // a caption that grew or shrank moves the whole group. View::resize only
-  // dirties a superview that is itself a container, and the footer bar is a
-  // plain View - it has to pin both halves to opposite edges, which a StackView
-  // cannot do - so nothing here would ever ask it to re-place the group. The
-  // group would keep the x it was given at whatever width the caption used to
-  // be, and the buttons would walk off the right edge while the caption ran on
-  // underneath them. That is the overlap this footer has been reported for.
-  if (commitDidResize) {
-    self->footerBar->needsLayout = true;
-  }
-
-  // The commit pair is only reachable while there is something to commit, so a
-  // stale count cannot survive a revert or a page change.
-  setControlFlag((Control *) self->revertChanges, ControlStateDisabled, dirtyCount == 0);
-  setControlFlag((Control *) self->apply, ControlStateDisabled, dirtyCount == 0);
 
   refreshPresetSegments(self);
   refreshStrafePresetSegments(self);
@@ -1871,9 +1846,9 @@ static void didSelectResolution(Select *select, Option *option) {
 /**
  * @brief Restores every row to the value it held when the route was entered.
  */
-static void didClickRevertChanges(Button *button) {
+static void didRevertChanges(ident sender) {
 
-  SettingsViewController *self = button->delegate.self;
+  SettingsViewController *self = sender;
 
   for (size_t row = 0; row < SETTINGS_ROW_COUNT; row++) {
     if (isRowDirty(self, row)) {
@@ -1892,9 +1867,9 @@ static void didClickRevertChanges(Button *button) {
  * adds is the restart that the renderer-class and sound-class rows need before
  * their new values are visible or audible, and a new baseline for Revert.
  */
-static void didClickApply(Button *button) {
+static void didApplyChanges(ident sender) {
 
-  SettingsViewController *self = button->delegate.self;
+  SettingsViewController *self = sender;
 
   bool rendererRestart = false;
   bool soundRestart = false;
@@ -2368,9 +2343,6 @@ static View *makeControl(SettingsViewController *self, size_t row) {
 
   switch (descriptor->kind) {
 
-    case SettingRowPreset:
-      return makePresetSegments(self);
-
     case SettingRowValue: {
       Label *value = $(alloc(Label), initWithText, "", NULL);
       $((View *) value, addClassName, "rowValue");
@@ -2469,9 +2441,6 @@ static View *makeRow(SettingsViewController *self, size_t row) {
   View *view = $(alloc(View), initWithFrame, NULL);
   $(view, addClassName, "settingRow");
   switch (descriptor->kind) {
-    case SettingRowPreset:
-      $(view, addClassName, "presetRow");
-      break;
     case SettingRowStrafePreset:
       $(view, addClassName, "presetRow");
       $(view, addClassName, "strafePresetRow");
@@ -2522,6 +2491,13 @@ static View *makeRow(SettingsViewController *self, size_t row) {
   $((View *) right, addClassName, "rowRight");
   right->axis = StackViewAxisHorizontal;
   right->view.alignment = ViewAlignmentMiddleRight;
+
+  // A slider is dragged, not clicked, so it gets a wider cell than the controls
+  // beside it. The cell is right-pinned, so the extra width runs leftward and
+  // every control on the page still ends on the same edge.
+  if (descriptor->kind == SettingRowSlider) {
+    $((View *) right, addClassName, "sliderCell");
+  }
 
   View *control = makeControl(self, row);
   assert(control);
@@ -2628,27 +2604,33 @@ static void resolveOutlets(SettingsViewController *self) {
 
   Outlet outlets[] = MakeOutlets(
     MakeOutlet("settingsFilter", &self->filter),
+    MakeOutlet("settingsPresetHost", &self->presetHost),
     MakeOutlet("settingsStrafePreview", &self->strafePreviewHost),
     MakeOutlet("settingsStrafeTabs", &self->strafeTabs),
     MakeOutlet("settingsEmptyState", &self->emptyState),
     MakeOutlet("settingsFooterBar", &self->footerBar),
-    MakeOutlet("settingsHint", &self->hint),
-    MakeOutlet("settingsDirtyStatus", &self->dirtyStatus),
-    MakeOutlet("revertChanges", &self->revertChanges),
-    MakeOutlet("applyChanges", &self->apply)
+    MakeOutlet("settingsHint", &self->hint)
   );
 
   $(self->viewController.view, resolve, outlets);
 
   assert(self->filter);
+  assert(self->presetHost);
+
+  // The design's filter bar carries the quality preset. Built here rather than
+  // from a row descriptor, because it no longer has a row: the five segments
+  // are chrome for the whole route, not one setting inside Display.
+  {
+    View *segments = makePresetSegments(self);
+    $(self->presetHost, addSubview, segments);
+    release(segments);
+  }
+
   assert(self->strafePreviewHost);
   assert(self->strafeTabs);
   assert(self->emptyState);
   assert(self->footerBar);
   assert(self->hint);
-  assert(self->dirtyStatus);
-  assert(self->revertChanges);
-  assert(self->apply);
 }
 
 /**
@@ -2740,14 +2722,6 @@ static void loadView(ViewController *viewController) {
     .self = self,
     .didEdit = didEditFilter
   };
-  self->revertChanges->delegate = (ButtonDelegate) {
-    .self = self,
-    .didClick = didClickRevertChanges
-  };
-  self->apply->delegate = (ButtonDelegate) {
-    .self = self,
-    .didClick = didClickApply
-  };
 
   captureOpeningValues(self);
   selectStrafeTab(self, SettingsStrafeTabBar);
@@ -2764,10 +2738,29 @@ static void viewWillAppear(ViewController *viewController) {
 
   SettingsViewController *self = (SettingsViewController *) viewController;
 
+  MainViewController_SetCommitDelegate(&(const RaceCommitDelegate) {
+    .self = self,
+    .didApply = didApplyChanges,
+    .didRevert = didRevertChanges
+  });
+
   captureOpeningValues(self);
   refreshFilter(self);
   syncControlsFromCvars(self);
   refreshHint(self);
+}
+
+/**
+ * @see ViewController::viewWillDisappear(ViewController *)
+ * @details The footer's commit pair is on loan for as long as this route is on
+ * top. The shell drops it on every navigation as well, so this is the belt to
+ * that braces rather than the only guard.
+ */
+static void viewWillDisappear(ViewController *viewController) {
+
+  super(ViewController, viewController, viewWillDisappear);
+
+  MainViewController_SetCommitDelegate(NULL);
 }
 
 /**
@@ -2808,6 +2801,7 @@ static void initialize(Class *clazz) {
   ((ViewControllerInterface *) clazz->interface)->loadView = loadView;
   ((ViewControllerInterface *) clazz->interface)->respondToEvent = respondToEvent;
   ((ViewControllerInterface *) clazz->interface)->viewWillAppear = viewWillAppear;
+  ((ViewControllerInterface *) clazz->interface)->viewWillDisappear = viewWillDisappear;
 }
 
 /**

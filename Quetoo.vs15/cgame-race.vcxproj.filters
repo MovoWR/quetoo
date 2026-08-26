@@ -67,6 +67,9 @@
     <Filter Include="src\race\ui\admin">
       <UniqueIdentifier>{607707aa-e9ad-45ef-87f3-9e73705d9b6a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\race\ui\backgrounds">
+      <UniqueIdentifier>{b9e14c31-7a52-4d68-9c0f-2f1a6d3e4b70}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\race\ui\home">
       <UniqueIdentifier>{3f8c4dd4-58cb-4cdd-bf08-38a36e7cce40}</UniqueIdentifier>
     </Filter>
@@ -237,6 +240,9 @@
     <ClInclude Include="..\src\cgame\race\cg_race_client_file.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_dashboard_layout.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_admin_command.h">
       <Filter>src\race</Filter>
     </ClInclude>
@@ -282,6 +288,9 @@
     <ClInclude Include="..\src\cgame\race\ui\admin\AdminViewController.h">
       <Filter>src\race\ui\admin</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\cgame\race\ui\admin\WeaponLabViewController.h">
+      <Filter>src\race\ui\admin</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\race\ui\controls\ControlsViewController.h">
       <Filter>src\race\ui\controls</Filter>
     </ClInclude>
@@ -292,9 +301,6 @@
       <Filter>src\race\ui\controls</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\ui\controls\RaceBindTextView.h">
-      <Filter>src\race\ui\controls</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\cgame\race\ui\controls\ResponseServiceViewController.h">
       <Filter>src\race\ui\controls</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\ui\settings\SettingsViewController.h">
@@ -324,10 +330,22 @@
     <ClInclude Include="..\src\cgame\race\ui\main\RaceSlider.h">
       <Filter>src\race\ui\main</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\cgame\race\ui\main\SpeedGridView.h">
+      <Filter>src\race\ui\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cgame\race\ui\main\LoadingViewController.h">
+      <Filter>src\race\ui\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cgame\race\ui\main\LoadingGridView.h">
+      <Filter>src\race\ui\main</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\race\ui\main\MainView.h">
       <Filter>src\race\ui\main</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\ui\main\MainViewController.h">
+      <Filter>src\race\ui\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cgame\race\ui\main\QuickSettingsHostView.h">
       <Filter>src\race\ui\main</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\ui\main\QuickSettingsViewController.h">
@@ -557,6 +575,9 @@
     <ClCompile Include="..\src\cgame\race\ui\admin\AdminViewController.c">
       <Filter>src\race\ui\admin</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cgame\race\ui\admin\WeaponLabViewController.c">
+      <Filter>src\race\ui\admin</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\cgame\race\ui\controls\ControlsViewController.c">
       <Filter>src\race\ui\controls</Filter>
     </ClCompile>
@@ -567,9 +588,6 @@
       <Filter>src\race\ui\controls</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\ui\controls\RaceBindTextView.c">
-      <Filter>src\race\ui\controls</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\cgame\race\ui\controls\ResponseServiceViewController.c">
       <Filter>src\race\ui\controls</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\ui\settings\SettingsViewController.c">
@@ -585,6 +603,9 @@
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_client_file.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_dashboard_layout.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_admin_command.c">
@@ -608,7 +629,19 @@
     <ClCompile Include="..\src\cgame\race\ui\main\RaceSlider.c">
       <Filter>src\race\ui\main</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cgame\race\ui\main\SpeedGridView.c">
+      <Filter>src\race\ui\main</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\cgame\race\ui\main\MainViewController.c">
+      <Filter>src\race\ui\main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cgame\race\ui\main\QuickSettingsHostView.c">
+      <Filter>src\race\ui\main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cgame\race\ui\main\LoadingViewController.c">
+      <Filter>src\race\ui\main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cgame\race\ui\main\LoadingGridView.c">
       <Filter>src\race\ui\main</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\ui\main\MainView.c">
@@ -943,6 +976,27 @@
     <None Include="..\src\cgame\race\ui\DialogViewController.css">
       <Filter>src\race\ui</Filter>
     </None>
+    <None Include="..\src\cgame\race\ui\conback.png">
+      <Filter>src\race\ui</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\backgrounds\0.png">
+      <Filter>src\race\ui\backgrounds</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\backgrounds\1.png">
+      <Filter>src\race\ui\backgrounds</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\backgrounds\2.png">
+      <Filter>src\race\ui\backgrounds</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\backgrounds\3.png">
+      <Filter>src\race\ui\backgrounds</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\backgrounds\4.png">
+      <Filter>src\race\ui\backgrounds</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\backgrounds\5.png">
+      <Filter>src\race\ui\backgrounds</Filter>
+    </None>
     <None Include="..\src\cgame\race\ui\hud_input_attack.png">
       <Filter>src\race\ui</Filter>
     </None>
@@ -997,6 +1051,12 @@
     <None Include="..\src\cgame\race\ui\admin\AdminViewController.json">
       <Filter>src\race\ui\admin</Filter>
     </None>
+    <None Include="..\src\cgame\race\ui\admin\WeaponLabViewController.css">
+      <Filter>src\race\ui\admin</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\admin\WeaponLabViewController.json">
+      <Filter>src\race\ui\admin</Filter>
+    </None>
     <None Include="..\src\cgame\race\ui\controls\ControlsViewController.json">
       <Filter>src\race\ui\controls</Filter>
     </None>
@@ -1004,12 +1064,6 @@
       <Filter>src\race\ui\controls</Filter>
     </None>
     <None Include="..\src\cgame\race\ui\controls\MovementCombatViewController.json">
-      <Filter>src\race\ui\controls</Filter>
-    </None>
-    <None Include="..\src\cgame\race\ui\controls\ResponseServiceViewController.css">
-      <Filter>src\race\ui\controls</Filter>
-    </None>
-    <None Include="..\src\cgame\race\ui\controls\ResponseServiceViewController.json">
       <Filter>src\race\ui\controls</Filter>
     </None>
     <None Include="..\src\cgame\race\ui\settings\SettingsViewController.css">
@@ -1037,6 +1091,18 @@
       <Filter>src\race\ui\main</Filter>
     </None>
     <None Include="..\src\cgame\race\ui\main\LoadingViewController.css">
+      <Filter>src\race\ui\main</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\main\LoadingViewController.json">
+      <Filter>src\race\ui\main</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\main\loading_lockup.png">
+      <Filter>src\race\ui\main</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\main\menu_lockup.png">
+      <Filter>src\race\ui\main</Filter>
+    </None>
+    <None Include="..\src\cgame\race\ui\main\menu_mark.png">
       <Filter>src\race\ui\main</Filter>
     </None>
     <None Include="..\src\cgame\race\ui\main\UpdateViewController.css">

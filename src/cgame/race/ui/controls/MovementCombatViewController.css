@@ -185,7 +185,7 @@ Panel.controlsMenu > StackView > .contentView {
 .movementCombat .controlsColumns {
   alignment: top-left;
   autoresizing-mask: contain | width;
-  min-column-width: 460;
+  min-column-width: 680;
   min-width: 0;
   spacing: 24;
 }
@@ -275,14 +275,51 @@ Panel.controlsMenu > StackView > .contentView {
   min-height: 40;
 }
 
-.movementCombat .rowLeft,
-.movementCombat .rowRight {
+.movementCombat .rowLeft {
   autoresizing-mask: contain;
   axis: horizontal;
   background-color: transparent;
   distribution: default;
   min-width: 0;
   spacing: 6;
+}
+
+/* States the control track rather than containing it - see the note on
+   `Panel.settingsMenu .rowRight`. A contained cell is collapsed to zero by the
+   page's strict width pass before its children have been laid out, which left
+   this route's Always-run checkbox and every cvar slider as a hairline. */
+.movementCombat .rowRight {
+  autoresizing-mask: none;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  height: 34;
+  max-height: 34;
+  max-width: 206;
+  min-height: 34;
+  min-width: 206;
+  spacing: 6;
+  width: 206;
+}
+
+/* A slider is dragged, not clicked. The cell is right-pinned, so the extra
+   width runs leftward and every control on the page still ends on one edge.
+   420 leaves about 374 points of groove once Slider::layoutSubviews has taken
+   its readout out of the bar - against the ~160 the base track left, which is
+   what made these read as stubs rather than as something you can aim with. */
+.movementCombat .rowRight.sliderCell {
+  max-width: 420;
+  min-width: 420;
+  width: 420;
+}
+
+/* The control, not just the cell. The route's shared track pins every Select,
+   Checkbox and field at 206, and a Slider left at that inside a 420 cell is a
+   wider cell around the same stub. */
+.movementCombat .sliderCell Slider {
+  max-width: 420;
+  min-width: 420;
+  width: 420;
 }
 
 /* The changed marker. Hidden until the row differs from what the client ships,
@@ -500,48 +537,28 @@ Panel.controlsMenu > StackView > .contentView {
   color: #6d8291;
 }
 
-/* The mask, not just the height: ObjectivelyMVC's stylesheet fills the bar to the
-   Slider's full height, so `height` alone is overwritten every layout pass. */
-.movementCombat Slider > .bar {
-  alignment: middle-left;
-  autoresizing-mask: width;
-  background-color: #16232e;
-  height: 4;
-  max-height: 4;
-  min-height: 4;
-}
-
-.movementCombat Slider > .bar > .handle {
-  background-color: #5c8fb5;
-  border-color: #a5dcf7;
-  border-width: 1;
-  min-height: 18;
-  min-width: 10;
-}
-
-.movementCombat Slider:hover > .bar > .handle,
-.movementCombat Slider:focused > .bar > .handle {
-  background-color: #73c7f2;
-  border-color: #d3efff;
-}
-
-.movementCombat Slider:focused > .bar {
-  background-color: #365163;
-}
-
 .movementCombat Checkbox {
   alignment: middle-right;
 }
 
+/* The box is pinned square on all four, not floored on two. The Checkbox that
+   holds it is the row's 206pt control cell, and a Control given only a minimum
+   stretches to fill that cell and is squashed to the row's height - which drew
+   the Always-run box as a horizontal sliver rather than a checkbox. Settings
+   and Admin pin theirs the same way. */
 .movementCombat Checkbox > Control {
   alignment: middle-right;
   background-color: #16232e;
   border-color: #2a3f4f;
   border-width: 1;
   bevel: none;
+  height: 22;
+  max-height: 22;
+  max-width: 22;
   min-height: 22;
   min-width: 22;
   padding: 5 5 5 5;
+  width: 22;
 }
 
 .movementCombat Checkbox:hover > Control {
@@ -572,67 +589,21 @@ Panel.controlsMenu .controlsFooter {
   spacing: 24;
 }
 
-Panel.controlsMenu .controlsFooterReset,
-Panel.controlsMenu .controlsFooterStatus,
-Panel.controlsMenu .controlsFooterActions {
-  autoresizing-mask: contain;
-  axis: horizontal;
-  distribution: default;
-  min-width: 0;
-}
-
 Panel.controlsMenu .controlsFooterStatus {
   alignment: middle-left;
   spacing: 24;
 }
 
-Panel.controlsMenu .controlsFooterActions {
-  alignment: middle-right;
-  spacing: 8;
-}
-
-/* Reset sits at the far end of the bar with the status copy between it and the
-   commit pair. It is the one action here that throws work away, so it does not
-   share an edge with Apply. */
+/* Reset sits at the far end of the bar, with the route hint between it and the
+   shell footer's commit pair. It is the one action here that throws work away,
+   so it does not share an edge with Apply. */
 Panel.controlsMenu .controlsFooterReset {
   alignment: middle-left;
   spacing: 8;
-}
-
-Panel.controlsMenu .controlsHint,
-Panel.controlsMenu .controlsDirtyStatus {
-  autoresizing-mask: contain;
-  background-color: transparent;
-  border-width: 0;
-  height: 18;
-  max-height: 18;
-  min-height: 18;
-  min-width: 0;
-  padding: 0;
 }
 
 Panel.controlsMenu .controlsHint > Text {
   alignment: middle-left;
   color: #5c8fb5;
   font-size: 12;
-}
-
-Panel.controlsMenu .controlsDirtyStatus > Text {
-  alignment: middle-left;
-  color: #93aec1;
-  font-size: 12;
-}
-
-#main Panel.controlsMenu .controlsFooterReset > Button,
-#main Panel.controlsMenu .controlsFooterActions > Button {
-  min-height: 36;
-  min-width: 0;
-}
-
-#main Panel.controlsMenu .controlsFooterActions > Button.primaryButton {
-  background-color: #22557f;
-}
-
-#main Panel.controlsMenu .controlsFooterActions > Button.primaryButton > Text {
-  color: #f4f8fb;
 }

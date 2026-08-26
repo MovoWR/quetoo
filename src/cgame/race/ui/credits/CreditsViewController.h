@@ -48,11 +48,6 @@ typedef struct CreditsViewControllerInterface CreditsViewControllerInterface;
 #define CREDITS_SECTION_COUNT 7
 
 /**
- * @brief The Race tab's two cards.
- */
-#define CREDITS_CARD_COUNT 2
-
-/**
  * @brief The Credits route.
  * @details One page strip over one flow of sections, the shape Settings and the
  * Controls roster already use - every section from every page lives in the same

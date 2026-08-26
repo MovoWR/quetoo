@@ -132,62 +132,27 @@
   width: 420;
 }
 
+/* The caption is trimmed so the rail can have the room instead: "Max ping" is
+   a short label and the slider is the part of this filter you actually aim. */
 #Join .joinPingFilter > Label {
-  max-width: 176;
-  min-width: 176;
-  width: 176;
+  max-width: 110;
+  min-width: 110;
+  width: 110;
 }
 
 /* Slider::layoutSubviews reserves its readout out of its own bar width, so the
-   value rides inside these 210 rather than floating past them - no separate
-   value label is needed. */
+   value rides inside these 300 rather than floating past them - no separate
+   value label is needed. 300 against the caption's 110 and the filter's own
+   420: the rail gets the slack, because 210 left about 160 points of groove
+   and a ping threshold is set by dragging, not by reading. */
 #Join #maxPing {
   autoresizing-mask: none;
   height: 34;
   max-height: 34;
-  max-width: 210;
+  max-width: 300;
   min-height: 34;
-  min-width: 210;
-  width: 210;
-}
-
-/* The route's one slider, in the shell's slider language. This was the only
-   place in the menu that mounted a Slider and then styled nothing under it, so
-   it fell through to ObjectivelyMVC's own stylesheet: `Slider > .bar` there is
-   `autoresizing-mask: fill`, which is the bar taking the control's whole 34
-   points. What drew was a 210x34 filled block with a 34-tall blue fill inside
-   it and the stock 8x16 handle - a solid rectangle where every other route
-   draws a 4px track.
-
-   The mask, not just the height: `fill` is re-applied on every layout pass, so
-   `height` alone is overwritten before the control draws. The bar's colour and
-   the handle's come from the shell (`#main Slider > .bar`), which is more
-   specific than anything this file could say about them without restating the
-   whole ladder - so only the geometry the shell leaves open is set here. */
-#Join Slider > .bar {
-  alignment: middle-left;
-  autoresizing-mask: width;
-  height: 4;
-  max-height: 4;
-  min-height: 4;
-}
-
-/* Size only. `#main Slider > .bar > .handle` scores exactly what this selector
-   scores, and Selector.c resolves a tie by qsort order - so the shell keeps
-   sole ownership of the handle's fill and border, and this states the one thing
-   the shell leaves open. */
-#Join Slider > .bar > .handle {
-  height: 20;
-  max-height: 20;
-  max-width: 11;
-  min-height: 20;
-  min-width: 11;
-  width: 11;
-}
-
-#Join Slider Text {
-  color: #dde8f1;
-  font-size: 13;
+  min-width: 300;
+  width: 300;
 }
 
 /* The route's one line of guidance, in the slot the design keeps it in: the
@@ -428,20 +393,20 @@
   color: #f4f8fb;
 }
 
-/* 250 + 160 + 118 + 100 + 92 + five cells of 2+2 padding = 740, inside 901. */
+/* 330 + 198 + 100 + 92 + four cells of 2+2 padding = 736, inside 901. The
+   ruleset column is gone: `g_race_physics` is advertised `CVAR_SERVER_INFO`,
+   but the client extracts four keys into `cl_server_info_t` and hands CGAME
+   only that struct, so the browser could never read it and the column could
+   only ever spell one em dash. Its width went to the two columns that were
+   actually truncating, hostname first. */
 #Join #servers #Server {
-  min-width: 250;
-  width: 250;
+  min-width: 330;
+  width: 330;
 }
 
 #Join #servers #Map {
-  min-width: 160;
-  width: 160;
-}
-
-#Join #servers #Physics {
-  min-width: 118;
-  width: 118;
+  min-width: 198;
+  width: 198;
 }
 
 #Join #servers #Players {
@@ -602,10 +567,10 @@
   autoresizing-mask: none;
   axis: vertical;
   distribution: default;
-  height: 54;
-  max-height: 54;
+  height: 56;
+  max-height: 56;
   max-width: 701;
-  min-height: 54;
+  min-height: 56;
   min-width: 701;
   spacing: 4;
   width: 701;
@@ -615,10 +580,10 @@
    and at 30 it read as a page title rather than as a prompt. */
 #Join .joinDetailTitle {
   autoresizing-mask: none;
-  height: 30;
-  max-height: 30;
+  height: 32;
+  max-height: 32;
   max-width: 701;
-  min-height: 30;
+  min-height: 32;
   min-width: 701;
   width: 701;
 }

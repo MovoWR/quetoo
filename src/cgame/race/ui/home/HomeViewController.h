@@ -10,6 +10,7 @@
 #pragma once
 
 #include "cg_score.h"
+#include "cg_race_dashboard_layout.h"
 
 #include <ObjectivelyMVC.h>
 
@@ -25,7 +26,6 @@ struct HomeViewController {
   StackView *sessionDashboard;
   View *sessionColumn;
   View *routeFilter;
-  TextView *rosterFilter;
   Label *routeHint;
   View *mapSummary;
   Label *mapSectionTitle;
@@ -64,14 +64,7 @@ struct HomeViewController {
   cg_roster_entry_t players[MAX_CLIENTS];
   size_t numPlayers;
 
-  /**
-   * @brief The route's one filter slot, folded to lowercase, and the roster
-   * rows that survive it. `matches` indexes into `players`, so the table reads
-   * its rows through it rather than compacting the snapshot itself.
-   */
-  char filter[64];
-  size_t matches[MAX_CLIENTS];
-  size_t numMatches;
+  cg_race_dashboard_layout_state_t dashboardLayout;
 };
 
 struct HomeViewControllerInterface {

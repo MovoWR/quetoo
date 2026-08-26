@@ -33,9 +33,11 @@
 typedef struct AdminViewController AdminViewController;
 typedef struct AdminViewControllerInterface AdminViewControllerInterface;
 
-#define ADMIN_SECTION_COUNT 6
-#define ADMIN_ROW_COUNT 25
+#define ADMIN_SECTION_COUNT 7
+#define ADMIN_ROW_COUNT 28
 #define ADMIN_VALUE_SIZE 64
+#define ADMIN_CAPABILITY_COUNT 8
+#define ADMIN_TAB_COUNT 6
 
 /**
  * @brief The Admin route.
@@ -45,13 +47,11 @@ typedef struct AdminViewControllerInterface AdminViewControllerInterface;
  * from the footer hint.
  *
  * The one thing this route cannot reproduce from the design is a live value.
- * Race settings live on the server and reach a client only as console replies
- * to `race admin settings get`; there is no wire channel carrying settings
- * state. So a settings row opens at the value the shipped catalog defaults to
- * and is marked *unconfirmed* until this admin writes it, and the footer says
- * so rather than letting the control pose as authoritative. A value another
- * admin set, a `global.settings` file, or a map override will read as the
- * default here until it is written from this route.
+ * Registered cvars and map properties live on the server and reach a client
+ * only as console replies to `gget` and `mget`; there is no wire channel carrying
+ * configuration state. A setting row therefore opens at its shared registry
+ * default and is marked *unconfirmed* until this admin writes it. The footer
+ * says so rather than letting the control pose as authoritative.
  * @extends ViewController
  */
 struct AdminViewController {
@@ -76,7 +76,7 @@ struct AdminViewController {
   Label *emptyState;
 
   /**
-   * @brief Sections, and the per-section annotation ("applies on next map").
+   * @brief Sections, and their optional annotations or roster metric.
    * @private
    */
   View *sectionViews[ADMIN_SECTION_COUNT];
@@ -98,10 +98,11 @@ struct AdminViewController {
   bool rowPainted[ADMIN_ROW_COUNT];
 
   /**
-   * @brief What this route believes each settings row holds, and whether that
-   * belief came from this admin's own write rather than the shipped default.
+   * @brief Registry defaults, displayed values, and whether each displayed
+   * value came from this admin's own write rather than initialization.
    * @private
    */
+  char rowDefaults[ADMIN_ROW_COUNT][ADMIN_VALUE_SIZE];
   char rowValues[ADMIN_ROW_COUNT][ADMIN_VALUE_SIZE];
   bool rowConfirmed[ADMIN_ROW_COUNT];
 
@@ -119,8 +120,14 @@ struct AdminViewController {
    * @private
    */
   TextView *mapName;
+
+  /**
+   * @brief The Add map section's name field, and the answer it last got.
+   * @private
+   */
+  TextView *newMapName;
+  Label *newMapResult;
   TextView *playerSlot;
-  TextView *settingsScope;
   TextView *settingsKey;
   TextView *settingsValue;
 
@@ -150,6 +157,74 @@ struct AdminViewController {
    */
   Label *hint;
   Label *provenance;
+
+  /**
+   * @brief The design's "Admin route hidden" dismissal, and the document it
+   * replaces when this connection publishes no capabilities at all.
+   * @details The menu is deliberately not a login form. The console supplies
+   * the local one-use `radmin_password`, and `radmin <account>` starts the
+   * challenge without putting the password in a client command.
+   * @private
+   */
+  View *signedOutPanel;
+  View *document;
+
+  /**
+   * @brief The subtab strip, and which tab is open.
+   * @details Same grammar as the Settings route's pages: five tabs group the
+   * seven sections and a sixth hosts the weapon lab, a tab with nothing visible
+   * at this capability mask is not offered at all, and a query reaches every
+   * tab rather than only the open one - which is why a filtered section names
+   * the tab it came from.
+   * @private
+   */
+  Button *tabs[ADMIN_TAB_COUNT];
+  size_t openTab;
+
+  /**
+   * @brief The Weapons tab's panel, and the tab a confirmation is waiting on.
+   * @details Weapons is a tab *kind* rather than a section group: its rows are
+   * one authoritative GAME snapshot, not settings rows, so it is a hosted
+   * ViewController with its own catalog and commit footer instead of another
+   * entry in adminRows. Leaving it with a staged draft asks first, and
+   * `pendingTab` is where the answer waits.
+   * @private
+   */
+  ViewController *weaponLab;
+  size_t pendingTab;
+
+  /**
+   * @brief The eight capability chips, and the hex mask they summarize.
+   * @details One chip per bit in STAT_RACE_ADMIN_CAPABILITIES, lit when this
+   * session holds it. The whole set is shown rather than only the held bits,
+   * because the useful question an administrator asks here is which authority
+   * they are *missing*.
+   * @private
+   */
+  Label *capabilityChips[ADMIN_CAPABILITY_COUNT];
+  Label *capabilityValue;
+
+  /**
+   * @brief The response log: the last command this route sent, and what can be
+   * said about its outcome.
+   * @details The design prints the command *and* the server's audit line. Only
+   * the first half is available to a client: the audit line is a GAME-side
+   * console print with no wire channel behind it, so the reply half says where
+   * to read it rather than inventing one.
+   * @private
+   */
+  View *responseView;
+  Label *responseCommand;
+  Label *responseReply;
+
+  /**
+   * @brief Row accounting for the legend, recomputed by every filter pass.
+   * @details `visibleRows` is what this capability mask and this query left
+   * standing; `totalRows` is every row the route declares.
+   * @private
+   */
+  size_t visibleRows;
+  size_t totalRows;
 
   /**
    * @brief The capability bitmask this client last saw in its player state.

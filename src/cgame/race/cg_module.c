@@ -36,8 +36,10 @@
 #include "cg_race_training.h"
 #include "cg_race_settings.h"
 #include "cg_race_weapon_tuning.h"
+#include "ui/admin/WeaponLabViewController.h"
 #include "ui/home/HomeViewController.h"
 #include "ui/main/MainViewController.h"
+#include "ui/main/SpeedGridView.h"
 #include "ui/voting/VotingViewController.h"
 
 static cvar_t *cg_show_jumpers;
@@ -57,6 +59,7 @@ void Cg_Module_Init(void) {
   Cg_RaceDoubleJump_Init();
   Cg_RaceWeaponTuning_Init();
   Cg_RaceSettings_Init();
+  SpeedGridView_Init();
   Cg_RacePhysics_Init();
   Cg_RaceFinishReport_Init();
   Cg_RaceHud_Init();
@@ -214,7 +217,7 @@ void Cg_Module_Update(void) {
 }
 
 void Cg_Module_UpdateUi(const player_state_t *ps) {
-  HomeViewController_RefreshPlayerActions(ps);
+  WeaponLabViewController_RefreshAuthoritativeState();
   MainViewController_RefreshEscState();
   MainViewController_RefreshAdmin(ps);
   MainViewController_RefreshVote();

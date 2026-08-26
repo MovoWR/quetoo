@@ -56,6 +56,9 @@
   width: 1642;
 }
 
+/* `.r-filter`: the design's one filter slot per route - a 260px input on the
+   left, the route hint on the right. The bar spans the content plane so the
+   hint can sit against its right edge the way the design places it. */
 #Maps .mapToolbarPrimary {
   alignment: middle-left;
   autoresizing-mask: none;
@@ -63,31 +66,58 @@
   distribution: default;
   height: 44;
   max-height: 44;
-  max-width: 664;
+  max-width: 1642;
   min-height: 44;
-  min-width: 664;
-  spacing: 8;
-  width: 664;
+  min-width: 1642;
+  spacing: 16;
+  width: 1642;
 }
 
+/* 260 x 34, `#0c1721` on a `#31516a` hairline - the design's filter input,
+   which is a shade darker and a touch shorter than the route's other fields. */
 #Maps #filter {
   autoresizing-mask: none;
-  height: 44;
-  max-height: 44;
-  max-width: 440;
-  min-height: 44;
-  min-width: 440;
-  width: 440;
+  background-color: #0c1721;
+  border-color: #31516a;
+  border-width: 1;
+  height: 34;
+  max-height: 34;
+  max-width: 260;
+  min-height: 34;
+  min-width: 260;
+  width: 260;
+}
+
+#Maps #filter:focused {
+  border-color: #73c7f2;
+  border-width: 2;
 }
 
 #Maps .mapToolbarPrimary Button {
   autoresizing-mask: none;
-  height: 44;
-  max-height: 44;
+  height: 34;
+  max-height: 34;
   max-width: 104;
-  min-height: 44;
+  min-height: 34;
   min-width: 104;
   width: 104;
+}
+
+/* `.r-hint`: the route hint, right-aligned against the end of the filter bar. */
+#Maps #maps_route_hint {
+  autoresizing-mask: none;
+  height: 34;
+  max-height: 34;
+  max-width: 1246;
+  min-height: 34;
+  min-width: 1246;
+  width: 1246;
+}
+
+#Maps #maps_route_hint > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
 }
 
 /* ---- Content: the list and its details, separated by whitespace ---------- */
@@ -457,10 +487,10 @@
 #Maps .mapDetailTitleRow {
   alignment: top-left;
   autoresizing-mask: width;
-  height: 42;
-  max-height: 42;
+  height: 46;
+  max-height: 46;
   max-width: 701;
-  min-height: 42;
+  min-height: 46;
   min-width: 0;
   padding: 0;
 }
@@ -468,10 +498,10 @@
 #Maps .mapDetailTitle {
   alignment: middle-left;
   autoresizing-mask: none;
-  height: 42;
-  max-height: 42;
+  height: 46;
+  max-height: 46;
   max-width: 460;
-  min-height: 42;
+  min-height: 46;
   min-width: 460;
   width: 460;
 }
@@ -827,9 +857,18 @@
 
 #Maps #maps_vote {
   background-color: #1e5375;
-  max-width: 128;
-  min-width: 128;
-  width: 128;
+  max-width: 190;
+  min-width: 190;
+  width: 190;
+}
+
+#Maps #maps_watch_wr {
+  background-color: transparent;
+  border-color: #365163;
+  border-width: 1;
+  max-width: 160;
+  min-width: 160;
+  width: 160;
 }
 
 #Maps #maps_vote:hover,
@@ -841,9 +880,9 @@
   background-color: transparent;
   border-color: #365163;
   border-width: 1;
-  max-width: 212;
-  min-width: 212;
-  width: 212;
+  max-width: 180;
+  min-width: 180;
+  width: 180;
 }
 
 /* ---- Controls: flat fills, no hairline, no bevel ------------------------- */

@@ -36,10 +36,18 @@
   background-color: transparent;
 }
 
+/* ImageView blits straight to its frame, so the slot and the asset are cut to
+   the same 96x126 - the mark's own ratio, not the stock logo's landscape one,
+   which would have squashed it. Matching them means the corner reads correctly
+   whether the frame comes from this rule or from the image's natural size. */
 #logo {
   alignment: bottom-right;
-  height: 112;
-  width: 240;
+  height: 126;
+  max-height: 126;
+  max-width: 96;
+  min-height: 126;
+  min-width: 96;
+  width: 96;
 }
 
 #version {
@@ -166,25 +174,111 @@
   border-width: 2;
 }
 
+/* Sliders ----------------------------------------------------------------- */
+
+/* The one slider treatment, for every route. Settings, Controls, Admin, Maps,
+   Join server, the Runner appearance rails and the strafe-helper colour rails
+   all draw from here; nothing below `#main` restates a colour. A route may
+   still say how *wide* its control cell is - that is a column decision - but a
+   slider that is red on one route and blue on the next is the same control
+   telling the player two different things.
+
+   The mask and all three heights, not just `height`: ObjectivelyMVC's own
+   stylesheet gives `.bar` `autoresizing-mask: fill`, which stretches it to the
+   Slider's full height on every layout pass, and `View::resize` clamps against
+   min/max - so a lone `height` is overwritten before the control ever draws.
+
+   Two properties of the mock have no dialect equivalent and are dropped rather
+   than approximated: the 3px corner radius, and tabular figures on the readout.
+   The readout cannot shift as its digits change regardless - see the note on
+   `#main Slider Text` below. */
 #main Slider > .bar {
-  background-color: #16232e;
+  alignment: middle-left;
+  autoresizing-mask: width;
+  background-color: #3d6280;
+  border-color: #8fc4e2;
+  border-width: 1;
+  height: 12;
+  max-height: 12;
+  min-height: 12;
 }
 
-/* The filled portion of the track, which is what reads as "current value" at a
-   glance. The stock Slider has no such thing - it draws one hardcoded white
-   line across the whole bar - so every Race slider is a RaceSlider, which adds
-   this `.fill` ahead of the handle and suppresses the line. Stated here rather
-   than per route: a slider that fills on Settings and does not on Play is the
-   same control telling the player two different stories. */
+#main Slider:hover > .bar {
+  border-color: #d3efff;
+}
+
+/* 2px and no glow: the shell's one focus treatment, the same as every field. */
+#main Slider:focused > .bar {
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+#main Slider:disabled > .bar {
+  background-color: #101c27;
+  border-color: #2a3f4f;
+}
+
+/* The filled portion, left edge to the handle, at 85% so the track reads
+   through it. The stock Slider has no such thing - it draws one hardcoded
+   white line across the whole bar - so every Race slider is a RaceSlider,
+   which adds this `.fill`, positions it from the bar's final bounds and
+   suppresses the line. */
 #main Slider > .bar > .fill {
   autoresizing-mask: none;
-  background-color: #3e6b9d;
+  background-color: #a5444ed9;
 }
 
+/* Full track height and 16 wide, so the handle sits *in* the groove rather
+   than straddling it. */
 #main Slider > .bar > .handle {
-  background-color: #5c8fb5;
-  border-color: #a5dcf7;
+  background-color: #c85a66;
+  border-color: #f0d0d4;
   border-width: 1;
+  height: 12;
+  max-height: 12;
+  max-width: 16;
+  min-height: 12;
+  min-width: 16;
+  width: 16;
+}
+
+#main Slider:hover > .bar > .handle,
+#main Slider:focused > .bar > .handle {
+  background-color: #e08a94;
+}
+
+#main Slider:disabled > .bar > .handle {
+  background-color: #365163;
+  border-color: #2a3f4f;
+}
+
+/* The readout, and colour and size are all it may state.
+
+   The mock's `min-width: 46` cannot be honoured here, and stating it puts the
+   value on top of the track. `Slider::layoutSubviews` buys the readout its room
+   by measuring `labelFormat` at the format's own min and max and taking that
+   many points - plus the label's `padding-left` - out of the *bar*; it never
+   looks at the label view's width. `Text::render` then draws the glyphs at
+   `frame.x` at their natural width, with no alignment inside an oversized
+   frame. So a label forced wider than its text is right-aligned by the layout
+   pass to `sliderWidth - 46` and then paints from there - dragging the digits
+   `46 - textWidth` points left, across the end of the groove and over a handle
+   sitting near the maximum. At 13pt a readout runs 16 to 26 points wide, so
+   that is 20 to 30 points of collision on every route in the shell.
+
+   Left to measure itself the label is exactly the width the bar gave back, so
+   its right edge is the control's right edge whatever the digits do, and the
+   gap before the groove is exactly the `padding-left` the reservation assumed.
+   The row is already still without it. */
+#main Slider Text {
+  color: #dde8f1;
+  font-size: 13;
+}
+
+/* A disabled slider greys the whole control, readout included. A row that dims
+   only its label reads as a value you may still drag. */
+#main Slider:disabled Text {
+  color: #6d8291;
 }
 
 #main Box {
@@ -540,6 +634,21 @@
   border-width: 0;
 }
 
+#weaponTuningWarning {
+  autoresizing-mask: none;
+  background-color: #351b25;
+  border-color: #934858;
+  border-width: 1;
+  padding: 0 12 0 12;
+}
+
+#weaponTuningWarning > Text {
+  alignment: middle-center;
+  color: #f1b6bd;
+  font-size: 12;
+  font-style: regular;
+}
+
 #routeSummary {
   autoresizing-mask: none;
   padding: 15 0 7 0;
@@ -550,21 +659,39 @@
    framework's own sheet, so a bare `height` is advisory: `sizeToContain` grows
    the Label to whatever its Text measures and `resize` only clamps against
    min/max, which a bare `height` does not set. The title is the one that
-   matters - a 44pt face measures well over its authored 44 - and the eyebrow,
-   its spacing and that overrun together ask #routeSummary for more than the
-   MAIN_WINDOW_HEADER_HEIGHT of 95 the shell reserves for the whole block. The
-   stack lays its children out from the top either way, so what is pushed out is
-   the bottom of the title and whatever the block cannot fit. */
+   matters - a 44pt face measures well over its authored 44. Pinning both title
+   and eyebrow keeps every route inside the 150pt block the shell reserves. */
 #connectionLabel {
   height: 18;
   max-height: 18;
   min-height: 18;
 }
 
+/* Brand red, which the design reserves for the offline eyebrow - today that is
+   the Admin route reporting no administrator session. */
+#connectionLabel.offline > Text {
+  color: #c1616c;
+}
+
 #connectionLabel > Text {
   color: #5c8fb5;
   font-size: 12;
   font-style: regular;
+}
+
+/* The design's route-head lockup, which Home takes in place of its title.
+
+   The 480x220 export is shown at 238x109. Together with routeSummary's 15 top,
+   18 eyebrow, 1 spacing and 7 bottom, that fills the 150pt header exactly. */
+#windowLockup {
+  alignment: middle-left;
+  autoresizing-mask: none;
+  height: 109;
+  max-height: 109;
+  max-width: 238;
+  min-height: 109;
+  min-width: 238;
+  width: 238;
 }
 
 #windowTitle {
@@ -639,17 +766,20 @@ Panel.controlsMenu {
   autoresizing-mask: contain | width;
 }
 
-#activeVoteHost,
-#quickSettingsHost {
+#activeVoteHost {
   background-color: #060d15f5;
   clips-subviews: true;
 }
 
-/* The same hairline as every other pane; the drawer's own border matches it,
-   so the two stacked fills read as one edge rather than two brighter ones. */
+/* The tier-1 drawer's scrim, `rgba(2,6,12,.42)` in the design. The host covers
+   the whole viewport - both chrome bars included - and the panel is pinned to
+   its right edge by MainView::layoutSubviews. It carries no border of its own:
+   the drawer draws the single left hairline the design asks for, and a second
+   one here would double it. */
 #quickSettingsHost {
-  border-color: #2a3f4f;
-  border-width: 1;
+  background-color: #02060c6b;
+  border-width: 0;
+  clips-subviews: true;
 }
 
 /* Shared section language ------------------------------------------------- */
@@ -773,6 +903,7 @@ Panel.controlsMenu {
 .serverInfo {
   autoresizing-mask: none;
   axis: horizontal;
+  clips-subviews: true;
   padding: 0;
   spacing: 8;
 }
@@ -798,14 +929,43 @@ Panel.controlsMenu {
   color: #4f6678;
 }
 
-/* The design's footer carries only the server line and the two actions; the
-   keyboard hint it replaced is kept in the tree but rendered to nothing, and
-   MainView::layoutSubviews collapses its frame. */
+/* `.m-keys`: the keyboard hint sits between the session line and the footer
+   actions. The design hides it under 1180px rather than letting it crowd the
+   session line - there is no media query in the dialect, so
+   MainView::layoutSubviews applies that breakpoint and this rule only carries
+   the type. */
 #contextHint {
   padding: 0;
 }
 
 #contextHint > Text {
-  color: transparent;
-  font-size: 0;
+  alignment: middle-center;
+  color: #5f7488;
+  font-size: 12;
+  font-style: regular;
+}
+
+/* `.m-dirty`: the footer's staged-change count, and the gold it turns when one
+   of those changes needs a restart to take effect. */
+#commitStatus {
+  padding: 0;
+}
+
+#commitStatus > Text {
+  alignment: middle-right;
+  color: #93aec1;
+  font-size: 12;
+  font-style: regular;
+}
+
+#commitStatus.warn > Text {
+  color: #e7c368;
+}
+
+/* The commit pair sizes to its own words rather than to the fixed widths the
+   Disconnect and Quit slots carry, because a hidden pair must take no room. */
+#secondaryMenu Button.commitAction {
+  max-width: 88;
+  min-width: 88;
+  width: 88;
 }

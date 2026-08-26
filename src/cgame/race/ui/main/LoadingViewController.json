@@ -1,0 +1,87 @@
+{
+  "identifier": "loading",
+  "subviews": [
+    {
+      "class": "ImageView",
+      "identifier": "mapShot"
+    },
+    {
+      "class": "ImageView",
+      "identifier": "scrim"
+    },
+    {
+      "class": "View",
+      "identifier": "stage",
+      "subviews": [
+        {
+          "class": "ImageView",
+          "identifier": "logo"
+        }
+      ]
+    },
+    {
+      "class": "StackView",
+      "identifier": "footer",
+      "subviews": [
+        {
+          "class": "ImageView",
+          "identifier": "statusBar",
+          "subviews": [
+            {
+              "class": "StackView",
+              "identifier": "statusLeft",
+              "subviews": [
+                {
+                  "class": "Label",
+                  "identifier": "loadingEyebrow",
+                  "text": { "text": "Loading map" }
+                },
+                {
+                  "class": "Label",
+                  "identifier": "mapTitle"
+                },
+                {
+                  "class": "Label",
+                  "identifier": "mapPath"
+                }
+              ]
+            },
+            {
+              "class": "StackView",
+              "identifier": "statusRight",
+              "subviews": [
+                {
+                  "class": "Label",
+                  "identifier": "loadingPercent"
+                },
+                {
+                  "class": "Label",
+                  "identifier": "loadingHost"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "class": "ProgressBar",
+          "identifier": "progress"
+        },
+        {
+          "class": "View",
+          "identifier": "keysRule"
+        },
+        {
+          "class": "View",
+          "identifier": "keysBar",
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "keysHint",
+              "text": { "text": "ESC cancels and returns to the menu" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

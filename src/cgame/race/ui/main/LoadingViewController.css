@@ -1,41 +1,211 @@
-#loading {
-  autoresizing-mask: fill;
-  background-color: #020914;
-}
+/* Race loading screen.
 
-#loading #mapShot {
+   Ported from "Menu v2 - Loading" (Quetoo Race Design System,
+   `_ds/quetoo-race-design-system-3b6491be`). Token values are inlined because
+   the ObjectivelyMVC dialect has no custom properties; the mapping is the one
+   MainView.css states, and the values this screen uses are:
+
+     --accent   #5c8fb5  eyebrow, progress fill    --txt    #f4f8fb  title
+     --txt-2    #dde8f1  percentage                --txt-5  #74899b  path, host
+     --ink-line #2f4a5e  rules, at 60% over #010408 -> #1d2e3c
+
+   The division of labour with LoadingViewController.c is exact, and it is a
+   division by *constant against computed*, not by kind:
+
+     - Everything constant - the autoresizing masks, the alignments, each
+       stack's axis, and the design's fixed line boxes - is stated in both
+       places. structureViewTree sets the same values, and re-applying a
+       constant is idempotent, so the screen still stands up when one half of
+       the pair is stale in an installed tree. That matters here more than
+       anywhere else in the menu: a container left at zero size throws its
+       centred contents off the top-left corner, and the loading screen is the
+       one screen that has to survive a half-installed tree.
+
+     - Everything computed is the C side's alone and must never appear here:
+       the shell gutter, the status bar's height and vertical padding, the key
+       band's horizontal padding, the two column widths, the footer's height,
+       the stage's bottom inset, and the lockup. The design states each of them
+       as a clamp against the window, which this dialect cannot express - and a
+       rule here declaring one would reset the computed value the moment
+       anything triggered a restyle.
+
+   Two of the design's fills are the C side's alone for a different reason: the
+   scrim over the map shot and the status bar's vertical ramp are gradients,
+   and `background-color` is the only fill primitive here.
+
+   The design's font is Manrope. Coda is used instead, because MainView.css
+   already carries "Coda throughout" for the menu this screen resolves into,
+   and a typeface that changes across the handover is more wrong than one that
+   differs from the mock. */
+
+/* Structure — mirrors structureViewTree. Constants only. ----------------- */
+
+#loading,
+#loading #mapShot,
+#loading #scrim,
+#loading #stage {
   autoresizing-mask: fill;
 }
 
 #loading #logo {
   alignment: middle-center;
-  height: 315;
-  width: 420;
 }
 
-#loading #progress {
+#loading #footer {
   alignment: bottom-center;
   autoresizing-mask: width;
-  background-color: #06111fe8;
-  border-color: #315a7c;
-  border-width: 1;
+  axis: vertical;
+  distribution: default;
+  spacing: 0;
+}
+
+#loading #statusBar,
+#loading #progress,
+#loading #keysRule,
+#loading #keysBar {
+  autoresizing-mask: width;
+}
+
+#loading #statusLeft,
+#loading #statusRight {
+  autoresizing-mask: none;
+  axis: vertical;
+  distribution: default;
+  spacing: 0;
+}
+
+#loading #statusLeft {
+  alignment: bottom-left;
+  height: 99;
+}
+
+#loading #statusRight {
+  alignment: bottom-right;
   height: 64;
-  max-width: 1080;
+}
+
+/* Line boxes — each is the design's line plus the margin that follows it, so
+   a column's height is the plain sum of its rows. */
+
+#loading #statusLeft Label,
+#loading #statusRight Label,
+#loading #keysHint {
+  autoresizing-mask: width;
   min-width: 0;
-  padding: 12 18 12 18;
+}
+
+#loading #loadingEyebrow {
+  height: 24;
+}
+
+#loading #mapTitle {
+  height: 54;
+}
+
+#loading #mapPath {
+  height: 27;
+}
+
+#loading #loadingPercent {
+  height: 40;
+}
+
+#loading #loadingHost {
+  height: 24;
+}
+
+#loading #keysHint {
+  height: 14;
+}
+
+/* Surface ---------------------------------------------------------------- */
+
+#loading {
+  background-color: #010408;
+}
+
+#loading Text {
+  font-family: Coda;
+}
+
+#loading #stage,
+#loading #footer {
+  background-color: transparent;
+}
+
+/* Status bar — each Text aligns to the edge of its Label that the design's
+   margin is not on: the eyebrow's 6px sits under it, the path's 7px above. */
+
+#loading #loadingEyebrow > Text {
+  alignment: top-left;
+  color: #5c8fb5;
+  font-size: 12;
+  font-style: regular;
+}
+
+#loading #mapTitle > Text {
+  alignment: middle-left;
+  color: #f4f8fb;
+  font-size: 38;
+  font-style: regular;
+}
+
+#loading #mapPath > Text {
+  alignment: bottom-left;
+  color: #74899b;
+  font-size: 14;
+  font-style: regular;
+}
+
+#loading #loadingPercent > Text {
+  alignment: top-right;
+  color: #dde8f1;
+  font-size: 32;
+  font-style: regular;
+}
+
+#loading #loadingHost > Text {
+  alignment: bottom-right;
+  color: #74899b;
+  font-size: 13;
+  font-style: regular;
+}
+
+/* Rail and key hint — the rail is three points edge to edge with no chrome of
+   its own, so the control's border and fill are cleared and only its two
+   bands paint. */
+
+#loading #progress {
+  background-color: transparent;
+  border-width: 0;
+  height: 3;
 }
 
 #loading #progress > .background {
-  background-color: #102536;
+  autoresizing-mask: fill;
+  background-color: #1d2e3c;
 }
 
 #loading #progress > .foreground {
-  background-color: #5ab7e3;
+  autoresizing-mask: height;
+  background-color: #5c8fb5;
 }
 
-#loading #progress > Text {
+#loading #keysRule {
+  background-color: #1d2e3c;
+  height: 1;
+}
+
+#loading #keysBar {
+  background-color: #010408;
+  height: 38;
+  padding-top: 10;
+  padding-bottom: 14;
+}
+
+#loading #keysHint > Text {
   alignment: middle-left;
-  color: #eef6fb;
-  font-size: 13;
-  font-style: bold;
+  color: #74899b;
+  font-size: 12;
+  font-style: regular;
 }

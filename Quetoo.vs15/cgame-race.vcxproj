@@ -44,6 +44,7 @@
     <ClInclude Include="..\src\cgame\race\cg_race_hud.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_admin_command.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_client_file.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_dashboard_layout.h" />
     <ClInclude Include="..\src\cgame\race\cg_input_viewer.h" />
     <ClInclude Include="..\src\cgame\race\cg_input_viewer_math.h" />
     <ClInclude Include="..\src\cgame\race\cg_jump_viewer.h" />
@@ -79,18 +80,22 @@
     <ClInclude Include="..\src\cgame\race\ui\home\HomeViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\credits\CreditsViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\admin\AdminViewController.h" />
+    <ClInclude Include="..\src\cgame\race\ui\admin\WeaponLabViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\controls\ControlsViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\controls\CrosshairView.h" />
     <ClInclude Include="..\src\cgame\race\ui\controls\MovementCombatViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\controls\RaceBindTextView.h" />
-    <ClInclude Include="..\src\cgame\race\ui\controls\ResponseServiceViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\settings\SettingsViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\settings\StrafeHelperPreview.h" />
     <ClInclude Include="..\src\cgame\race\ui\maps\MapBrowserViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\main\ColumnsView.h" />
     <ClInclude Include="..\src\cgame\race\ui\main\RaceSlider.h" />
+    <ClInclude Include="..\src\cgame\race\ui\main\SpeedGridView.h" />
+    <ClInclude Include="..\src\cgame\race\ui\main\LoadingViewController.h" />
+    <ClInclude Include="..\src\cgame\race\ui\main\LoadingGridView.h" />
     <ClInclude Include="..\src\cgame\race\ui\main\MainView.h" />
     <ClInclude Include="..\src\cgame\race\ui\main\MainViewController.h" />
+    <ClInclude Include="..\src\cgame\race\ui\main\QuickSettingsHostView.h" />
     <ClInclude Include="..\src\cgame\race\ui\main\QuickSettingsViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\main\ActiveVoteViewController.h" />
     <ClInclude Include="..\src\cgame\race\ui\play\CreateServerViewController.h" />
@@ -130,6 +135,7 @@
     <ClCompile Include="..\src\cgame\race\cg_race_finish_report.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_hud.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_client_file.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_dashboard_layout.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_message.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_markers.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_practice_markers.c" />
@@ -145,17 +151,21 @@
     <ClCompile Include="..\src\cgame\race\ui\home\HomeViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\credits\CreditsViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\admin\AdminViewController.c" />
+    <ClCompile Include="..\src\cgame\race\ui\admin\WeaponLabViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\controls\ControlsViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\controls\CrosshairView.c" />
     <ClCompile Include="..\src\cgame\race\ui\controls\MovementCombatViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\controls\RaceBindTextView.c" />
-    <ClCompile Include="..\src\cgame\race\ui\controls\ResponseServiceViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\settings\SettingsViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\settings\StrafeHelperPreview.c" />
     <ClCompile Include="..\src\cgame\race\ui\main\ColumnsView.c" />
     <ClCompile Include="..\src\cgame\race\ui\main\RaceSlider.c" />
+    <ClCompile Include="..\src\cgame\race\ui\main\SpeedGridView.c" />
+    <ClCompile Include="..\src\cgame\race\ui\main\LoadingViewController.c" />
+    <ClCompile Include="..\src\cgame\race\ui\main\LoadingGridView.c" />
     <ClCompile Include="..\src\cgame\race\ui\main\MainView.c" />
     <ClCompile Include="..\src\cgame\race\ui\main\MainViewController.c" />
+    <ClCompile Include="..\src\cgame\race\ui\main\QuickSettingsHostView.c" />
     <ClCompile Include="..\src\cgame\race\ui\main\QuickSettingsViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\main\ActiveVoteViewController.c" />
     <ClCompile Include="..\src\cgame\race\ui\maps\MapBrowserViewController.c" />
@@ -178,6 +188,13 @@
     <None Include="..\deps\argon2\LICENSE" />
     <None Include="..\deps\argon2\UPSTREAM.md" />
     <None Include="..\src\cgame\race\ui\DialogViewController.css" />
+    <None Include="..\src\cgame\race\ui\conback.png" />
+    <None Include="..\src\cgame\race\ui\backgrounds\0.png" />
+    <None Include="..\src\cgame\race\ui\backgrounds\1.png" />
+    <None Include="..\src\cgame\race\ui\backgrounds\2.png" />
+    <None Include="..\src\cgame\race\ui\backgrounds\3.png" />
+    <None Include="..\src\cgame\race\ui\backgrounds\4.png" />
+    <None Include="..\src\cgame\race\ui\backgrounds\5.png" />
     <None Include="..\src\cgame\race\ui\hud_input_attack.png" />
     <None Include="..\src\cgame\race\ui\hud_input_crouch.png" />
     <None Include="..\src\cgame\race\ui\hud_input_down.png" />
@@ -198,11 +215,11 @@
     <None Include="..\src\cgame\race\ui\play\PlayerSetupViewController.json" />
     <None Include="..\src\cgame\race\ui\admin\AdminViewController.css" />
     <None Include="..\src\cgame\race\ui\admin\AdminViewController.json" />
+    <None Include="..\src\cgame\race\ui\admin\WeaponLabViewController.css" />
+    <None Include="..\src\cgame\race\ui\admin\WeaponLabViewController.json" />
     <None Include="..\src\cgame\race\ui\controls\ControlsViewController.json" />
     <None Include="..\src\cgame\race\ui\controls\MovementCombatViewController.css" />
     <None Include="..\src\cgame\race\ui\controls\MovementCombatViewController.json" />
-    <None Include="..\src\cgame\race\ui\controls\ResponseServiceViewController.css" />
-    <None Include="..\src\cgame\race\ui\controls\ResponseServiceViewController.json" />
     <None Include="..\src\cgame\race\ui\settings\SettingsViewController.css" />
     <None Include="..\src\cgame\race\ui\settings\SettingsViewController.json" />
     <None Include="..\src\cgame\race\ui\maps\MapBrowserViewController.css" />
@@ -210,6 +227,10 @@
     <None Include="..\src\cgame\race\ui\main\MainView.css" />
     <None Include="..\src\cgame\race\ui\main\MainView.json" />
     <None Include="..\src\cgame\race\ui\main\LoadingViewController.css" />
+    <None Include="..\src\cgame\race\ui\main\LoadingViewController.json" />
+    <None Include="..\src\cgame\race\ui\main\loading_lockup.png" />
+    <None Include="..\src\cgame\race\ui\main\menu_lockup.png" />
+    <None Include="..\src\cgame\race\ui\main\menu_mark.png" />
     <None Include="..\src\cgame\race\ui\main\UpdateViewController.css" />
     <None Include="..\src\cgame\race\ui\main\QuickSettingsViewController.css" />
     <None Include="..\src\cgame\race\ui\main\QuickSettingsViewController.json" />
@@ -255,6 +276,8 @@
     <ClInclude Remove="..\src\cgame\common\ui\play\JoinServerViewController.h" />
     <ClCompile Remove="..\src\cgame\common\ui\main\MainViewController.c" />
     <ClInclude Remove="..\src\cgame\common\ui\main\MainViewController.h" />
+    <ClCompile Remove="..\src\cgame\common\ui\main\LoadingViewController.c" />
+    <ClInclude Remove="..\src\cgame\common\ui\main\LoadingViewController.h" />
   </ItemGroup>
   <PropertyGroup>
     <TargetName>cgame</TargetName>
@@ -293,7 +316,7 @@
       <AdditionalOptions>/Brepro %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>COPY_DEPENDENCIES "$(QUETOO_HOME)" "$(Platform)" "$(Configuration)" &amp;&amp; ROBO "../src/cgame/race/ui/" "$(QUETOO_HOME)/lib/race/ui/" hud_input_*.png &amp;&amp; ROBO "../src/cgame/race/ui/" "$(QUETOO_HOME)/lib/race/ui/" DialogViewController.css &amp;&amp; ROBO_FLAT "../src/cgame/race/ui/fonts/" "$(QUETOO_HOME)/lib/race/ui/fonts/" Coda-Regular.ttf &amp;&amp; ROBO "../src/cgame/race/ui/admin/" "$(QUETOO_HOME)/lib/race/ui/admin/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/admin/" "$(QUETOO_HOME)/lib/race/ui/admin/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/home/" "$(QUETOO_HOME)/lib/race/ui/home/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/home/" "$(QUETOO_HOME)/lib/race/ui/home/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/credits/" "$(QUETOO_HOME)/lib/race/ui/credits/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/credits/" "$(QUETOO_HOME)/lib/race/ui/credits/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/play/" "$(QUETOO_HOME)/lib/race/ui/play/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/play/" "$(QUETOO_HOME)/lib/race/ui/play/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/controls/" "$(QUETOO_HOME)/lib/race/ui/controls/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/controls/" "$(QUETOO_HOME)/lib/race/ui/controls/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/main/" "$(QUETOO_HOME)/lib/race/ui/main/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/main/" "$(QUETOO_HOME)/lib/race/ui/main/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/maps/" "$(QUETOO_HOME)/lib/race/ui/maps/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/maps/" "$(QUETOO_HOME)/lib/race/ui/maps/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/settings/" "$(QUETOO_HOME)/lib/race/ui/settings/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/settings/" "$(QUETOO_HOME)/lib/race/ui/settings/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/voting/" "$(QUETOO_HOME)/lib/race/ui/voting/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/voting/" "$(QUETOO_HOME)/lib/race/ui/voting/" *.json &amp;&amp; COPY_CGAME_MODULE "$(QUETOO_HOME)" "$(Platform)$(Configuration)" "race"</Command>
+      <Command>COPY_DEPENDENCIES "$(QUETOO_HOME)" "$(Platform)" "$(Configuration)" &amp;&amp; ROBO "../src/cgame/race/ui/" "$(QUETOO_HOME)/lib/race/ui/" hud_input_*.png &amp;&amp; ROBO "../src/cgame/race/ui/backgrounds/" "$(QUETOO_HOME)/lib/race/ui/backgrounds/" *.png &amp;&amp; ROBO "../src/cgame/race/ui/" "$(QUETOO_HOME)/lib/race/ui/" DialogViewController.css &amp;&amp; ROBO_FLAT "../src/cgame/race/ui/" "$(QUETOO_HOME)/lib/race/ui/" conback.png &amp;&amp; ROBO_FLAT "../src/cgame/race/ui/fonts/" "$(QUETOO_HOME)/lib/race/ui/fonts/" Coda-Regular.ttf &amp;&amp; ROBO "../src/cgame/race/ui/admin/" "$(QUETOO_HOME)/lib/race/ui/admin/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/admin/" "$(QUETOO_HOME)/lib/race/ui/admin/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/home/" "$(QUETOO_HOME)/lib/race/ui/home/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/home/" "$(QUETOO_HOME)/lib/race/ui/home/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/credits/" "$(QUETOO_HOME)/lib/race/ui/credits/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/credits/" "$(QUETOO_HOME)/lib/race/ui/credits/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/play/" "$(QUETOO_HOME)/lib/race/ui/play/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/play/" "$(QUETOO_HOME)/lib/race/ui/play/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/controls/" "$(QUETOO_HOME)/lib/race/ui/controls/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/controls/" "$(QUETOO_HOME)/lib/race/ui/controls/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/main/" "$(QUETOO_HOME)/lib/race/ui/main/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/main/" "$(QUETOO_HOME)/lib/race/ui/main/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/main/" "$(QUETOO_HOME)/lib/race/ui/main/" *.png &amp;&amp; ROBO "../src/cgame/race/ui/maps/" "$(QUETOO_HOME)/lib/race/ui/maps/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/maps/" "$(QUETOO_HOME)/lib/race/ui/maps/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/settings/" "$(QUETOO_HOME)/lib/race/ui/settings/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/settings/" "$(QUETOO_HOME)/lib/race/ui/settings/" *.json &amp;&amp; ROBO "../src/cgame/race/ui/voting/" "$(QUETOO_HOME)/lib/race/ui/voting/" *.css &amp;&amp; ROBO "../src/cgame/race/ui/voting/" "$(QUETOO_HOME)/lib/race/ui/voting/" *.json &amp;&amp; COPY_CGAME_MODULE "$(QUETOO_HOME)" "$(Platform)$(Configuration)" "race"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

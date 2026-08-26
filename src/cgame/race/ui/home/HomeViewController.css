@@ -4,9 +4,7 @@
    mapping and for the shared `.sectionEyebrow` / `.sectionRule` section
    language this route heads every block with.
 
-   v2 heads the route with `menu-shell.css`'s one filter slot (`.r-filter`):
-   a 260x34 field on the left, the route hint on the right. It is route-owned
-   here rather than shell-owned, following the Maps browser's `#filter`.
+   v2 heads the route with a compact hint row above the current-map summary.
 
    HomeViewController::layoutConnectedDashboard owns the geometry — panel
    frames, the two overview columns and their gaps, the table and header
@@ -57,43 +55,7 @@ Panel#Home > StackView > .contentView {
   clips-subviews: true;
 }
 
-/* Filter slot ------------------------------------------------------------- */
-
-/* Both children are placed from C, so both restate their metrics here: a
-   stylesheet pass resets anything it does not mention, which would collapse
-   the frames layoutConnectedDashboard set. */
-.routeFilter {
-  autoresizing-mask: width;
-  background-color: transparent;
-  border-width: 0;
-  height: 34;
-  min-height: 34;
-}
-
-#rosterFilter {
-  alignment: none;
-  background-color: #0c1721;
-  border-color: #31516a;
-  border-width: 1;
-  height: 34;
-  min-height: 34;
-  min-width: 0;
-  padding: 0 11 0 11;
-  width: 260;
-}
-
-#rosterFilter > Text {
-  alignment: middle-left;
-  color: #dde8f1;
-  font-size: 13;
-  font-style: regular;
-}
-
-#rosterFilter:focused {
-  background-color: #0c1721;
-  border-color: #73c7f2;
-  border-width: 2;
-}
+/* Route hint -------------------------------------------------------------- */
 
 .routeHint {
   alignment: none;
@@ -138,15 +100,38 @@ Panel#Home > StackView > .contentView {
   height: 20;
 }
 
+/* The heading honours the line breaks a mapper writes into the worldspawn
+   message; `lineWrap` is what makes SDL_ttf render the newline rather than
+   swallow it. HomeViewController::layoutConnectedDashboard grows the label and
+   its section to two lines when the title actually has one. */
+/* One heading line. The title is joined onto a single line before it reaches
+   here - see HomeViewController::resolvedMapTitle - so the Label and its Text
+   share one height. The Text carries it too, because Renderer::drawView
+   scissors every view to its own frame and a Text sizes itself from the string
+   rather than from the Label around it.
+
+   KNOWN LIMIT: a long title is still truncated at whatever width the Label
+   happens to hold. MainView::collapsePageWidths squeezes a horizontal row
+   proportionally once its children overflow, writes the result straight to
+   `frame.w`, and releases any `min-width` that stood in the way - so a heading
+   once measured narrow stays narrow, and neither an autoresizing mask, a floor,
+   nor a frame set from the route survives it. That belongs in the width pass,
+   not in this sheet. */
 .mapTitle {
+  autoresizing-mask: width;
   clips-subviews: true;
-  height: 41;
+  height: 57;
+  max-height: 57;
+  min-height: 57;
 }
 
 .mapTitle > Text {
   color: #f4f8fb;
   font-size: 40;
   font-style: regular;
+  height: 57;
+  max-height: 57;
+  min-height: 57;
 }
 
 .mapIdentifier {
@@ -154,9 +139,11 @@ Panel#Home > StackView > .contentView {
   height: 20;
 }
 
+/* The design sets the asset path in `.val`, which is 13px - one step up from
+   the 12px it uses for hints and captions. */
 .mapIdentifier > Text {
   color: #74899b;
-  font-size: 12;
+  font-size: 13;
 }
 
 /* Mode selector ----------------------------------------------------------- */
@@ -190,24 +177,25 @@ Panel#Home > StackView > .contentView {
   autoresizing-mask: width;
   axis: horizontal;
   distribution: fill-equally;
-  height: 36;
-  min-height: 36;
+  height: 40;
+  min-height: 40;
   padding: 0;
   spacing: 8;
 }
 
+/* SegmentedControl.jsx sizes its segments 40 tall on 10/14 padding. */
 .homeActionRow > Button,
 .modeActions > Button {
-  height: 36;
-  min-height: 36;
+  height: 40;
+  min-height: 40;
   min-width: 0;
-  padding: 5 8 5 8;
+  padding: 10 14 10 14;
 }
 
 .modeActions {
   background-color: transparent;
-  height: 36;
-  min-height: 36;
+  height: 40;
+  min-height: 40;
 }
 
 .modeActions {
@@ -425,7 +413,7 @@ Panel#Home > StackView > .contentView {
   font-style: bold;
 }
 
-/* Stands in for the roster table when the filter admits nothing. */
+/* Stands in for the roster table when the roster is empty. */
 .emptyState {
   alignment: none;
   autoresizing-mask: none;

@@ -56,10 +56,11 @@ typedef enum {
  */
 typedef enum {
   /**
-   * @brief The Race tab: three bordered cards rather than the route's usual
-   * hairline sections. It is the one screen in this design system that frames
-   * its content, because a people card, a tools card and a "built on" pointer
-   * read as discrete blocks rather than as one flowing list.
+   * @brief The Race tab: a centred masthead over one unframed card. Earlier
+   * revisions framed a roster card and a tools card beside the pointer at the
+   * engine; the design now credits Race in a single line under the build stamp
+   * and keeps only "Built on Quetoo", so the page reads as a masthead over one
+   * block rather than as a grid.
    */
   CreditsLayoutCards,
 
@@ -227,72 +228,39 @@ static const CreditsEntryDescriptor creditsEntries[] = {
   { CreditsSectionFonts, NULL, "Coda", "SIL Open Font License 1.1" }
 };
 
-#pragma mark - Cards
-
-typedef struct {
-  const char *title;
-
-  /**
-   * @brief The bordered aside beside the title, or NULL.
-   */
-  const char *tag;
-
-  /**
-   * @brief A display line reading "<lead> <leadName>", the second half accented.
-   */
-  const char *lead;
-  const char *leadName;
-
-  /**
-   * @brief Wrapped body copy above the card's rows, or NULL.
-   */
-  const char *copy;
-
-  /**
-   * @brief A button that changes page, or NULL. `link` is its title.
-   */
-  const char *link;
-  CreditsPage linkPage;
-
-  /**
-   * @brief Small print under the button, or NULL.
-   */
-  const char *note;
-} CreditsCardDescriptor;
-
-static const CreditsCardDescriptor creditsCards[CREDITS_CARD_COUNT] = {
-  {
-    .title = "Development assistance",
-    .copy = "Tools and AI systems that helped accelerate development and "
-            "improve quality."
-  },
-  {
-    .title = "Built on Quetoo",
-    .copy = "Race is built on Quetoo by Jay Dolan and contributors.",
-    .link = "View original Quetoo credits", .linkPage = CreditsPageQuetoo,
-    .note = "Original engine, assets, and upstream contributors are "
-            "acknowledged in the Quetoo and Licenses tabs."
-  }
-};
+/**
+ * @brief The design's build line, verbatim.
+ * @details The month is the design's own; it is a release stamp rather than a
+ * derived value, so it is written once here instead of being assembled from
+ * the engine's version string, which names Quetoo's build and not Race's.
+ */
+#define RACE_CREDITS_BUILD_LINE "Race mode for Quetoo · build 2026.08"
 
 /**
- * @brief A card's rows. Same left-label, right-value shape as a license row.
+ * @brief The line under the build stamp, verbatim from the design.
  */
-typedef struct {
-  size_t card;
-  const char *label;
-  const char *value;
+#define RACE_CREDITS_CREDIT_LINE \
+  "Race development: Sata. Most evidence remains local."
 
-  /**
-   * @brief Whether the value names a person, and so carries the accent.
-   */
-  bool credited;
-} CreditsCardEntryDescriptor;
+#pragma mark - Cards
 
-static const CreditsCardEntryDescriptor creditsCardEntries[] = {
-  { 0, "AI coding assistants",
-       "Code generation, design iteration, UI feedback", false }
-};
+/**
+ * @brief The Race page's one card, written as copy rather than assembled.
+ * @details The body line accents the engine author's name, which forces it
+ * into three Labels - a Text carries a single colour - so the sentence is
+ * stored in the three pieces it renders as. The design closes the button with
+ * an arrow glyph, which is dropped here with the icons: the shipped face is
+ * Coda and nothing in this dialect has ever drawn U+2192.
+ */
+#define RACE_CREDITS_CARD_TITLE "Built on Quetoo"
+#define RACE_CREDITS_CARD_COPY_PREFIX "Race is built on Quetoo by"
+#define RACE_CREDITS_CARD_COPY_NAME "Jay Dolan"
+#define RACE_CREDITS_CARD_COPY_SUFFIX "and contributors."
+#define RACE_CREDITS_CARD_LINK "View original Quetoo credits"
+#define RACE_CREDITS_CARD_NOTE \
+  "Original engine, assets, and upstream contributors are acknowledged in " \
+  "the Quetoo and Licenses tabs."
+
 
 #pragma mark - Construction
 
@@ -402,138 +370,56 @@ static View *makeEntryRow(const CreditsEntryDescriptor *entry, bool last) {
 }
 
 /**
- * @brief One card row: label left, value right.
- */
-static View *makeCardRow(const CreditsCardEntryDescriptor *entry, bool last) {
-
-  View *view = $(alloc(View), initWithFrame, NULL);
-  assert(view);
-
-  $(view, addClassName, "creditRow");
-
-  Label *label = makeLabel(entry->label, "creditCardRowLabel");
-  $(view, addSubview, (View *) label);
-  release(label);
-
-  Label *value = makeLabel(entry->value, entry->credited ? "creditCardRowName"
-                                                         : "creditCardRowValue");
-  $(view, addSubview, (View *) value);
-  release(value);
-
-  if (!last) {
-    View *rule = makeRule("creditRowRule");
-    rule->alignment = ViewAlignmentBottomLeft;
-    $(view, addSubview, rule);
-    release(rule);
-  }
-
-  return view;
-}
-
-/**
  * @brief ButtonDelegate for the page strip, and for the card that links into it.
  */
 static void didClickPage(Button *button);
 
-static View *makeCard(CreditsViewController *self, size_t card) {
-
-  const CreditsCardDescriptor *descriptor = &creditsCards[card];
+static View *makeCard(CreditsViewController *self) {
 
   StackView *view = $(alloc(StackView), initWithFrame, NULL);
   assert(view);
 
   $((View *) view, addClassName, "creditCard");
 
-  StackView *head = $(alloc(StackView), initWithFrame, NULL);
-  $((View *) head, addClassName, "creditCardHead");
-  head->axis = StackViewAxisHorizontal;
-  head->view.alignment = ViewAlignmentMiddleLeft;
-
-  Label *title = makeLabel(descriptor->title, "creditCardTitle");
-  $((View *) head, addSubview, (View *) title);
+  Label *title = makeLabel(RACE_CREDITS_CARD_TITLE, "creditCardTitle");
+  $((View *) view, addSubview, (View *) title);
   release(title);
 
-  if (descriptor->tag) {
-    Label *tag = makeLabel(descriptor->tag, "creditCardTag");
-    $((View *) head, addSubview, (View *) tag);
-    release(tag);
-  }
+  // The accented middle keeps the sentence one row of three Labels; the
+  // stylesheet centres the row and colours only the name.
+  StackView *copy = $(alloc(StackView), initWithFrame, NULL);
+  $((View *) copy, addClassName, "creditCardDesc");
+  copy->axis = StackViewAxisHorizontal;
 
-  $((View *) view, addSubview, (View *) head);
-  release(head);
+  Label *prefix = makeLabel(RACE_CREDITS_CARD_COPY_PREFIX, "creditCardDescText");
+  $((View *) copy, addSubview, (View *) prefix);
+  release(prefix);
 
-  if (descriptor->lead) {
+  Label *name = makeLabel(RACE_CREDITS_CARD_COPY_NAME, "creditCardDescName");
+  $((View *) copy, addSubview, (View *) name);
+  release(name);
 
-    StackView *lead = $(alloc(StackView), initWithFrame, NULL);
-    $((View *) lead, addClassName, "creditCardLead");
-    lead->axis = StackViewAxisHorizontal;
-    lead->view.alignment = ViewAlignmentMiddleLeft;
+  Label *suffix = makeLabel(RACE_CREDITS_CARD_COPY_SUFFIX, "creditCardDescText");
+  $((View *) copy, addSubview, (View *) suffix);
+  release(suffix);
 
-    Label *prefix = makeLabel(descriptor->lead, "creditCardLeadPrefix");
-    $((View *) lead, addSubview, (View *) prefix);
-    release(prefix);
+  $((View *) view, addSubview, (View *) copy);
+  release(copy);
 
-    Label *name = makeLabel(descriptor->leadName, "creditCardLeadName");
-    $((View *) lead, addSubview, (View *) name);
-    release(name);
+  Button *link = $(alloc(Button), initWithTitle, RACE_CREDITS_CARD_LINK);
+  $((View *) link, addClassName, "creditCardLink");
+  link->delegate = (ButtonDelegate) {
+    .self = self,
+    .data = (ident) (intptr_t) CreditsPageQuetoo,
+    .didClick = didClickPage
+  };
 
-    $((View *) view, addSubview, (View *) lead);
-    release(lead);
-  }
+  $((View *) view, addSubview, (View *) link);
+  release(link);
 
-  if (descriptor->copy) {
-    Label *copy = makeCopy(descriptor->copy, "creditCardCopy");
-    $((View *) view, addSubview, (View *) copy);
-    release(copy);
-  }
-
-  size_t rows = 0;
-  for (size_t i = 0; i < lengthof(creditsCardEntries); i++) {
-    if (creditsCardEntries[i].card == card) {
-      rows++;
-    }
-  }
-
-  if (rows) {
-
-    StackView *body = $(alloc(StackView), initWithFrame, NULL);
-    $((View *) body, addClassName, "creditRows");
-
-    size_t placed = 0;
-    for (size_t i = 0; i < lengthof(creditsCardEntries); i++) {
-
-      if (creditsCardEntries[i].card != card) {
-        continue;
-      }
-
-      View *row = makeCardRow(&creditsCardEntries[i], ++placed == rows);
-      $((View *) body, addSubview, row);
-      release(row);
-    }
-
-    $((View *) view, addSubview, (View *) body);
-    release(body);
-  }
-
-  if (descriptor->link) {
-
-    Button *link = $(alloc(Button), initWithTitle, descriptor->link);
-    $((View *) link, addClassName, "creditCardLink");
-    link->delegate = (ButtonDelegate) {
-      .self = self,
-      .data = (ident) (intptr_t) descriptor->linkPage,
-      .didClick = didClickPage
-    };
-
-    $((View *) view, addSubview, (View *) link);
-    release(link);
-  }
-
-  if (descriptor->note) {
-    Label *note = makeCopy(descriptor->note, "creditCardNote");
-    $((View *) view, addSubview, (View *) note);
-    release(note);
-  }
+  Label *note = makeCopy(RACE_CREDITS_CARD_NOTE, "creditCardNote");
+  $((View *) view, addSubview, (View *) note);
+  release(note);
 
   return (View *) view;
 }
@@ -549,6 +435,29 @@ static View *makeSection(CreditsViewController *self, size_t section) {
   assert(view);
 
   $((View *) view, addClassName, "creditSection");
+
+  // The Race page opens on the centred lockup over its build line, the way the
+  // design's `.cred-lockup` / `.cred-build` pair does. The wordmark is placed,
+  // never redrawn - it is the shipped blue 480x220 export.
+  if (section == CreditsSectionRace) {
+
+    ImageView *lockup = $(alloc(ImageView), initWithFrame, NULL);
+    assert(lockup);
+    $((View *) lockup, addClassName, "creditLockup");
+
+    $(lockup, setImageWithResourceName, "ui/main/menu_lockup.png");
+
+    $((View *) view, addSubview, (View *) lockup);
+    release(lockup);
+
+    Label *build = makeLabel(RACE_CREDITS_BUILD_LINE, "creditBuild");
+    $((View *) view, addSubview, (View *) build);
+    release(build);
+
+    Label *credit = makeLabel(RACE_CREDITS_CREDIT_LINE, "creditCredit");
+    $((View *) view, addSubview, (View *) credit);
+    release(credit);
+  }
 
   if (descriptor->label) {
 
@@ -568,8 +477,10 @@ static View *makeSection(CreditsViewController *self, size_t section) {
   // auto-fit in the mock, and neither can be reproduced by a StackView.
   switch (descriptor->layout) {
     case CreditsLayoutCards:
-      $((View *) body, addClassName, "columns");
-      $((View *) body, addClassName, "creditCards");
+      // Not a ColumnsView: the design centres its one card
+      // (`.cred-cards.solo`), and a single centred block is a stack, not a
+      // grid.
+      $((View *) body, addClassName, "creditCardsSolo");
       break;
     case CreditsLayoutThanks:
       $((View *) body, addClassName, "columns");
@@ -582,11 +493,9 @@ static View *makeSection(CreditsViewController *self, size_t section) {
 
   if (descriptor->layout == CreditsLayoutCards) {
 
-    for (size_t card = 0; card < CREDITS_CARD_COUNT; card++) {
-      View *cardView = makeCard(self, card);
-      $((View *) body, addSubview, cardView);
-      release(cardView);
-    }
+    View *cardView = makeCard(self);
+    $((View *) body, addSubview, cardView);
+    release(cardView);
 
   } else {
 

@@ -4,88 +4,148 @@
   "subviews": [
     {
       "class": "StackView",
-      "identifier": "quickHeader",
+      "identifier": "quickHead",
       "subviews": [
-        { "class": "Label", "identifier": "quickTitle", "text": { "text": "Quick settings" } },
-        { "class": "Button", "identifier": "quickClose", "title": { "text": "Close" } }
+        { "class": "Label", "identifier": "quickTitle", "text": { "text": "Menu" } },
+        { "class": "Label", "identifier": "quickSubtitle", "text": { "text": "Home · Esc resumes" } }
       ]
     },
+    { "class": "View", "identifier": "quickHeadRule", "classNames": [ "drawerRule" ] },
     {
       "class": "StackView",
-      "identifier": "quickHintRow",
-      "subviews": [
-        { "class": "Label", "identifier": "quickHint", "text": { "text": "Changes apply immediately." } },
-        { "class": "Label", "identifier": "quickEscHint", "text": { "text": "Esc closes" } }
-      ]
-    },
-    {
-      "class": "StackView",
-      "identifier": "quickSettingsContent",
+      "identifier": "quickList",
       "subviews": [
         {
-          "class": "StackView",
-          "classNames": [ "quickSection" ],
+          "class": "Label",
+          "identifier": "quickGroupRun",
+          "classNames": [ "quickGroup", "quickGroupFirst" ],
+          "text": { "text": "Run" }
+        },
+        {
+          "class": "Button",
+          "identifier": "quickResume",
+          "classNames": [ "quickItem" ],
+          "title": { "text": "Resume" },
           "subviews": [
             {
-              "class": "StackView",
-              "classNames": [ "quickSectionHeader" ],
-              "subviews": [
-                { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Aim" } },
-                { "class": "Label", "identifier": "quickAimStatus", "classNames": [ "quickSectionStatus" ], "text": { "text": "m_sensitivity · cg_fov" } }
-              ]
-            },
-            { "class": "View", "classNames": [ "sectionRule" ] }
+              "class": "Label",
+              "identifier": "quickResumeHint",
+              "classNames": [ "quickItemHint" ],
+              "text": { "text": "Esc" }
+            }
           ]
         },
         {
-          "class": "Input",
-          "label": { "text": { "text": "Mouse sensitivity" } },
-          "control": { "class": "RaceSlider", "identifier": "quickSensitivity", "var": "m_sensitivity", "min": 0.125, "max": 6.0, "step": 0.125 }
-        },
-        {
-          "class": "Input",
-          "label": { "text": { "text": "Field of view" } },
-          "control": { "class": "RaceSlider", "identifier": "quickFov", "var": "cg_fov", "min": 90, "max": 160, "step": 1 }
-        },
-        {
-          "class": "StackView",
-          "classNames": [ "quickSection", "quickSectionSpaced" ],
+          "class": "Button",
+          "identifier": "quickRestart",
+          "classNames": [ "quickItem" ],
+          "title": { "text": "Restart run" },
           "subviews": [
             {
-              "class": "StackView",
-              "classNames": [ "quickSectionHeader" ],
-              "subviews": [
-                { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "HUD helpers" } },
-                { "class": "Label", "identifier": "quickHelperStatus", "classNames": [ "quickSectionStatus" ], "text": { "text": "0 of 3 on" } }
-              ]
-            },
-            { "class": "View", "classNames": [ "sectionRule" ] }
+              "class": "Label",
+              "identifier": "quickRestartHint",
+              "classNames": [ "quickItemHint" ],
+              "text": {}
+            }
           ]
         },
         {
-          "class": "Input",
-          "label": { "text": { "text": "Strafe helper" } },
-          "control": { "class": "CvarCheckbox", "identifier": "quickStrafeHelper", "var": "cg_race_strafe_helper_draw" }
+          "class": "Button",
+          "identifier": "quickWatchBest",
+          "classNames": [ "quickItem" ],
+          "title": { "text": "Watch personal best" },
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "quickWatchBestHint",
+              "classNames": [ "quickItemHint" ],
+              "text": {}
+            }
+          ]
         },
         {
-          "class": "Input",
-          "label": { "text": { "text": "UPS meter" } },
-          "control": { "class": "CvarCheckbox", "identifier": "quickUps", "var": "cg_race_strafe_helper_ups" }
+          "class": "Label",
+          "identifier": "quickGroupSession",
+          "classNames": [ "quickGroup" ],
+          "text": { "text": "Session" }
         },
         {
-          "class": "Input",
-          "label": { "text": { "text": "Input display" } },
-          "control": { "class": "CvarCheckbox", "identifier": "quickInputViewer", "var": "cg_input_viewer" }
+          "class": "Button",
+          "identifier": "quickSpectate",
+          "classNames": [ "quickItem" ],
+          "title": { "text": "Spectate" },
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "quickSpectateHint",
+              "classNames": [ "quickItemHint" ],
+              "text": {}
+            }
+          ]
+        },
+        {
+          "class": "Button",
+          "identifier": "quickCallVote",
+          "classNames": [ "quickItem" ],
+          "title": { "text": "Call vote" },
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "quickCallVoteHint",
+              "classNames": [ "quickItemHint" ],
+              "text": {}
+            }
+          ]
+        },
+        {
+          "class": "Button",
+          "identifier": "quickFullMenu",
+          "classNames": [ "quickItem" ],
+          "title": { "text": "Full menu" },
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "quickFullMenuHint",
+              "classNames": [ "quickItemHint" ],
+              "text": {}
+            }
+          ]
         }
       ]
     },
-    { "class": "View", "identifier": "quickFooterRule", "classNames": [ "sectionRule" ] },
+    { "class": "View", "identifier": "quickFootRule", "classNames": [ "drawerRule" ] },
     {
       "class": "StackView",
-      "identifier": "quickFooter",
+      "identifier": "quickFoot",
       "subviews": [
-        { "class": "Button", "identifier": "quickControls", "title": { "text": "All controls" } },
-        { "class": "Button", "identifier": "quickSettings", "title": { "text": "All settings" } }
+        {
+          "class": "Button",
+          "identifier": "quickDisconnect",
+          "classNames": [ "quickItem", "quickDanger" ],
+          "title": { "text": "Disconnect" },
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "quickDisconnectHint",
+              "classNames": [ "quickItemHint" ],
+              "text": {}
+            }
+          ]
+        },
+        {
+          "class": "Button",
+          "identifier": "quickQuit",
+          "classNames": [ "quickItem", "quickDanger" ],
+          "title": { "text": "Quit to desktop" },
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "quickQuitHint",
+              "classNames": [ "quickItemHint" ],
+              "text": {}
+            }
+          ]
+        }
       ]
     }
   ]

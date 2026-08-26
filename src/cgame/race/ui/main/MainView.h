@@ -52,16 +52,6 @@ struct MainView {
   MainViewInterface *interface;
 
   /**
-   * @brief The background image.
-   */
-  ImageView *background;
-
-  /**
-   * @brief The logo image.
-   */
-  ImageView *logo;
-
-  /**
    * @brief The version string.
    */
   Label *version;
@@ -70,6 +60,12 @@ struct MainView {
    * @brief Connected-session canvas, overlay and fixed menu regions.
    */
   View *activeBackground;
+  /**
+   * @brief The moving half of the connected-session plane.
+   * @details `activeBackground` lights the room; this is its floor.
+   */
+  View *speedGrid;
+
   View *footerHairline;
   View *overlayShade;
   View *topBar;
@@ -84,6 +80,35 @@ struct MainView {
   Label *brandTitle;
   Label *menuHeading;
   Label *connectionLabel;
+  Label *weaponTuningWarning;
+
+  /**
+   * @brief The route head's lockup, shown in place of the title.
+   * @details The design gives one route a lockup instead of an `h1`
+   * ("omit -> plain h1 route title"), and Home is that route. The two are
+   * siblings and exactly one is ever visible.
+   */
+  ImageView *windowLockup;
+
+  /**
+   * @brief The footer's dirty count.
+   * @details `.m-dirty` in the design: how many staged changes a route is
+   * holding, turning gold when one of them needs a restart to take effect. It
+   * lives in the shell because the design has one footer, not one per route.
+   */
+  Label *commitStatus;
+
+  /**
+   * @brief A route-supplied eyebrow, or "" for the session default.
+   * @details The eyebrow is shell chrome and normally says what the session is
+   * ("Connected session"). One route needs it to say what the *account* is:
+   * the design flips Admin's to "Authenticated session", or to "No
+   * administrator session" in brand red when this connection publishes 0x00.
+   * The override lives here rather than in the route because layoutSubviews
+   * rewrites the label on every pass and would otherwise stamp on it.
+   */
+  char eyebrowOverride[64];
+  bool eyebrowOffline;
   Label *windowTitle;
   Label *topPlayers;
   Label *topTime;

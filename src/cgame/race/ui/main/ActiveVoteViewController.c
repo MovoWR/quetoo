@@ -95,10 +95,10 @@ static bool refresh(ActiveVoteViewController *self) {
     q_snprintf(title, sizeof(title), "%s called a %s vote: %s",
                info.initiator, info.type, info.target);
   }
-  $(self->title->text, setText, canCast ? "ACTIVE VOTE" : "ACTIVE VOTE · VIEW ONLY");
+  $(self->title->text, setText, canCast ? "Active vote" : "Active vote · view only");
   $(self->detail->text, setText, title);
   $(self->tally->text, setText,
-    va("YES  %d     NO  %d     NEED  %d", info.yes_votes,
+    va("Yes %d · No %d · Need %d", info.yes_votes,
        info.no_votes, info.needed));
   $(self->remaining->text, setText, va("%ds", info.remaining));
   setButtonEnabled(self->yesButton, canCast);

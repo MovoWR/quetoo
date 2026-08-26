@@ -293,7 +293,7 @@ Panel.settingsMenu .settingsColumns {
   alignment: top-left;
   autoresizing-mask: contain | width;
   max-column-width: 760;
-  min-column-width: 530;
+  min-column-width: 730;
   min-width: 0;
   spacing: 24;
 }
@@ -383,14 +383,58 @@ Panel.settingsMenu .settingRow {
   min-height: 44;
 }
 
-Panel.settingsMenu .rowLeft,
-Panel.settingsMenu .rowRight {
+Panel.settingsMenu .rowLeft {
   autoresizing-mask: contain;
   axis: horizontal;
   background-color: transparent;
   distribution: default;
   min-width: 0;
   spacing: 6;
+}
+
+/* The control cell states the track rather than containing it.
+   MainView::collapsePageWidths walks the page in strict mode and forces any
+   view wider than the width its parent was measured at down to that width,
+   recursing with the width it just wrote. A `contain` cell has no width until
+   its children have been laid out, so on the pass that runs first its children
+   are collapsed to zero and their min-widths released - and `contain` then
+   sizes the cell to those zero-width children and holds it there. A Select
+   survives it by falling back to its own text width; a Slider, whose bar is
+   masked `width` and has no intrinsic size, draws as a one-pixel sliver.
+   Stating the width breaks the cycle, and it is the same 300 the controls
+   below already ask for. */
+Panel.settingsMenu .rowRight {
+  autoresizing-mask: none;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  height: 34;
+  max-height: 34;
+  max-width: 300;
+  min-height: 34;
+  min-width: 300;
+  spacing: 6;
+  width: 300;
+}
+
+/* A slider is dragged, not clicked. The cell is right-pinned, so the extra
+   width runs leftward and every control on the page still ends on one edge.
+   420 leaves about 374 points of groove once Slider::layoutSubviews has taken
+   its readout out of the bar - against the ~254 the base track left, which is
+   what made these read as stubs rather than as something you can aim with. */
+Panel.settingsMenu .rowRight.sliderCell {
+  max-width: 420;
+  min-width: 420;
+  width: 420;
+}
+
+/* The control, not just the cell. The route's shared track pins every Select,
+   Checkbox and field at 300, and a Slider left at that inside a 420 cell is a
+   wider cell around the same stub. */
+Panel.settingsMenu .sliderCell Slider {
+  max-width: 420;
+  min-width: 420;
+  width: 420;
 }
 
 /* The changed marker. Hidden until the row differs from what the client ships,
@@ -475,15 +519,27 @@ Panel.settingsMenu .settingRow.modified .rowLabel > Text {
 /* One control track for the whole route. Fixed rather than flexed: `fill`
    scales a subview by availableSize/requestedSize, which pushes the control to
    the section's far right after a short label and then snaps it back the moment
-   hover re-runs View::applyStyle. */
+   hover re-runs View::applyStyle.
+
+   300, not 200, because of what `Slider::layoutSubviews` does with it: the
+   readout is measured at the format's min and max and taken out of the *bar's*
+   own width, so a 200pt cell left a groove of about 154. That reads as a stub
+   under the 12pt track the shell now draws. 300 is the design's own upper
+   bound for a slider (`clamp(200px, 25vw, 300px)`) and leaves ~254 of groove.
+
+   The cell is raised rather than the Slider alone so the column stays aligned -
+   a route where the sliders end 100 points right of the selects is worse than
+   one with slightly wide selects. This is the decision the readout question
+   gets, once, here: the readout stays inside the Slider (moving it out is a C
+   change) and the cell is sized around it. */
 Panel.settingsMenu Select,
 Panel.settingsMenu Slider,
 Panel.settingsMenu Checkbox,
 Panel.settingsMenu .rowValue {
-  max-width: 200;
+  max-width: 300;
   min-height: 34;
-  min-width: 200;
-  width: 200;
+  min-width: 300;
+  width: 300;
 }
 
 Panel.settingsMenu Select {
@@ -667,8 +723,14 @@ Panel.settingsMenu .strafeColorsRow .rowLeft {
   alignment: top-left;
 }
 
+/* The colour picker is three stacked rails, not one control, so this row keeps
+   the containing cell the rest of the route no longer uses - and states a cap
+   wide enough that the strict collapse pass has nothing to take off it. */
 Panel.settingsMenu .strafeColorsRow .rowRight {
+  autoresizing-mask: contain;
+  max-width: 480;
   min-width: 0;
+  width: 340;
 }
 
 Panel.settingsMenu .strafeColors {
@@ -905,7 +967,7 @@ Panel.settingsMenu .strafeColorAxisLabel > Text {
    viewport no longer has.
 
    `max-width` has to be restated even though nothing here wants a cap. The
-   route pins one 200pt control track for every `Panel.settingsMenu Slider`,
+   route pins one 300pt control track for every `Panel.settingsMenu Slider`,
    and `View::resize` clamps against exactly that field - so a rail that is
    handed 738 points by the layout is given back 200 unless this rule says
    otherwise. 760 is the picker's own cap, which is the real bound. */
@@ -981,58 +1043,6 @@ Panel.settingsMenu .strafeEditing > Text {
   alignment: middle-left;
   color: #73c7f2;
   font-size: 12;
-}
-
-/* The mask, not just the height: ObjectivelyMVC's stylesheet fills the bar to
-   the Slider's full height, so `height` alone is overwritten every layout
-   pass. */
-Panel.settingsMenu Slider > .bar {
-  alignment: middle-left;
-  autoresizing-mask: width;
-  background-color: #152532;
-  height: 4;
-  max-height: 4;
-  min-height: 4;
-}
-
-/* The filled track is the shared control language now, in MainView.css, so that
-   every route's sliders read the same - see `#main Slider > .bar > .fill`. */
-
-Panel.settingsMenu Slider > .bar > .handle {
-  background-color: #73c7f2;
-  border-width: 0;
-  height: 20;
-  max-height: 20;
-  max-width: 11;
-  min-height: 20;
-  min-width: 11;
-  width: 11;
-}
-
-Panel.settingsMenu Slider:hover > .bar > .handle,
-Panel.settingsMenu Slider:focused > .bar > .handle {
-  background-color: #d3efff;
-}
-
-Panel.settingsMenu Slider:focused > .bar {
-  background-color: #365163;
-}
-
-Panel.settingsMenu Slider Text {
-  color: #dde8f1;
-  font-size: 13;
-}
-
-Panel.settingsMenu Slider:disabled > .bar {
-  background-color: #101c27;
-}
-
-Panel.settingsMenu Slider:disabled > .bar > .handle {
-  background-color: #365163;
-}
-
-Panel.settingsMenu Slider:disabled Text {
-  color: #6d8291;
 }
 
 Panel.settingsMenu Checkbox {
@@ -1157,34 +1167,6 @@ Panel.settingsMenu .settingsHint {
   alignment: middle-left;
 }
 
-/* The commit group: what changed, what it costs, and the pair of buttons that
-   act on it, read as one thing against the right edge rather than as three
-   items scattered across the bar.
-
-   `fit`, not `contain`. `sizeThatContains` is max(current, sizeThatFits) - a
-   high-water mark - so a group that was once as wide as a 620px hint never
-   narrows again, and the caption ends up stranded at the far left of a box
-   whose right edge is still where the longest hint left it. That is the gap
-   this route was reported for. `sizeToFit` resizes to `sizeThatFits` outright,
-   so the group tracks its contents in both directions. */
-Panel.settingsMenu .settingsFooterCommit {
-  alignment: middle-right;
-  autoresizing-mask: fit;
-  axis: horizontal;
-  distribution: default;
-  min-width: 0;
-  padding: 0;
-  spacing: 20;
-}
-
-Panel.settingsMenu .settingsFooterActions {
-  autoresizing-mask: fit;
-  axis: horizontal;
-  distribution: default;
-  min-width: 0;
-  spacing: 8;
-}
-
 /* Each status line hugs its own text, and is bounded and clipped at the widest
    caption it can ever hold. The bound is the safety net, not the layout: a
    Label whose Text outgrows it does not push its siblings along, it draws
@@ -1201,12 +1183,6 @@ Panel.settingsMenu .settingsHint {
   min-height: 18;
   min-width: 0;
   padding: 0;
-}
-
-/* "85 settings changed - Renderer and sound restart required" is the longest
-   this line gets, measured at the 12pt it draws at. */
-Panel.settingsMenu .settingsDirtyStatus {
-  max-width: 380;
 }
 
 Panel.settingsMenu .settingsStatus > Text,
@@ -1229,21 +1205,38 @@ Panel.settingsMenu .settingsHint > Text {
   color: #5c8fb5;
 }
 
-/* Gold is the shell's warning tint: the restart requirement rides on this line
-   and is the one thing here the player has to act on. */
-Panel.settingsMenu .settingsDirtyStatus > Text {
-  color: #e7c368;
+/* `.r-preset`: the quality preset, in the filter bar rather than in the
+   document. The design pairs a small label with the control and sits the pair
+   at the right of the filter row; the control itself is the same five-segment
+   strip this route already used, so a preset reads identically wherever the
+   player last saw it. */
+Panel.settingsMenu .settingsPresetSlot {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 0;
+  spacing: 10;
 }
 
-#main Panel.settingsMenu .settingsFooterActions > Button {
-  min-height: 36;
+Panel.settingsMenu .settingsPresetLabel {
+  min-height: 34;
   min-width: 0;
 }
 
-#main Panel.settingsMenu .settingsFooterActions > Button.primaryButton {
-  background-color: #22557f;
+Panel.settingsMenu .settingsPresetLabel > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
 }
 
-#main Panel.settingsMenu .settingsFooterActions > Button.primaryButton > Text {
-  color: #f4f8fb;
+Panel.settingsMenu .settingsPresetHost {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 0;
+  spacing: 0;
 }

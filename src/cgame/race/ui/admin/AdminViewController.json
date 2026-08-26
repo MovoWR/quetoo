@@ -57,6 +57,22 @@
           },
           {
             "class": "StackView",
+            "identifier": "adminTabs",
+            "classNames": [
+              "adminTabs"
+            ],
+            "subviews": [
+              { "class": "Button", "identifier": "adminTabServer", "classNames": [ "adminTab" ], "title": { "text": "Server" } },
+              { "class": "Button", "identifier": "adminTabRules", "classNames": [ "adminTab" ], "title": { "text": "Rules" } },
+              { "class": "Button", "identifier": "adminTabPlayers", "classNames": [ "adminTab" ], "title": { "text": "Players" } },
+              { "class": "Button", "identifier": "adminTabSession", "classNames": [ "adminTab" ], "title": { "text": "Session" } },
+              { "class": "Button", "identifier": "adminTabAdvanced", "classNames": [ "adminTab" ], "title": { "text": "Advanced" } },
+              { "class": "Button", "identifier": "adminTabWeapons", "classNames": [ "adminTab" ], "title": { "text": "Weapons" } }
+            ]
+          },
+          { "class": "View", "identifier": "adminTabsRule", "classNames": [ "adminTabsRule" ] },
+          {
+            "class": "StackView",
             "identifier": "adminColumns",
             "classNames": [
               "columns",
@@ -73,6 +89,38 @@
             ]
           },
           {
+            "class": "StackView",
+            "identifier": "adminWeaponLabHost",
+            "classNames": [
+              "adminWeaponLabHost"
+            ]
+          },
+          {
+            "class": "StackView",
+            "identifier": "adminResponse",
+            "classNames": [
+              "adminResponse"
+            ],
+            "subviews": [
+              {
+                "class": "Label",
+                "identifier": "adminResponseCommand",
+                "classNames": [
+                  "adminResponseCommand"
+                ],
+                "text": {}
+              },
+              {
+                "class": "Label",
+                "identifier": "adminResponseReply",
+                "classNames": [
+                  "adminResponseReply"
+                ],
+                "text": { "lineWrap": true }
+              }
+            ]
+          },
+          {
             "class": "Label",
             "identifier": "adminEmptyState",
             "classNames": [
@@ -81,6 +129,44 @@
             "text": {
               "text": "Nothing matches that filter."
             }
+          },
+          {
+            "class": "StackView",
+            "identifier": "adminSignedOut",
+            "classNames": [
+              "adminSignedOut"
+            ],
+            "subviews": [
+              {
+                "class": "Label",
+                "classNames": [
+                  "adminSignedOutTitle"
+                ],
+                "text": {
+                  "text": "Admin route hidden"
+                }
+              },
+              {
+                "class": "Label",
+                "classNames": [
+                  "adminSignedOutCopy"
+                ],
+                "text": {
+                  "lineWrap": true,
+                  "text": "No authenticated Race administrator session on this connection, so STAT_RACE_ADMIN_CAPABILITIES publishes 0x00 and the menu dismisses this panel."
+                }
+              },
+              {
+                "class": "Label",
+                "classNames": [
+                  "adminSignedOutCopy"
+                ],
+                "text": {
+                  "lineWrap": true,
+                  "text": "In the client console, set the local one-use password with set radmin_password <password>, then use radmin <account>. The password is not sent to the server."
+                }
+              }
+            ]
           }
         ]
       }
@@ -105,9 +191,7 @@
             "classNames": [
               "adminHint"
             ],
-            "text": {
-              "text": ""
-            }
+            "text": {}
           },
           {
             "class": "Label",
@@ -115,9 +199,7 @@
             "classNames": [
               "adminProvenance"
             ],
-            "text": {
-              "text": ""
-            }
+            "text": {}
           }
         ]
       }

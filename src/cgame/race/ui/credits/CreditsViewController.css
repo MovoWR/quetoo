@@ -19,9 +19,10 @@
      The dialect has no box-shadow, and every other ported route already draws
      its strip as a filled tab, so this one matches those rather than inventing
      a third appearance for the same control.
-   - The mock's cards carry an SVG icon in each head. There are no vector icons
-     in this dialect and shipping three PNGs for decoration is not worth the
-     assets, so the heads are text only.
+   - The mock's card carries an SVG icon in its head, and its button closes
+     with an arrow glyph. There are no vector icons in this dialect, shipping
+     PNGs for decoration is not worth the assets, and the shipped face is Coda
+     with no proven U+2192 - so the head and the button are text only.
 
    There is no filter field: the design turns search off route-wide, and with it
    off there is nothing to tag an off-page section with either, so a section on
@@ -280,106 +281,85 @@ Panel.creditsMenu .creditThanksName {
   min-height: 22;
 }
 
-/* Race tab: cards --------------------------------------------------------- */
+/* Race tab: the solo card ------------------------------------------------- */
 
-/* The one grid in the menu whose cells are drawn boxes rather than transparent
-   sections, so it is the one that has to square its row: a card's frame comes
-   from the column's own height, and two cards of different content ended at
-   different heights with two mismatched bottom edges side by side. */
-Panel.creditsMenu .creditCards {
-  alignment: top-left;
-  autoresizing-mask: contain | width;
-  equal-row-heights: true;
-  min-column-width: 300;
-  min-width: 0;
-  spacing: 20;
-}
-
-/* The one bordered container in this design system. Every other section on
-   every other route is unframed and separated by hairlines; the Race tab's
-   three blocks are discrete enough - a roster, a tools list, a pointer at
-   Quetoo - that the frame is carrying real structure rather than decoration. */
-Panel.creditsMenu .creditCard {
+/* `.cred-cards.solo`: the design centres one unframed card at 560 and centres
+   the copy inside it. Not a ColumnsView - a single centred block is a stack.
+   560 stands fixed rather than fluid: the route floor is 1024 and the widest
+   line inside is the button's title, so the clamp the mock writes always lands
+   here on the sizes this dialect ships. */
+Panel.creditsMenu .creditCardsSolo {
   alignment: top-left;
   autoresizing-mask: contain | width;
   axis: vertical;
-  background-color: transparent;
-  border-color: #2f4a5e;
-  border-width: 1;
   distribution: default;
   min-width: 0;
-  padding: 20;
-  spacing: 4;
+  padding: 10 0 0 0;
+  spacing: 0;
 }
 
-Panel.creditsMenu .creditCardHead {
-  alignment: middle-left;
-  autoresizing-mask: contain | width;
-  axis: horizontal;
+/* Unframed since the page became a masthead over one block: the border earned
+   its keep when three cards had to read as three, and a lone centred card
+   under a centred lockup reads as a column, not a box. */
+Panel.creditsMenu .creditCard {
+  alignment: top-center;
+  autoresizing-mask: contain;
+  axis: vertical;
+  background-color: transparent;
+  border-width: 0;
   distribution: default;
-  min-width: 0;
-  padding: 0 0 6 0;
-  spacing: 12;
+  max-width: 560;
+  min-width: 560;
+  padding: 20 0 20 0;
+  spacing: 4;
+  width: 560;
 }
 
 Panel.creditsMenu .creditCardTitle {
+  alignment: top-center;
   autoresizing-mask: contain;
   background-color: transparent;
   border-width: 0;
-  padding: 0;
+  padding: 0 0 6 0;
 }
 
 Panel.creditsMenu .creditCardTitle > Text {
-  alignment: middle-left;
+  alignment: middle-center;
   color: #f4f8fb;
   font-size: 19;
 }
 
-/* The one place the copy voice is allowed to loosen, and it is deliberately
-   set as an aside rather than as body copy. */
-Panel.creditsMenu .creditCardTag {
+/* The design's one accented sentence: prefix, name, suffix, centred as a row.
+   Three Labels because a Text carries a single colour. */
+Panel.creditsMenu .creditCardDesc {
+  alignment: top-center;
   autoresizing-mask: contain;
-  background-color: transparent;
-  border-color: #2f4a5e;
-  border-width: 1;
-  clips-subviews: true;
-  padding: 6 10 6 10;
-}
-
-Panel.creditsMenu .creditCardTag > Text {
-  alignment: middle-left;
-  color: #93aec1;
-  font-size: 12;
-}
-
-Panel.creditsMenu .creditCardLead {
-  alignment: middle-left;
-  autoresizing-mask: contain | width;
   axis: horizontal;
+  background-color: transparent;
   distribution: default;
-  min-width: 0;
-  padding: 4 0 8 0;
-  spacing: 7;
+  padding: 2 0 8 0;
+  spacing: 5;
 }
 
-Panel.creditsMenu .creditCardLeadPrefix,
-Panel.creditsMenu .creditCardLeadName {
+Panel.creditsMenu .creditCardDescText,
+Panel.creditsMenu .creditCardDescName {
   autoresizing-mask: contain;
   background-color: transparent;
   border-width: 0;
   padding: 0;
 }
 
-Panel.creditsMenu .creditCardLeadPrefix > Text {
+Panel.creditsMenu .creditCardDescText > Text {
   alignment: middle-left;
-  color: #f4f8fb;
-  font-size: 22;
+  color: #93aec1;
+  font-size: 13;
 }
 
-Panel.creditsMenu .creditCardLeadName > Text {
+Panel.creditsMenu .creditCardDescName > Text {
   alignment: middle-left;
   color: #5c8fb5;
-  font-size: 22;
+  font-size: 13;
+  font-style: bold;
 }
 
 /* Wrapped copy has to be measured by hand. Text::render wraps to the Text's own
@@ -388,79 +368,27 @@ Panel.creditsMenu .creditCardLeadName > Text {
    width instead, run off the card, and leave its siblings stacked on top of
    each other. So: the Text follows the Label's width, and the Label declares a
    height with room for one more line than the canvas needs. */
-Panel.creditsMenu .creditCardCopy,
 Panel.creditsMenu .creditCardNote {
   autoresizing-mask: width;
   background-color: transparent;
   border-width: 0;
-  min-width: 0;
-  padding: 0 0 8 0;
-}
-
-Panel.creditsMenu .creditCardCopy {
-  height: 44;
-  max-height: 44;
-  min-height: 44;
-}
-
-Panel.creditsMenu .creditCardNote {
   height: 48;
   max-height: 48;
   min-height: 48;
-}
-
-Panel.creditsMenu .creditCardCopy > Text {
-  alignment: top-left;
-  autoresizing-mask: width;
-  color: #93aec1;
-  font-size: 13;
+  min-width: 0;
+  padding: 8 0 0 0;
 }
 
 Panel.creditsMenu .creditCardNote > Text {
-  alignment: top-left;
+  alignment: top-center;
   autoresizing-mask: width;
   color: #74899b;
   font-size: 12;
 }
 
-Panel.creditsMenu .creditCardRowLabel {
-  alignment: middle-left;
-  background-color: transparent;
-  border-width: 0;
-  clips-subviews: true;
-  padding: 0;
-}
-
-Panel.creditsMenu .creditCardRowLabel > Text {
-  alignment: middle-left;
-  color: #c6d5e1;
-  font-size: 14;
-}
-
-Panel.creditsMenu .creditCardRowName,
-Panel.creditsMenu .creditCardRowValue {
-  alignment: middle-right;
-  background-color: transparent;
-  border-width: 0;
-  clips-subviews: true;
-  padding: 0;
-}
-
-Panel.creditsMenu .creditCardRowName > Text {
-  alignment: middle-right;
-  color: #5c8fb5;
-  font-size: 14;
-  font-style: bold;
-}
-
-Panel.creditsMenu .creditCardRowValue > Text {
-  alignment: middle-right;
-  color: #c6d5e1;
-  font-size: 13;
-}
-
 /* Changes page rather than opening a URL: the "original Quetoo credits" the
-   mock links out to are the route's own second tab. */
+   mock links out to are the route's own second tab. Full card width, title
+   left, the same border-and-hover grammar as the mock's `.cred-btn`. */
 #main Panel.creditsMenu .creditCardLink {
   autoresizing-mask: width;
   background-color: transparent;
@@ -486,4 +414,55 @@ Panel.creditsMenu .creditCardRowValue > Text {
 
 #main Panel.creditsMenu .creditCardLink:hover > Text {
   color: #73c7f2;
+}
+
+/* `.cred-lockup` / `.cred-build`: the Race page's masthead.
+
+   Scoped by panel class like everything above: the route root's identifier is
+   `raceCreditsRoot`, so the `#Credits` scope these rules originally carried
+   never matched anything and the masthead rendered unstyled.
+
+   The design centres the 480x220 blue lockup at 300px and puts the build line
+   under it. The wordmark is placed, never redrawn - there is no monochrome
+   variant and none is to be derived. */
+/* The design scales the lockup up to 560; the shipped export is 480x220 and
+   placing it at its own size is the largest it renders without resampling. */
+Panel.creditsMenu .creditLockup {
+  alignment: top-center;
+  autoresizing-mask: none;
+  height: 220;
+  max-height: 220;
+  max-width: 480;
+  min-height: 220;
+  min-width: 480;
+  width: 480;
+}
+
+Panel.creditsMenu .creditBuild {
+  autoresizing-mask: width;
+  height: 26;
+  max-height: 26;
+  min-height: 26;
+  padding: 6 0 0 0;
+}
+
+Panel.creditsMenu .creditBuild > Text {
+  alignment: middle-center;
+  color: #74899b;
+  font-size: 12;
+}
+
+/* `.cred-credit`: the one line that credits Race itself. */
+Panel.creditsMenu .creditCredit {
+  autoresizing-mask: width;
+  height: 26;
+  max-height: 26;
+  min-height: 26;
+  padding: 4 0 0 0;
+}
+
+Panel.creditsMenu .creditCredit > Text {
+  alignment: middle-center;
+  color: #c6d5e1;
+  font-size: 14;
 }

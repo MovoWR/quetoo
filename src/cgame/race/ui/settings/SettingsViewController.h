@@ -35,7 +35,7 @@ typedef struct SettingsViewController SettingsViewController;
 typedef struct SettingsViewControllerInterface SettingsViewControllerInterface;
 
 #define SETTINGS_PAGE_COUNT 8
-#define SETTINGS_SECTION_COUNT 19
+#define SETTINGS_SECTION_COUNT 18
 #define SETTINGS_ROW_COUNT 83
 #define SETTINGS_PRESET_COUNT 5
 #define SETTINGS_VALUE_SIZE 128
@@ -128,6 +128,14 @@ struct SettingsViewController {
    * @brief Sections, and the chip naming an off-page section's home.
    * @private
    */
+  /**
+   * @brief The filter bar's quality-preset host.
+   * @details The design puts the preset control in the filter bar rather than
+   * in the document, so it is not a row and has no section of its own: the
+   * five segments are built once and parented here.
+   */
+  View *presetHost;
+
   View *sectionViews[SETTINGS_SECTION_COUNT];
   Label *sectionTags[SETTINGS_SECTION_COUNT];
 
@@ -241,14 +249,13 @@ struct SettingsViewController {
   Label *gpuBackend;
 
   /**
-   * @brief The footer: the hovered row's cvar, the commit status, and the pair.
+   * @brief The footer: the hovered row's cvar.
+   * @details The commit status and the Apply/Revert pair moved to the shell
+   * footer, which the design gives one of - see MainViewController_SetCommitDelegate.
    * @private
    */
   View *footerBar;
   Label *hint;
-  Label *dirtyStatus;
-  Button *revertChanges;
-  Button *apply;
 
   /**
    * @brief Row values as of route entry, for the footer's commit pair.

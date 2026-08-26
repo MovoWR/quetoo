@@ -468,7 +468,6 @@ Panel.votingMenu .sectionHint {
 Panel.votingMenu .proposalSection > .sectionHeading,
 Panel.votingMenu .proposalSection > .sectionTitle,
 Panel.votingMenu .proposalSection > .sectionHint,
-Panel.votingMenu .proposalSection > .physicsButtons,
 Panel.votingMenu .proposalSection > .proposalActionRow {
   max-width: 954;
   min-width: 954;
@@ -493,7 +492,6 @@ Panel.votingMenu .countdownBadge > Text {
   font-style: bold;
 }
 
-Panel.votingMenu .physicsButtons,
 Panel.votingMenu .proposalActionRow,
 Panel.votingMenu .nominationRow {
   alignment: middle-left;
@@ -503,17 +501,6 @@ Panel.votingMenu .nominationRow {
   height: 50;
   min-width: 0;
   spacing: 10;
-}
-
-Panel.votingMenu .physicsButtons {
-  distribution: fill-equally;
-}
-
-Panel.votingMenu .physicsButtons Button {
-  max-height: 50;
-  min-height: 50;
-  min-width: 0;
-  height: 50;
 }
 
 Panel.votingMenu .proposalInput {

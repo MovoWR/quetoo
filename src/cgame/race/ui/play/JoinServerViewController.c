@@ -28,14 +28,11 @@
 #include "CvarCheckbox.h"
 #include "CvarSlider.h"
 
-#include "race_physics.h"
-
 /**
  * @brief Column identifiers double as CSS ids, so they carry no spaces.
  */
 static const char *_server = "Server";
 static const char *_map = "Map";
-static const char *_physics = "Physics";
 static const char *_players = "Players";
 static const char *_ping = "Ping";
 
@@ -71,18 +68,13 @@ static JoinServerViewController *sortingJoinServerViewController;
 
 #define _Class _JoinServerViewController
 
-static const cl_server_info_t *serverAtIndex(const List *servers, size_t index) {
+static const cl_server_info_t *serverAtIndex(const PointerArray *servers, size_t index) {
 
-  if (servers == NULL) {
+  if (servers == NULL || index >= servers->count) {
     return NULL;
   }
 
-  const ListNode *node = servers->head;
-  while (node && index--) {
-    node = node->next;
-  }
-
-  return node ? node->element : NULL;
+  return $(servers, get, index);
 }
 
 /**
@@ -95,8 +87,8 @@ static const cl_server_info_t *selectedServer(const JoinServerViewController *se
     return NULL;
   }
 
-  for (const ListNode *node = self->servers->head; node; node = node->next) {
-    const cl_server_info_t *server = node->element;
+  for (size_t i = 0; i < self->servers->count; i++) {
+    const cl_server_info_t *server = $(self->servers, get, i);
     if (q_strcmp(server->hostname, self->selectedHostname) == 0) {
       return server;
     }
@@ -138,18 +130,6 @@ static void setLabelText(Label *label, const char *text) {
  */
 static int32_t maxPing(void) {
   return cg_quick_join_max_ping ? Clampf(cg_quick_join_max_ping->integer, 1, 999) : 200;
-}
-
-/**
- * @brief Spells the ruleset a server advertises in `g_race_physics`.
- * @details The cvar carries a selector (`q2`), not a preset key (`q2-v1`), so
- * it is resolved the same way the physics service resolves it - a server
- * running a selector this build has retired reads as unknown rather than as
- * whatever the raw string happened to be.
- */
-static const char *physicsLabel(const cl_server_info_t *server) {
-  (void) server;
-  return _unset;
 }
 
 /**
@@ -382,12 +362,11 @@ static void refreshDetails(JoinServerViewController *self) {
   setLabelText(self->sourceLabel, sourceLabel(server));
   setLabelText(self->mapLabel, *server->name ? server->name : _unset);
   setLabelText(self->gameplayLabel, gameplayText(server));
-  setLabelText(self->physicsLabel, physicsLabel(server));
   setLabelText(self->playersLabel, playersLabel(server));
   setLabelText(self->pingLabel,
                pingUnanswered(server) ? _unset : va("%d ms", server->ping));
 
-  // Stock v1.0.79 exposes aggregate occupancy but no pre-connect player rows.
+  // Server discovery exposes aggregate occupancy but no pre-connect player rows.
   self->rosterTableView->control.view.hidden = true;
   self->rosterEmptyLabel->view.hidden = false;
   setLabelText(self->rosterEmptyLabel,
@@ -413,15 +392,13 @@ static void restoreSelection(JoinServerViewController *self) {
   TableView *tableView = self->serversTableView;
 
   ssize_t index = -1;
-  size_t row = 0;
-
-  for (const ListNode *node = self->servers ? self->servers->head : NULL; node; node = node->next) {
-    const cl_server_info_t *server = node->element;
+  const size_t count = self->servers ? self->servers->count : 0;
+  for (size_t row = 0; row < count; row++) {
+    const cl_server_info_t *server = $(self->servers, get, row);
     if (q_strcmp(server->hostname, self->selectedHostname) == 0) {
       index = (ssize_t) row;
       break;
     }
-    row++;
   }
 
   if (index < 0) {
@@ -448,7 +425,7 @@ static void restoreSelection(JoinServerViewController *self) {
  */
 static void refreshSummary(JoinServerViewController *self) {
 
-  const List *known = cgi.Servers();
+  const PointerArray *known = cgi.Servers();
   const size_t listed = self->servers ? self->servers->count : 0;
   const size_t total = known ? known->count : listed;
 
@@ -514,10 +491,10 @@ static void didClickQuickJoin(Button *button) {
 
   uint32_t total_weight = 0;
 
-  const ListNode *node = this->servers ? this->servers->head : NULL;
+  const size_t count = this->servers ? this->servers->count : 0;
 
-  while (node != NULL) {
-    const cl_server_info_t *server = node->element;
+  for (size_t i = 0; i < count; i++) {
+    const cl_server_info_t *server = $(this->servers, get, i);
 
     int32_t weight = 1;
 
@@ -534,21 +511,17 @@ static void didClickQuickJoin(Button *button) {
     }
 
     total_weight += max(weight, 1);
-
-    node = node->next;
   }
 
   if (total_weight == 0) {
     return;
   }
 
-  node = this->servers ? this->servers->head : NULL;
-
   const uint32_t random_weight = RandomRangeu(0, total_weight);
   uint32_t current_weight = 0;
 
-  while (node != NULL) {
-    const cl_server_info_t *server = node->element;
+  for (size_t i = 0; i < count; i++) {
+    const cl_server_info_t *server = $(this->servers, get, i);
 
     int32_t weight = 1;
 
@@ -571,8 +544,6 @@ static void didClickQuickJoin(Button *button) {
       cgi.Connect(&server->addr);
       break;
     }
-
-    node = node->next;
   }
 }
 
@@ -637,8 +608,6 @@ static TableCellView *cellForColumnAndRow(const TableView *tableView, const Tabl
     $(cell->text, setText, server->hostname);
   } else if (q_strcmp(column->identifier, _map) == 0) {
     $(cell->text, setText, server->name);
-  } else if (q_strcmp(column->identifier, _physics) == 0) {
-    $(cell->text, setText, physicsLabel(server));
   } else if (q_strcmp(column->identifier, _players) == 0) {
     $(cell->text, setText, va("%d / %d", server->clients, server->max_clients));
   } else if (q_strcmp(column->identifier, _ping) == 0) {
@@ -757,7 +726,6 @@ static void loadView(ViewController *self) {
     MakeOutlet("server_source", &this->sourceLabel),
     MakeOutlet("server_map", &this->mapLabel),
     MakeOutlet("server_gameplay", &this->gameplayLabel),
-    MakeOutlet("server_physics", &this->physicsLabel),
     MakeOutlet("server_players", &this->playersLabel),
     MakeOutlet("server_ping", &this->pingLabel),
     MakeOutlet("roster_count", &this->rosterCountLabel),
@@ -778,7 +746,6 @@ static void loadView(ViewController *self) {
 
   $(this->serversTableView, addColumnWithIdentifier, _server);
   $(this->serversTableView, addColumnWithIdentifier, _map);
-  $(this->serversTableView, addColumnWithIdentifier, _physics);
   $(this->serversTableView, addColumnWithIdentifier, _players);
   $(this->serversTableView, addColumnWithIdentifier, _ping);
 
@@ -851,11 +818,15 @@ static void viewWillAppear(ViewController *self) {
 
   JoinServerViewController *this = (JoinServerViewController *) self;
 
-  if (this->servers == NULL) {
-    cgi.GetServers();
-  } else {
+  // show what we already know at once, then ask the master again; querying only
+  // when nothing was cached meant the first answer of a session was the only one,
+  // so a list that was empty when the menu first opened stayed empty until the
+  // Refresh button was pressed
+  if (this->servers) {
     $(this, reloadServers);
   }
+
+  cgi.GetServers();
 }
 
 #pragma mark - JoinServerViewController
@@ -903,22 +874,20 @@ static bool preferServer(const cl_server_info_t *a, const cl_server_info_t *b) {
  * another answered faster, or - for two equally good copies - when the other
  * came first. That last clause is what leaves exactly one of a tie standing.
  */
-static void dedupeServers(List *servers) {
+static void dedupeServers(PointerArray *servers) {
 
-  for (ListNode *node = servers->head; node; ) {
-    ListNode *next = node->next;
-
-    const cl_server_info_t *server = node->element;
+  for (size_t i = 0; i < servers->count; ) {
+    const cl_server_info_t *server = $(servers, get, i);
     bool superseded = false, precedes = true;
 
-    for (const ListNode *other = servers->head; other; other = other->next) {
+    for (size_t j = 0; j < servers->count; j++) {
 
-      if (other == node) {
+      if (j == i) {
         precedes = false;
         continue;
       }
 
-      const cl_server_info_t *candidate = other->element;
+      const cl_server_info_t *candidate = $(servers, get, j);
       if (!sameServer(server, candidate)) {
         continue;
       }
@@ -931,10 +900,10 @@ static void dedupeServers(List *servers) {
     }
 
     if (superseded) {
-      $(servers, removeNode, node);
+      $(servers, removeAt, i);
+    } else {
+      i++;
     }
-
-    node = next;
   }
 }
 
@@ -977,10 +946,6 @@ static Order comparator(const ident a, const ident b) {
       cmp = q_strcmp(s0->hostname, s1->hostname);
     } else if (q_strcmp(this->serversTableView->sortColumn->identifier, _map) == 0) {
       cmp = q_strcmp(s0->name, s1->name);
-    } else if (q_strcmp(this->serversTableView->sortColumn->identifier, _physics) == 0) {
-      char physics[64];
-      q_strlcpy(physics, physicsLabel(s0), sizeof(physics));
-      cmp = q_strcmp(physics, physicsLabel(s1));
     } else if (q_strcmp(this->serversTableView->sortColumn->identifier, _players) == 0) {
       cmp = s0->clients - s1->clients;
     } else if (q_strcmp(this->serversTableView->sortColumn->identifier, _ping) == 0) {
@@ -1003,29 +968,35 @@ static void reloadServers(JoinServerViewController *self) {
 
   release(self->servers);
 
-  self->servers = $(alloc(List), init);
+  self->servers = $(alloc(PointerArray), init);
 
-  const List *servers = cgi.Servers();
-  for (const ListNode *node = servers ? servers->head : NULL; node; node = node->next) {
-    cl_server_info_t *server = node->element;
-    $(self->servers, append, server);
-  }
+  const PointerArray *servers = cgi.Servers();
+  const size_t count = servers ? servers->count : 0;
 
-  dedupeServers(self->servers);
+  Cg_Debug("%d servers known to the client\n", (int32_t) count);
 
-  for (ListNode *node = self->servers->head; node; ) {
-    ListNode *next = node->next;
+  uint32_t hidden = 0;
 
-    cl_server_info_t *server = node->element;
+  for (size_t i = 0; i < count; i++) {
+    cl_server_info_t *server = $(servers, get, i);
 
     const int32_t clients = cg_join_server_hide_bots->value ? server->clients - server->bots : server->clients;
 
     if (clients == 0 && (cg_join_server_hide_empty->value || cg_join_server_hide_bots->value)) {
-      $(self->servers, removeNode, node);
+      Cg_Debug("Hiding %s: %d clients, %d bots, hide_empty %d, hide_bots %d\n",
+               server->hostname, server->clients, server->bots,
+               cg_join_server_hide_empty->integer, cg_join_server_hide_bots->integer);
+
+      hidden++;
+      continue;
     }
 
-    node = next;
+    $(self->servers, add, server);
   }
+
+  dedupeServers(self->servers);
+
+  Cg_Debug("Showing %d servers, %u hidden by filters\n", (int32_t) self->servers->count, hidden);
 
   sortingJoinServerViewController = self;
   $(self->servers, sort, comparator);

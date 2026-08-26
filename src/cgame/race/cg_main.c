@@ -25,6 +25,7 @@
 #include "cg_race_weapon_tuning.h"
 #include "cg_module_compat.h"
 #include "race_hook.h"
+#include "ui/home/HomeViewController.h"
 
 cg_state_t cg_state;
 
@@ -311,6 +312,7 @@ static void Cg_UpdateConfigString(int32_t i) {
       return;
     case CS_NUM_CLIENTS:
       cg_state.num_clients = (int32_t) strtol(s, NULL, 10);
+      HomeViewController_Refresh();
       return;
     case CS_NAV_EDIT:
       cg_state.nav_edit = (int32_t) strtol(s, NULL, 10);
@@ -332,6 +334,7 @@ static void Cg_UpdateConfigString(int32_t i) {
         break;
       }
     }
+    HomeViewController_Refresh();
   }
 }
 

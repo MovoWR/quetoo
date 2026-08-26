@@ -24,6 +24,8 @@
 #include "cg_team_mode.h"
 
 #include "CreateServerViewController.h"
+
+#include "cg_race_client_file.h"
 #include "MapListCollectionItemView.h"
 
 #include "race_physics.h"
@@ -208,38 +210,31 @@ static void createServer(Button *button) {
   PointerArray *selectedMaps = $(this->mapList, selectedMaps);
   if (selectedMaps->count) {
 
-    file_t *file = cgi.OpenFileWrite(MAP_LIST_UI);
-    if (file) {
+    String *string = str("");
+    assert(string);
 
-      String *string = str("");
-      assert(string);
+    for (size_t i = 0; i < selectedMaps->count; i++) {
+      const MapListItemInfo *info = (MapListItemInfo *) $(selectedMaps, get, i);
 
-      for (size_t i = 0; i < selectedMaps->count; i++) {
-        const MapListItemInfo *info = (MapListItemInfo *) $(selectedMaps, get, i);
+      char name[MAX_QPATH];
+      StripExtension(Basename(info->mapname), name);
 
-        char name[MAX_QPATH];
-        StripExtension(Basename(info->mapname), name);
+      $(string, appendFormat, "{\n\tname %s\n}\n", name);
+    }
 
-        $(string, appendFormat, "{\n\tname %s\n}\n", name);
-      }
-
-      const int64_t len = cgi.WriteFile(file, string->chars, string->length, 1);
-
-      if (len == -1) {
-        Cg_Warn("Failed to write %s\n", MAP_LIST_UI);
-      } else {
-        Cg_Debug("Wrote %s %"PRId64" bytes\n", MAP_LIST_UI, len);
-      }
-
-      release(string);
-
-      cgi.CloseFile(file);
-
-      cgi.SetCvarString("sv_map_list", MAP_LIST_UI);
+    const char *current = cgi.GetCvarString("sv_map_list");
+    const char *path = q_strcmp(current, MAP_LIST_UI ".0")
+      ? MAP_LIST_UI ".0" : MAP_LIST_UI ".1";
+    if (Cg_RaceClientFile_WriteVerified(path, string->chars, string->length)) {
+      Cg_Debug("Wrote and verified %s %zu bytes\n", path, string->length);
+      cgi.SetCvarString("sv_map_list", path);
       cgi.Cbuf("next_map");
     } else {
-      Cg_Warn("Failed to create %s\n", MAP_LIST_UI);
+      Cg_Warn("Failed to save %s; the previous private map list remains selected\n",
+              path);
     }
+
+    release(string);
   } else {
     // Unreachable while the button is disabled at an empty rotation, but the
     // answer belongs on the page either way: the console this used to print to

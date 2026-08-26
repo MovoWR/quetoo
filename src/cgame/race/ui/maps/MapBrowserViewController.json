@@ -16,9 +16,14 @@
                 "class": "StackView",
                 "classNames": [ "mapToolbarPrimary" ],
                 "subviews": [
-                  { "class": "TextView", "identifier": "filter", "defaultText": "Search maps" },
-                  { "class": "Button", "identifier": "maps_filter", "title": { "text": "Search" } },
-                  { "class": "Button", "identifier": "maps_refresh", "title": { "text": "Refresh" } }
+                  { "class": "TextView", "identifier": "filter", "defaultText": "Filter maps" },
+                  { "class": "Button", "identifier": "maps_refresh", "title": { "text": "Refresh" } },
+                  {
+                    "class": "Label",
+                    "identifier": "maps_route_hint",
+                    "classNames": [ "routeHint" ],
+                    "text": { "text": "Select a map to see records. Call a vote to change map." }
+                  }
                 ]
               }
             ]
@@ -140,6 +145,14 @@
                                 "class": "StackView",
                                 "classNames": [ "mapDetailRow" ],
                                 "subviews": [
+                                  { "class": "Label", "classNames": [ "mapDetailCaption" ], "text": { "text": "World record" } },
+                                  { "class": "Label", "identifier": "maps_detail_world", "classNames": [ "mapDetailValue" ], "text": { "text": "-" } }
+                                ]
+                              },
+                              {
+                                "class": "StackView",
+                                "classNames": [ "mapDetailRow" ],
+                                "subviews": [
                                   { "class": "Label", "classNames": [ "mapDetailCaption" ], "text": { "text": "Your best" } },
                                   { "class": "Label", "identifier": "maps_detail_pb", "classNames": [ "mapDetailValue" ], "text": { "text": "-" } }
                                 ]
@@ -202,7 +215,8 @@
                     "class": "StackView",
                     "classNames": [ "mapSelectionButtons" ],
                     "subviews": [
-                      { "class": "Button", "identifier": "maps_vote", "title": { "text": "Vote now" } },
+                      { "class": "Button", "identifier": "maps_vote", "title": { "text": "Call vote to change map" } },
+                      { "class": "Button", "identifier": "maps_watch_wr", "title": { "text": "Watch world record" } },
                       { "class": "Button", "identifier": "maps_nominate", "title": { "text": "Nominate for next map" } }
                     ]
                   }

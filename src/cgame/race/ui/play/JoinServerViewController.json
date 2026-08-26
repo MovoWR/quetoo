@@ -97,7 +97,7 @@
                         { "class": "Label", "classNames": [ "joinPaneTitle" ], "text": { "text": "Server details" } }
                       ]
                     },
-                    { "class": "Label", "identifier": "server_source", "classNames": [ "joinPaneStatus" ], "text": { "text": "" } }
+                    { "class": "Label", "identifier": "server_source", "classNames": [ "joinPaneStatus" ], "text": {} }
                   ]
                 },
                 { "class": "View", "classNames": [ "joinPaneRule" ] },
@@ -111,11 +111,11 @@
                       "classNames": [ "joinDetailTitleRow" ],
                       "subviews": [
                         { "class": "Label", "identifier": "server_hostname", "classNames": [ "joinDetailTitle" ], "text": { "text": "Select a server" } },
-                        { "class": "Label", "identifier": "server_address", "classNames": [ "joinDetailAddress" ], "text": { "text": "" } }
+                        { "class": "Label", "identifier": "server_address", "classNames": [ "joinDetailAddress" ], "text": {} }
                       ]
                     },
                     { "class": "Label", "identifier": "server_hint", "classNames": [ "joinDetailHint" ], "text": { "text": "Choose a server from the list to see its map, rules and roster." } },
-                    { "class": "Label", "identifier": "server_motd", "classNames": [ "joinDetailMotd" ], "text": { "text": "" } },
+                    { "class": "Label", "identifier": "server_motd", "classNames": [ "joinDetailMotd" ], "text": {} },
                     {
                       "class": "StackView",
                       "identifier": "server_grid",
@@ -135,14 +135,6 @@
                           "subviews": [
                             { "class": "Label", "classNames": [ "joinDetailCaption" ], "text": { "text": "Gameplay" } },
                             { "class": "Label", "identifier": "server_gameplay", "classNames": [ "joinDetailValue" ], "text": { "text": "-" } }
-                          ]
-                        },
-                        {
-                          "class": "StackView",
-                          "classNames": [ "joinDetailRow" ],
-                          "subviews": [
-                            { "class": "Label", "classNames": [ "joinDetailCaption" ], "text": { "text": "Physics" } },
-                            { "class": "Label", "identifier": "server_physics", "classNames": [ "joinDetailValue" ], "text": { "text": "-" } }
                           ]
                         },
                         {
@@ -170,7 +162,7 @@
                       "classNames": [ "joinRosterHeader" ],
                       "subviews": [
                         { "class": "Label", "classNames": [ "joinRosterTitle" ], "text": { "text": "On the server" } },
-                        { "class": "Label", "identifier": "roster_count", "classNames": [ "joinRosterCount" ], "text": { "text": "" } }
+                        { "class": "Label", "identifier": "roster_count", "classNames": [ "joinRosterCount" ], "text": {} }
                       ]
                     },
                     { "class": "TableView", "identifier": "roster" },

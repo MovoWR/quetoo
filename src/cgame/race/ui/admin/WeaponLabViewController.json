@@ -1,0 +1,177 @@
+{
+  "class": "StackView",
+  "identifier": "raceWeaponLab",
+  "classNames": [
+    "weaponLab"
+  ],
+  "subviews": [
+    {
+      "class": "View",
+      "identifier": "weaponLabStatus",
+      "classNames": [
+        "weaponLabStatus"
+      ],
+      "subviews": [
+        {
+          "class": "StackView",
+          "classNames": [
+            "weaponLabStatusLeft"
+          ],
+          "subviews": [
+            {
+              "class": "StackView",
+              "classNames": [
+                "weaponLabStatusLine"
+              ],
+              "subviews": [
+                {
+                  "class": "Label",
+                  "identifier": "weaponLabUnranked",
+                  "classNames": [
+                    "weaponLabUnranked"
+                  ],
+                  "text": {
+                    "text": "UNRANKED"
+                  }
+                },
+                {
+                  "class": "Label",
+                  "classNames": [
+                    "weaponLabStatusTitle"
+                  ],
+                  "text": {
+                    "text": "Weapon values"
+                  }
+                },
+                {
+                  "class": "Label",
+                  "identifier": "weaponLabState",
+                  "classNames": [
+                    "weaponLabChip"
+                  ],
+                  "text": {
+                    "text": "Default values"
+                  }
+                }
+              ]
+            },
+            {
+              "class": "Label",
+              "identifier": "weaponLabStatusDetail",
+              "classNames": [
+                "weaponLabStatusDetail"
+              ],
+              "text": {}
+            }
+          ]
+        },
+        {
+          "class": "StackView",
+          "classNames": [
+            "weaponLabStatusRight"
+          ],
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "weaponLabRole",
+              "classNames": [
+                "weaponLabChip"
+              ],
+              "text": {
+                "text": "Viewer"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "StackView",
+      "identifier": "weaponLabGroups",
+      "classNames": [
+        "columns",
+        "weaponLabGroups"
+      ]
+    },
+    {
+      "class": "View",
+      "identifier": "weaponLabFooter",
+      "classNames": [
+        "weaponLabFooter"
+      ],
+      "subviews": [
+        {
+          "class": "View",
+          "classNames": [
+            "weaponLabFooterRule"
+          ]
+        },
+        {
+          "class": "StackView",
+          "classNames": [
+            "weaponLabCounts"
+          ],
+          "subviews": [
+            {
+              "class": "Label",
+              "identifier": "weaponLabPending",
+              "classNames": [
+                "weaponLabCount"
+              ],
+              "text": {}
+            },
+            {
+              "class": "Label",
+              "identifier": "weaponLabValueCount",
+              "classNames": [
+                "weaponLabCount"
+              ],
+              "text": {}
+            }
+          ]
+        },
+        {
+          "class": "StackView",
+          "classNames": [
+            "weaponLabActions"
+          ],
+          "subviews": [
+            {
+              "class": "Button",
+              "identifier": "weaponLabReset",
+              "classNames": [
+                "weaponLabAction",
+                "dangerButton"
+              ],
+              "title": {
+                "text": "Reset All"
+              }
+            },
+            {
+              "class": "Button",
+              "identifier": "weaponLabApply",
+              "classNames": [
+                "weaponLabAction",
+                "weaponLabPrimary"
+              ],
+              "title": {
+                "text": "Apply"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "Label",
+      "identifier": "weaponLabNote",
+      "classNames": [
+        "weaponLabNote"
+      ],
+      "text": {
+        "lineWrap": true,
+        "text": "These values are volatile. Edit values and select Apply to change the server. Reset All restores the server defaults. Custom values are automatically unranked."
+      }
+    }
+  ]
+}

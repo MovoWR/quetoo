@@ -7,15 +7,16 @@
 
    Two sections leave the column flow and run full width, which is what the
    design's `sec.wide` means: the roster table wants a real Player / Slot / Mode
-   / Ping span, and the raw command form reads as a form rather than as a stack
-   of narrow rows. ColumnsView has no column-span, so those two live in a
-   sibling container below it rather than inside it.
+   / Ping span, and the advanced configuration actions read as a form rather
+   than as a stack of narrow rows. ColumnsView has no column-span, so those two
+   live in a sibling container below it rather than inside it.
 
    The one thing this route cannot reproduce from the design is a live value.
-   Race settings live on the server and reach a client only as console replies,
-   so a settings row opens at the shipped default and the footer's provenance
-   line says how many rows are still in that state. That line is deliberately
-   styled like the Settings route's restart warning rather than like its hint -
+   Registered cvars and map properties reach a client only as console replies,
+   so a settings row opens at its shared registry default and the footer's
+   provenance line says how many rows are still in that state. That line is
+   deliberately styled like the Settings route's restart warning rather than
+   like its hint -
    it is the thing on this page an admin has to hold in mind. */
 
 /* The footer is the Panel's accessoryView, which the Panel's vertical stack
@@ -151,7 +152,7 @@ Panel.adminMenu .adminEmptyState > Text {
 Panel.adminMenu .adminColumns {
   alignment: top-left;
   autoresizing-mask: contain | width;
-  min-column-width: 460;
+  min-column-width: 740;
   min-width: 0;
   spacing: 24;
 }
@@ -163,6 +164,19 @@ Panel.adminMenu .adminWideSections {
   distribution: default;
   min-width: 0;
   spacing: 24;
+}
+
+/* The Weapons tab's slot. Empty in the JSON and filled with one hosted panel,
+   so it states only what every full-width container on this route states: the
+   document's width, and its own height from what it holds. */
+Panel.adminMenu .adminWeaponLabHost {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 0;
 }
 
 /* Sections ---------------------------------------------------------------- */
@@ -203,8 +217,7 @@ Panel.adminMenu .sectionEyebrow > Text {
   font-size: 12;
 }
 
-/* The section annotation: "applies on next map" for the settings the server
-   refuses at runtime scope, and the roster count for Players. */
+/* The optional section annotation, and the live roster count for Players. */
 Panel.adminMenu .sectionMetric {
   autoresizing-mask: contain;
   background-color: transparent;
@@ -248,8 +261,7 @@ Panel.adminMenu .adminRow {
   min-height: 44;
 }
 
-Panel.adminMenu .rowLeft,
-Panel.adminMenu .rowRight {
+Panel.adminMenu .rowLeft {
   autoresizing-mask: contain;
   axis: horizontal;
   background-color: transparent;
@@ -258,8 +270,50 @@ Panel.adminMenu .rowRight {
   spacing: 6;
 }
 
-/* The changed marker. Hidden until the row differs from the value the shipped
-   catalog defaults to, so a page nobody has touched carries no marks at all. */
+/* The control cell states its track rather than containing it.
+   MainView::collapsePageWidths walks the page in strict mode and forces any
+   view wider than the width its parent was measured at down to that width,
+   recursing with the width it just wrote. A `contain` cell has no width until
+   its children have been laid out, so on the pass that runs first its children
+   are collapsed to zero and their min-widths released - and `contain` then
+   sizes the cell to those zero-width children and holds it there. A Button
+   survives it by falling back to its own title width; a Slider, whose bar is
+   masked `width` and has no intrinsic size, was left as a 25-point stub. */
+Panel.adminMenu .rowRight {
+  autoresizing-mask: none;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  height: 34;
+  max-height: 34;
+  max-width: 200;
+  min-height: 34;
+  min-width: 200;
+  spacing: 6;
+  width: 200;
+}
+
+/* A slider is dragged, not clicked. The cell is right-pinned, so the extra
+   width runs leftward and every control on the page still ends on one edge.
+   420 leaves about 374 points of groove once Slider::layoutSubviews has taken
+   its readout out of the bar. */
+Panel.adminMenu .rowRight.sliderCell {
+  max-width: 420;
+  min-width: 420;
+  width: 420;
+}
+
+/* The control, not just the cell. The route's shared track pins every Select,
+   Checkbox and field at 200, and a Slider left at that inside a 420 cell is a
+   wider cell around the same stub. */
+Panel.adminMenu .sliderCell Slider {
+  max-width: 420;
+  min-width: 420;
+  width: 420;
+}
+
+/* The changed marker. Hidden until the row differs from its shared registry
+   default, so a page nobody has touched carries no marks at all. */
 Panel.adminMenu .rowDot {
   background-color: #73c7f2;
   height: 5;
@@ -447,55 +501,6 @@ Panel.adminMenu .rowField:disabled > Text {
   color: #5f7488;
 }
 
-/* The mask, not just the height: ObjectivelyMVC's stylesheet fills the bar to
-   the Slider's full height, so `height` alone is overwritten every layout
-   pass. */
-Panel.adminMenu Slider > .bar {
-  alignment: middle-left;
-  autoresizing-mask: width;
-  background-color: #152532;
-  height: 4;
-  max-height: 4;
-  min-height: 4;
-}
-
-Panel.adminMenu Slider > .bar > .handle {
-  background-color: #73c7f2;
-  border-width: 0;
-  height: 20;
-  max-height: 20;
-  max-width: 11;
-  min-height: 20;
-  min-width: 11;
-  width: 11;
-}
-
-Panel.adminMenu Slider:hover > .bar > .handle,
-Panel.adminMenu Slider:focused > .bar > .handle {
-  background-color: #d3efff;
-}
-
-Panel.adminMenu Slider:focused > .bar {
-  background-color: #365163;
-}
-
-Panel.adminMenu Slider Text {
-  color: #dde8f1;
-  font-size: 13;
-}
-
-Panel.adminMenu Slider:disabled > .bar {
-  background-color: #101c27;
-}
-
-Panel.adminMenu Slider:disabled > .bar > .handle {
-  background-color: #365163;
-}
-
-Panel.adminMenu Slider:disabled Text {
-  color: #6d8291;
-}
-
 Panel.adminMenu Checkbox {
   alignment: middle-right;
 }
@@ -666,9 +671,283 @@ Panel.adminMenu .adminHint > Text {
   color: #5c8fb5;
 }
 
-/* Gold is the shell's warning tint. On Settings it carries the restart
-   requirement; here it carries the one thing this route cannot know - how many
-   of these controls are showing a default rather than the server's value. */
+/* Gold is the shell's warning tint. Here it carries the one thing this route
+   cannot know - how many controls still show a registry default rather than an
+   authoritative server value. */
 Panel.adminMenu .adminProvenance > Text {
   color: #e7c368;
+}
+
+/* `.adm-gone`: the signed-out dismissal.
+
+   When STAT_RACE_ADMIN_CAPABILITIES publishes 0x00 there is nothing on this
+   route an unauthenticated client may do, so the design replaces the whole
+   panel rather than showing twenty-six dead controls. It is centred, and it is
+   deliberately not a login form - `radmin` is a console command, and a password
+   field here would be the only one in Race. */
+Panel.adminMenu .adminSignedOut {
+  alignment: top-center;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  background-color: transparent;
+  border-width: 0;
+  padding: 64 0 0 0;
+  spacing: 14;
+}
+
+Panel.adminMenu .adminSignedOutTitle {
+  autoresizing-mask: width;
+  height: 40;
+  max-height: 40;
+  min-height: 40;
+}
+
+Panel.adminMenu .adminSignedOutTitle > Text {
+  alignment: middle-center;
+  color: #f4f8fb;
+  font-size: 30;
+  font-style: regular;
+}
+
+/* The two explanatory paragraphs, held to a readable measure rather than the
+   full width of the content plane. */
+Panel.adminMenu .adminSignedOutCopy {
+  height: 58;
+  max-height: 58;
+  min-height: 58;
+  autoresizing-mask: none;
+  max-width: 620;
+  min-width: 0;
+  width: 620;
+}
+
+Panel.adminMenu .adminSignedOutCopy > Text {
+  alignment: top-center;
+  color: #93aec1;
+  font-size: 13;
+}
+
+/* `.adm-caps` / `.adm-cap`: the eight capability chips in the Session section.
+
+   The design lights a chip the session holds and dashes the one bit no Race
+   action consumes. The dialect has no border-style, so the reserved bit keeps
+   the unlit border and drops its label to the dimmest text instead - it reads
+   as "named but inert", which is the distinction the dashed border was making.
+   `color-mix(in oklab, var(--sel) 40%, transparent)` is written as #22557f66. */
+Panel.adminMenu .adminCapabilities {
+  autoresizing-mask: contain | width;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 6 0 6 0;
+  spacing: 12;
+}
+
+Panel.adminMenu .adminCapabilityLabel {
+  height: 22;
+  min-width: 0;
+}
+
+Panel.adminMenu .adminCapabilityLabel > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+Panel.adminMenu .adminCapabilityChips {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 0;
+  spacing: 6;
+}
+
+Panel.adminMenu .adminCapabilityChip {
+  background-color: transparent;
+  border-color: #2a3f4f;
+  border-width: 1;
+  height: 22;
+  min-height: 22;
+  min-width: 0;
+  padding: 2 7 2 7;
+}
+
+Panel.adminMenu .adminCapabilityChip > Text {
+  alignment: middle-center;
+  color: #74899b;
+  font-size: 11;
+}
+
+Panel.adminMenu .adminCapabilityHeld {
+  background-color: #22557f66;
+  border-color: #5c8fb5;
+}
+
+Panel.adminMenu .adminCapabilityHeld > Text {
+  color: #dde8f1;
+}
+
+Panel.adminMenu .adminCapabilityReserved > Text {
+  color: #5f7488;
+}
+
+Panel.adminMenu .adminCapabilityValue {
+  height: 22;
+  min-width: 0;
+}
+
+Panel.adminMenu .adminCapabilityValue > Text {
+  alignment: middle-right;
+  color: #5f7488;
+  font-size: 11;
+}
+
+/* `.adm-resp`: the response log.
+
+   The design's block is a small framed panel carrying the command that was sent
+   over the audit line it produced. Only the command is knowable client-side, so
+   the second line says where the audit line is written instead - see
+   AdminViewController::postCommand. `color-mix(in oklab, var(--ink-line) 50%,
+   transparent)` is written as #2f4a5e80. */
+Panel.adminMenu .adminResponse {
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  background-color: #0a141d;
+  border-color: #2f4a5e80;
+  border-width: 1;
+  padding: 9 11 9 11;
+  spacing: 4;
+}
+
+Panel.adminMenu .adminResponseCommand {
+  autoresizing-mask: width;
+  height: 16;
+  max-height: 16;
+  min-height: 16;
+}
+
+Panel.adminMenu .adminResponseCommand > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 11;
+}
+
+Panel.adminMenu .adminResponseReply {
+  height: 50;
+  max-height: 50;
+  min-height: 50;
+  autoresizing-mask: width;
+  min-width: 0;
+}
+
+Panel.adminMenu .adminResponseReply > Text {
+  alignment: top-left;
+  color: #c6d5e1;
+  font-size: 12;
+}
+
+/* `.adm-tabs` / `.r-page`: the Admin subtab strip.
+
+   The same strip grammar the Play route uses, and for the same reason: the
+   design's `inset 0 -2px 0 var(--focus)` underline has no equivalent in the
+   dialect, so the selected tab is filled rather than underlined - which is the
+   convention MainView.css already set for `TabView > .tabSelectionView`, and
+   two different treatments for one idea would be worse than one approximate
+   treatment used consistently. */
+Panel.adminMenu .adminTabs {
+  autoresizing-mask: contain | width;
+  axis: horizontal;
+  background-color: transparent;
+  border-width: 0;
+  distribution: default;
+  padding: 0;
+  spacing: 2;
+}
+
+Panel.adminMenu .adminTab {
+  background-color: transparent;
+  bevel: none;
+  border-color: transparent;
+  border-width: 0;
+  height: 36;
+  max-height: 36;
+  min-height: 36;
+  min-width: 0;
+  padding: 9 14 9 14;
+}
+
+Panel.adminMenu .adminTab > Text {
+  alignment: middle-center;
+  color: #93aec1;
+  font-size: 14;
+}
+
+Panel.adminMenu .adminTab:hover > Text {
+  color: #dde8f1;
+}
+
+Panel.adminMenu .adminTab:focused {
+  background-color: #1b405c;
+  border-color: #73c7f2;
+  border-width: 2;
+}
+
+Panel.adminMenu .adminTab:selected {
+  background-color: #22557f;
+}
+
+Panel.adminMenu .adminTab:selected > Text {
+  color: #f4f8fb;
+}
+
+/* The hairline the strip sits on. */
+Panel.adminMenu .adminTabsRule {
+  autoresizing-mask: width;
+  background-color: #2f4a5e73;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+/* The Add map section's standing note and its answer line.
+
+   The design's `.adm-adv-note` explains why the section is ungated; the answer
+   uses the design's "present" tone. There is no fetch row: a server-side
+   download from a client-supplied URL would need a new capability bit and a
+   download API in `g_import_t`, and adding one is an engine ABI change the
+   additive-only rule does not allow. */
+Panel.adminMenu .adminSectionNote {
+  height: 62;
+  max-height: 62;
+  min-height: 62;
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 0;
+  padding: 4 0 0 0;
+}
+
+Panel.adminMenu .adminSectionNote > Text {
+  alignment: top-left;
+  color: #5f7488;
+  font-size: 11;
+}
+
+Panel.adminMenu .adminMapResult {
+  height: 46;
+  max-height: 46;
+  min-height: 46;
+  autoresizing-mask: width;
+  background-color: #0a1a14;
+  border-color: #2d5a42;
+  border-width: 1;
+  min-width: 0;
+  padding: 6 9 6 9;
+}
+
+Panel.adminMenu .adminMapResult > Text {
+  alignment: top-left;
+  color: #a8d6b4;
+  font-size: 12;
 }

@@ -12,6 +12,8 @@
 #include <ObjectivelyMVC/TextView.h>
 #include <ObjectivelyMVC/ViewController.h>
 
+#include "race_physics.h"
+
 typedef struct VotingViewController VotingViewController;
 typedef struct VotingViewControllerInterface VotingViewControllerInterface;
 
@@ -32,7 +34,8 @@ struct VotingViewController {
   Label *actionCaption;
 
   Label *currentPhysics;
-  Button *physicsButtons[3];
+  Select *physicsTarget;
+  Button *physicsButton;
   TextView *mapTarget;
   Button *mapButton;
   Select *kickTarget;
@@ -50,6 +53,7 @@ struct VotingViewController {
   Label *nominationHint;
 
   uint64_t rosterSignature;
+  race_physics_preset_id_t displayedPhysics;
   int32_t selectedKickSlot;
   char selectedKickName[32];
   char feedback[128];

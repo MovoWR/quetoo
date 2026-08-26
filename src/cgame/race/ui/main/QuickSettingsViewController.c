@@ -8,69 +8,44 @@
 #include "cg_local.h"
 
 #include "QuickSettingsViewController.h"
-#include "CvarCheckbox.h"
 
 #define _Class _QuickSettingsViewController
 
 /**
- * @brief The HUD helper cvars, in the order the drawer lists them.
+ * @brief One drawer item: its outlets, and the bind its hint is resolved from.
+ * @details The design prints a literal key beside three of the six list items
+ * (Esc, R, F1, F3). Those are the designer's defaults, not Race's - every one
+ * of these commands ships unbound - so the hint is resolved from the player's
+ * own binding instead and an unbound command contributes no hint. Resume is
+ * the one true literal: Escape resumes the game whether or not anything is
+ * bound to it.
  */
-static const char *helperVars[] = {
-  "cg_race_strafe_helper_draw",
-  "cg_race_strafe_helper_ups",
-  "cg_input_viewer"
+static const struct {
+  const char *item;
+  const char *hint;
+  const char *bind;
+} itemOutlets[QuickSettingsItemCount] = {
+  [QuickSettingsItemResume] = { "quickResume", "quickResumeHint", NULL },
+  [QuickSettingsItemRestartRun] = { "quickRestart", "quickRestartHint", "kill" },
+  [QuickSettingsItemWatchBest] = { "quickWatchBest", "quickWatchBestHint", "replay pb" },
+  [QuickSettingsItemSpectate] = { "quickSpectate", "quickSpectateHint", "mode spectator" },
+  [QuickSettingsItemCallVote] = { "quickCallVote", "quickCallVoteHint", "race vote" },
+  [QuickSettingsItemFullMenu] = { "quickFullMenu", "quickFullMenuHint", NULL },
+  [QuickSettingsItemDisconnect] = { "quickDisconnect", "quickDisconnectHint", NULL },
+  [QuickSettingsItemQuit] = { "quickQuit", "quickQuitHint", NULL },
 };
 
 /**
- * @brief Repaints the "N of 3 on" count in the HUD helpers eyebrow.
- * @details Read from the cvars rather than from the Checkbox states, for the
- * same reason the Settings route paints its preset strips from them: a helper
- * can also be toggled from the console or from the full Settings route while
- * the drawer is open.
+ * @brief ButtonDelegate for every item in the drawer.
  */
-static void refreshHelperStatus(QuickSettingsViewController *self) {
-
-  if (self->helperStatus == NULL) {
-    return;
-  }
-
-  size_t on = 0;
-  for (size_t i = 0; i < lengthof(helperVars); i++) {
-    if (cgi.GetCvarInteger(helperVars[i])) {
-      on++;
-    }
-  }
-
-  $(self->helperStatus->text, setText,
-    va("%zu of %zu on", on, lengthof(helperVars)));
-}
-
-/**
- * @brief CheckboxDelegate for every helper row.
- */
-static void didToggleHelper(Checkbox *checkbox) {
-
-  cvarCheckboxDidToggle(checkbox);
-
-  refreshHelperStatus(checkbox->delegate.self);
-}
-
-static void didClickButton(Button *button) {
+static void didClickItem(Button *button) {
 
   QuickSettingsViewController *this = button->delegate.self;
 
-  if (button == this->closeButton) {
-    if (this->delegate.didClose) {
-      this->delegate.didClose(this->delegate.self);
-    }
-  } else if (button == this->controlsButton) {
-    if (this->delegate.didShowControls) {
-      this->delegate.didShowControls(this->delegate.self);
-    }
-  } else if (button == this->settingsButton) {
-    if (this->delegate.didShowSettings) {
-      this->delegate.didShowSettings(this->delegate.self);
-    }
+  const QuickSettingsItem item = (QuickSettingsItem) (intptr_t) button->delegate.data;
+
+  if (this->delegate.didSelectItem) {
+    this->delegate.didSelectItem(this->delegate.self, item);
   }
 }
 
@@ -86,42 +61,37 @@ static void loadView(ViewController *self) {
   assert(view->stylesheet);
 
   Outlet outlets[] = MakeOutlets(
-    MakeOutlet("quickSensitivity", &this->sensitivity),
-    MakeOutlet("quickFov", &this->fov),
-    MakeOutlet("quickClose", &this->closeButton),
-    MakeOutlet("quickControls", &this->controlsButton),
-    MakeOutlet("quickSettings", &this->settingsButton),
-    MakeOutlet("quickStrafeHelper", &this->helpers[0]),
-    MakeOutlet("quickUps", &this->helpers[1]),
-    MakeOutlet("quickInputViewer", &this->helpers[2]),
-    MakeOutlet("quickHelperStatus", &this->helperStatus)
+    MakeOutlet("quickSubtitle", &this->subtitle),
+    MakeOutlet("quickResume", &this->items[QuickSettingsItemResume]),
+    MakeOutlet("quickResumeHint", &this->itemHints[QuickSettingsItemResume]),
+    MakeOutlet("quickRestart", &this->items[QuickSettingsItemRestartRun]),
+    MakeOutlet("quickRestartHint", &this->itemHints[QuickSettingsItemRestartRun]),
+    MakeOutlet("quickWatchBest", &this->items[QuickSettingsItemWatchBest]),
+    MakeOutlet("quickWatchBestHint", &this->itemHints[QuickSettingsItemWatchBest]),
+    MakeOutlet("quickSpectate", &this->items[QuickSettingsItemSpectate]),
+    MakeOutlet("quickSpectateHint", &this->itemHints[QuickSettingsItemSpectate]),
+    MakeOutlet("quickCallVote", &this->items[QuickSettingsItemCallVote]),
+    MakeOutlet("quickCallVoteHint", &this->itemHints[QuickSettingsItemCallVote]),
+    MakeOutlet("quickFullMenu", &this->items[QuickSettingsItemFullMenu]),
+    MakeOutlet("quickFullMenuHint", &this->itemHints[QuickSettingsItemFullMenu]),
+    MakeOutlet("quickDisconnect", &this->items[QuickSettingsItemDisconnect]),
+    MakeOutlet("quickDisconnectHint", &this->itemHints[QuickSettingsItemDisconnect]),
+    MakeOutlet("quickQuit", &this->items[QuickSettingsItemQuit]),
+    MakeOutlet("quickQuitHint", &this->itemHints[QuickSettingsItemQuit])
   );
   $(view, resolve, outlets);
 
-  assert(this->sensitivity);
-  assert(this->fov);
-  assert(this->helperStatus);
+  assert(this->subtitle);
 
-  // Slider draws its own readout from a single labelFormat, and the stock
-  // "%0.1f" cannot say 1.500 on a 0.125 step - the same per-descriptor fix the
-  // Settings route makes. CvarSlider::updateBindings reasserts "%g" on every
-  // refresh for steps of 1 or more, so the field of view keeps that instead;
-  // over 90 - 160 the two print identically.
-  $((Slider *) this->sensitivity, setLabelFormat, "%0.3f");
-  $((Slider *) this->fov, setLabelFormat, "%0.0f");
+  for (size_t i = 0; i < QuickSettingsItemCount; i++) {
 
-  for (size_t i = 0; i < lengthof(this->helpers); i++) {
-    this->helpers[i]->delegate = (CheckboxDelegate) {
+    assert(this->items[i]);
+    assert(this->itemHints[i]);
+
+    this->items[i]->delegate = (ButtonDelegate) {
       .self = self,
-      .didToggle = didToggleHelper
-    };
-  }
-
-  Button *buttons[] = { this->closeButton, this->controlsButton, this->settingsButton };
-  for (size_t i = 0; i < lengthof(buttons); i++) {
-    buttons[i]->delegate = (ButtonDelegate) {
-      .self = self,
-      .didClick = didClickButton
+      .data = (ident) (intptr_t) i,
+      .didClick = didClickItem
     };
   }
 
@@ -129,14 +99,41 @@ static void loadView(ViewController *self) {
   release(view);
 }
 
+/**
+ * @fn void QuickSettingsViewController::refresh(QuickSettingsViewController *self)
+ * @memberof QuickSettingsViewController
+ */
 static void refresh(QuickSettingsViewController *self) {
+
+  for (size_t i = 0; i < QuickSettingsItemCount; i++) {
+
+    if (itemOutlets[i].bind == NULL) {
+      continue;
+    }
+
+    const SDL_Scancode key = cgi.KeyForBind(SDL_SCANCODE_UNKNOWN, itemOutlets[i].bind);
+    const char *name = key == SDL_SCANCODE_UNKNOWN ? NULL : cgi.KeyName(key);
+
+    $(self->itemHints[i]->text, setText, name ? name : "");
+  }
+
   $(self->viewController.view, updateBindings);
-  refreshHelperStatus(self);
+}
+
+/**
+ * @fn void QuickSettingsViewController::setRouteName(QuickSettingsViewController *self, const char *route)
+ * @memberof QuickSettingsViewController
+ */
+static void setRouteName(QuickSettingsViewController *self, const char *route) {
+
+  $(self->subtitle->text, setText,
+    va("%s · Esc resumes", route && *route ? route : "Menu"));
 }
 
 static void initialize(Class *clazz) {
   ((ViewControllerInterface *) clazz->interface)->loadView = loadView;
   ((QuickSettingsViewControllerInterface *) clazz->interface)->refresh = refresh;
+  ((QuickSettingsViewControllerInterface *) clazz->interface)->setRouteName = setRouteName;
 }
 
 Class *_QuickSettingsViewController(void) {

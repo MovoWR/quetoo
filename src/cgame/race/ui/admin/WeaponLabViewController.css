@@ -1,0 +1,559 @@
+/* Admin > Weapons: the temporary weapon-tuning lab.
+
+   Its own chrome inside the Admin route - a status strip, generated parameter
+   cards, and a commit footer. Values are GAME's; every row edit is a local
+   draft until Apply.
+
+   Four properties of the design have no equivalent in this dialect and are
+   dropped rather than approximated, the same way MainView.css drops them:
+
+   - The 3px corner radius. Every route here draws flat rectangles with 1px
+     hairlines, and the strip, the cards and the chips follow.
+   - Shadows, of which the design has none anyway: hierarchy comes from
+     background value steps and hairlines.
+   - Half-point type. `font-size` is an integer inlet, so the design's 11.5 and
+     10.5 land on 12 and 11 - which keeps the two a step apart, which is the
+     part of the ramp that carries meaning.
+   The design's tokens resolve to the literals the shell already states: canvas
+   and panel fills from the ink scale, `--ink-line` #24333f, `--sel` and
+   `--accent` #3e6b9d, `--focus` #73c7f2, brand red #a5444e over #1a0e11 with
+   #e39aa4 text, `--gold` #e7c368 for a pending draft, and the text ramp #f4f8fb
+   through #5f7488. Nothing below restates a Button, TextView or Slider colour:
+   those are MainView.css's, for every route. */
+
+/* The panel flow: status, generated cards, actions and a standing note. */
+Panel.adminMenu .weaponLab {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 16;
+}
+
+/* 1. Status strip --------------------------------------------------------- */
+
+/* Full width, and drawn in brand red whenever custom values are active. */
+Panel.adminMenu .weaponLabStatus {
+  autoresizing-mask: width;
+  background-color: #1a0e11d9;
+  border-color: #a5444e;
+  border-width: 1;
+  clips-subviews: true;
+  height: 64;
+  max-height: 64;
+  min-height: 64;
+  padding: 11 13 11 13;
+}
+
+Panel.adminMenu .weaponLabStatus.inactive {
+  background-color: #071621b8;
+  border-color: #24333f99;
+}
+
+Panel.adminMenu .weaponLabStatusLeft {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: vertical;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 4;
+}
+
+Panel.adminMenu .weaponLabStatusLine {
+  alignment: middle-left;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 10;
+}
+
+/* The unranked chip. Its own red, not the strip's, because it states the one
+   consequence that outlives the panel: nothing set here is rankable. */
+Panel.adminMenu .weaponLabUnranked {
+  background-color: transparent;
+  border-color: #a5444e;
+  border-width: 1;
+  padding: 2 7 2 7;
+}
+
+Panel.adminMenu .weaponLabUnranked > Text {
+  alignment: middle-left;
+  color: #e39aa4;
+  font-size: 11;
+}
+
+Panel.adminMenu .weaponLabStatusTitle {
+  background-color: transparent;
+  border-width: 0;
+}
+
+Panel.adminMenu .weaponLabStatusTitle > Text {
+  alignment: middle-left;
+  color: #dde8f1;
+  font-size: 13;
+}
+
+/* The state and role chips share one treatment: a hairline, no fill, and the
+   muted step - they report, they do not act. */
+Panel.adminMenu .weaponLabChip {
+  background-color: transparent;
+  border-color: #24333fb3;
+  border-width: 1;
+  padding: 2 7 2 7;
+}
+
+Panel.adminMenu .weaponLabChip > Text {
+  alignment: middle-left;
+  color: #93aec1;
+  font-size: 11;
+}
+
+Panel.adminMenu .weaponLabStatusDetail {
+  background-color: transparent;
+  border-width: 0;
+}
+
+Panel.adminMenu .weaponLabStatusDetail > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+Panel.adminMenu .weaponLabStatusRight {
+  alignment: middle-right;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 14;
+}
+
+/* Compact, like every action on this panel. */
+#main Panel.adminMenu .weaponLabAction {
+  min-height: 34;
+  min-width: 0;
+  padding: 7 12 7 12;
+}
+
+#main Panel.adminMenu .weaponLabAction > Text {
+  font-size: 13;
+}
+
+/* 2. Group grid ----------------------------------------------------------- */
+
+/* Two equal columns, one when the flow cannot hold two. ColumnsView divides by
+   `(width + spacing) / (min-column-width + spacing)`, and the minimum is what a
+   parameter row actually needs - 220 of label, 314 of controls and the card's
+   own padding - rather than the design's 900-point media query, which assumes a
+   slider that can flex down to 96. The cap keeps a single column from being
+   handed the whole viewport, which would leave a row's label and its controls
+   at opposite ends of half a metre of canvas. The 1260 total is two capped
+   columns and their gutter: past that the surplus stays margin.
+
+   `equal-row-heights` is deliberately off even though these are drawn cards:
+   exactly one card is expanded and the rest are single-line headers, and
+   squaring the row would inflate four headers to the height of the fifth. */
+Panel.adminMenu .weaponLabGroups {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  max-column-width: 620;
+  max-width: 1260;
+  min-column-width: 560;
+  min-width: 0;
+  spacing: 20;
+}
+
+Panel.adminMenu .weaponLabCard {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  background-color: #07131de0;
+  border-color: #24333f80;
+  border-width: 1;
+  distribution: default;
+  min-width: 0;
+  padding: 9 12 4 12;
+  spacing: 0;
+}
+
+/* A collapsed card is the button itself: the whole header is the hit area, so
+   the card drops its own frame and padding and lets the button draw them. */
+Panel.adminMenu .weaponLabCard.collapsed {
+  background-color: transparent;
+  border-width: 0;
+  padding: 0;
+}
+
+#main Panel.adminMenu .weaponLabCardToggle {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-color: #24333f80;
+  border-width: 1;
+  bevel: none;
+  min-height: 36;
+  min-width: 0;
+  padding: 9 12 9 12;
+}
+
+#main Panel.adminMenu .weaponLabCardToggle > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 12;
+}
+
+#main Panel.adminMenu .weaponLabCardToggle:hover {
+  background-color: #3e6b9d38;
+  border-color: #24333f80;
+}
+
+#main Panel.adminMenu .weaponLabCardToggle:focused {
+  background-color: transparent;
+  border-color: #73c7f2;
+  border-width: 1;
+}
+
+Panel.adminMenu .weaponLabCardToggleCount {
+  alignment: middle-right;
+  background-color: transparent;
+  border-width: 0;
+}
+
+Panel.adminMenu .weaponLabCardToggleCount > Text {
+  alignment: middle-right;
+  color: #74899b;
+  font-size: 12;
+}
+
+Panel.adminMenu .weaponLabCardBody {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 0;
+}
+
+/* Name and count hold stable positions as the query moves through the catalog. */
+Panel.adminMenu .weaponLabCardHead {
+  autoresizing-mask: width;
+  background-color: transparent;
+  height: 34;
+  max-height: 34;
+  min-height: 34;
+}
+
+Panel.adminMenu .weaponLabCardName {
+  alignment: middle-left;
+  background-color: transparent;
+  border-width: 0;
+}
+
+Panel.adminMenu .weaponLabCardName > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 12;
+}
+
+Panel.adminMenu .weaponLabCardCount {
+  alignment: middle-center;
+  background-color: transparent;
+  border-width: 0;
+}
+
+Panel.adminMenu .weaponLabCardCount > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+Panel.adminMenu .weaponLabCardHeadRule {
+  autoresizing-mask: width;
+  background-color: #24333f66;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+/* Parameter row ----------------------------------------------------------- */
+
+/* The design's `"lab ctl" / "meta meta"`: label and controls on one band, the
+   provenance line under both, the separator under that. */
+Panel.adminMenu .weaponLabRow {
+  alignment: top-left;
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  padding: 7 0 0 0;
+  spacing: 2;
+}
+
+Panel.adminMenu .weaponLabRowBand {
+  autoresizing-mask: width;
+  background-color: transparent;
+  clips-subviews: true;
+  height: 34;
+  max-height: 34;
+  min-height: 34;
+}
+
+/* Both halves of the band state a width rather than containing one.
+   MainView::collapsePageWidths walks the page and, in strict mode, forces any
+   view wider than the width its parent was measured at down to that width -
+   and a `contain` parent has no width until its children have been laid out,
+   so a cluster of fixed-width controls under one can be collapsed to zero on a
+   pass that runs first, and `contain` then keeps it there. Stating the width
+   is what breaks that cycle; the two add up to less than the narrowest column
+   the flow will hand a card. */
+Panel.adminMenu .weaponLabRowLeft {
+  alignment: middle-left;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  max-width: 220;
+  min-width: 220;
+  spacing: 8;
+  width: 220;
+}
+
+/* The accent dot: the accepted value differs from the server baseline. */
+Panel.adminMenu .weaponLabRowDot {
+  background-color: #73c7f2;
+  height: 5;
+  max-height: 5;
+  max-width: 5;
+  min-height: 5;
+  min-width: 5;
+  width: 5;
+}
+
+Panel.adminMenu .weaponLabRowLabel {
+  autoresizing-mask: contain;
+  background-color: transparent;
+  border-width: 0;
+  clips-subviews: true;
+  max-width: 168;
+  min-width: 0;
+  padding: 0;
+}
+
+Panel.adminMenu .weaponLabRowLabel > Text {
+  alignment: middle-left;
+  color: #c6d5e1;
+  font-size: 13;
+}
+
+/* A row that is changed or pending lifts its label to the top of the ramp. */
+Panel.adminMenu .weaponLabRow.moved .weaponLabRowLabel > Text,
+Panel.adminMenu .weaponLabRow.pending .weaponLabRowLabel > Text {
+  color: #f4f8fb;
+}
+
+/* 150 slider + 8 + 100 field + 8 + 48 unit. */
+Panel.adminMenu .weaponLabRowControl {
+  alignment: middle-right;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  max-width: 314;
+  min-width: 314;
+  spacing: 8;
+  width: 314;
+}
+
+/* The shell's slider, at the design's cell width. The route says how wide its
+   control cell is; it does not restate a colour. `min-width` is the design's
+   96 floor, which is what lets a squeezed column shrink the track instead of
+   pushing the numeric field out of the card. */
+Panel.adminMenu .weaponLabRowControl .weaponLabSlider {
+  max-width: 150;
+  min-height: 34;
+  min-width: 150;
+  width: 150;
+}
+
+#main Panel.adminMenu .weaponLabRowField {
+  max-width: 100;
+  min-height: 34;
+  min-width: 100;
+  padding: 6 8 6 8;
+  width: 100;
+}
+
+#main Panel.adminMenu .weaponLabRowField > Text {
+  alignment: middle-right;
+  color: #dde8f1;
+  font-size: 13;
+}
+
+/* The cell has to hold the widest unit the catalog states, not the widest one
+   a card happens to show. `weight` measures 31 and `fraction` is longer still,
+   so the 30 this was authored at clipped both against the band - and `scalar`,
+   the same character count as `weight` but 27 wide in glyphs, did not, which is
+   what made the loss read as arbitrary. The 18 comes off the track, so the
+   row's total stays 314 and nothing here changes what a column must hold. */
+Panel.adminMenu .weaponLabRowUnit {
+  alignment: middle-left;
+  background-color: transparent;
+  border-width: 0;
+  min-width: 48;
+}
+
+Panel.adminMenu .weaponLabRowUnit > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 11;
+}
+
+/* An unavailable transaction has no value to show, so the control cell is one
+   em dash rather than a disabled slider posing as a reading. */
+Panel.adminMenu .weaponLabRowUnavailable {
+  alignment: middle-right;
+  background-color: transparent;
+  border-width: 0;
+}
+
+Panel.adminMenu .weaponLabRowUnavailable > Text {
+  alignment: middle-right;
+  color: #5f7488;
+  font-size: 12;
+}
+
+/* Twenty for a fifteen-point line: the surplus is the design's 6pt below the
+   meta, which a StackView's one uniform spacing cannot state on its own. */
+Panel.adminMenu .weaponLabRowMeta {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-width: 0;
+  height: 20;
+  max-height: 20;
+  min-height: 20;
+  min-width: 0;
+}
+
+Panel.adminMenu .weaponLabRowMeta > Text {
+  alignment: top-left;
+  color: #5f7488;
+  font-size: 11;
+}
+
+/* Gold, and only here: the meta line's pending fragment is the one statement
+   on the page about what this client holds and the server has not seen. */
+Panel.adminMenu .weaponLabRow.pending .weaponLabRowMeta > Text {
+  color: #e7c368;
+}
+
+Panel.adminMenu .weaponLabRowRule {
+  autoresizing-mask: width;
+  background-color: #24333f4d;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+/* 6. Commit footer -------------------------------------------------------- */
+
+Panel.adminMenu .weaponLabFooter {
+  autoresizing-mask: width;
+  background-color: transparent;
+  height: 46;
+  max-height: 46;
+  min-height: 46;
+}
+
+Panel.adminMenu .weaponLabFooterRule {
+  alignment: top-left;
+  autoresizing-mask: width;
+  background-color: #24333f73;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
+}
+
+Panel.adminMenu .weaponLabCounts {
+  alignment: bottom-left;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 14;
+}
+
+Panel.adminMenu .weaponLabCount {
+  background-color: transparent;
+  border-width: 0;
+}
+
+Panel.adminMenu .weaponLabCount > Text {
+  alignment: middle-left;
+  color: #74899b;
+  font-size: 12;
+}
+
+Panel.adminMenu .weaponLabCount.pending > Text {
+  color: #e7c368;
+}
+
+Panel.adminMenu .weaponLabActions {
+  alignment: bottom-right;
+  autoresizing-mask: contain;
+  axis: horizontal;
+  background-color: transparent;
+  distribution: default;
+  min-width: 0;
+  spacing: 6;
+}
+
+/* Apply is the only filled action on the panel: it is the one control that
+   sends a mutation, and every other button beside it either stages or reads. */
+#main Panel.adminMenu .weaponLabAction.weaponLabPrimary {
+  background-color: #22557f;
+  border-color: #63bce9;
+}
+
+#main Panel.adminMenu .weaponLabAction.weaponLabPrimary > Text {
+  color: #f4f8fb;
+}
+
+#main Panel.adminMenu .weaponLabAction.weaponLabPrimary:disabled {
+  background-color: #0b1721;
+  border-color: #24333f;
+}
+
+#main Panel.adminMenu .weaponLabAction.weaponLabPrimary:disabled > Text {
+  color: #5f7488;
+}
+
+/* The standing note, at the design's 78-character measure. The dialect has no
+   `ch`, so the measure is stated in points at this size, and the Label declares
+   room for one line more than the copy needs - Text::render wraps to its own
+   frame and nothing back-propagates the wrapped height. */
+Panel.adminMenu .weaponLabNote {
+  autoresizing-mask: width;
+  background-color: transparent;
+  border-width: 0;
+  height: 90;
+  max-height: 90;
+  max-width: 680;
+  min-height: 90;
+  min-width: 0;
+}
+
+Panel.adminMenu .weaponLabNote > Text {
+  alignment: top-left;
+  autoresizing-mask: width;
+  color: #5f7488;
+  font-size: 12;
+  height: 90;
+  max-height: 90;
+  min-height: 90;
+}

@@ -1,287 +1,194 @@
-/* The host (MainView.css `#quickSettingsHost`) paints #060d15f5 under this
-   #071522f8, and the two together are effectively opaque. That is deliberate:
-   the backdrop here is menu text, not the 3D scene, so the panel alpha used
-   for HUD surfaces does not apply. Both borders read `--line-400`, the same
-   hairline as every other pane. */
+/* Tier-1 ESC drawer.
+
+   Ported from `menu-shell.css` (`.qs-*`) in the Race menu design handoff. This
+   is the quick *action* drawer, not a settings panel: Esc from a live session
+   opens a full-height panel flush to the right edge of the viewport, listing
+   the six things a runner does between attempts plus the two destructive ones.
+   Anything that writes a cvar lives in the tier-2 Settings route instead.
+
+   The design's own frame properties that the dialect cannot express are dropped
+   rather than approximated: no radius (the panel is flush to the viewport edge,
+   so the design squares it off anyway) and no transitions. Alpha is written as
+   an 8-digit hex suffix where the design used `color-mix`:
+
+     color-mix(in oklab, var(--sel)   34%, transparent)  ->  #22557f57
+     color-mix(in oklab, #a5444e      30%, transparent)  ->  #a5444e4d
+     color-mix(in oklab, var(--ink-line) 45%, transparent) -> #2f4a5e73
+
+   MainView owns the panel's frame - full viewport height, `min(380, width)`
+   wide, pinned right - and paints the scrim behind it; see
+   `MainView::layoutSubviews` and `#quickSettingsHost` in MainView.css. */
+
+/* `.qs-panel`: `#071522f8` over the scrim, with the single left hairline. The
+   dialect's border-width is uniform, so MainView pushes the other three edges
+   past the viewport and only this one lands on screen. */
 #quickSettingsDrawer {
   axis: vertical;
   background-color: #071522f8;
   border-color: #2a3f4f;
   border-width: 1;
-  padding: 14;
+  padding: 0;
   spacing: 0;
 }
 
-#quickHeader,
-#quickHintRow,
-#quickFooter {
-  autoresizing-mask: width;
-  axis: horizontal;
-  spacing: 8;
-}
-
-#quickHeader {
-  distribution: default;
-  height: 44;
-}
-
-#quickHintRow {
-  distribution: default;
-  height: 22;
-}
-
-/* The rule above the footer, and the 12px the design puts between them. */
-#quickFooterRule {
-  autoresizing-mask: width;
-}
-
-#quickFooter {
-  distribution: fill-equally;
-  height: 54;
-  padding: 12 0 0 0;
+/* `.qs-head`: 22px side padding, the design's clamped top space taken at its
+   midpoint, 16px below. */
+#quickHead {
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  padding: 24 22 16 22;
+  spacing: 4;
 }
 
 #quickTitle {
-  alignment: middle-left;
-  max-width: 352;
-  min-width: 352;
-  width: 352;
+  autoresizing-mask: width;
+  height: 26;
+  min-height: 26;
 }
 
 #quickTitle > Text {
+  alignment: middle-left;
   color: #f4f8fb;
-  font-size: 18;
-  font-style: bold;
+  font-size: 20;
+  font-style: regular;
 }
 
-#quickClose {
-  max-width: 72;
-  min-width: 72;
-  width: 72;
+#quickSubtitle {
+  autoresizing-mask: width;
+  height: 16;
+  min-height: 16;
 }
 
-#quickHint {
+/* `<Route> · Esc resumes` - QuickSettingsViewController::setRouteName writes the
+   route half on every open, so the line cannot drift from the selected tab. */
+#quickSubtitle > Text {
   alignment: middle-left;
-  height: 22;
-  max-width: 320;
-  min-width: 320;
-  width: 320;
+  color: #74899b;
+  font-size: 12;
+  font-style: regular;
 }
 
-#quickHint > Text {
-  color: #93aec1;
-  font-size: 11;
+/* The two hairlines the design draws under the head and over the foot. */
+#quickSettingsDrawer .drawerRule {
+  autoresizing-mask: width;
+  background-color: #2f4a5e73;
+  height: 1;
+  max-height: 1;
+  min-height: 1;
 }
 
-/* The C already closes the drawer on Esc; until now nothing said so. */
-#quickEscHint {
-  alignment: middle-left;
-  height: 22;
-  max-width: 104;
-  min-width: 104;
-  width: 104;
-}
-
-#quickEscHint > Text {
-  alignment: middle-right;
-  color: #5c8fb5;
-  font-size: 11;
-}
-
-#quickSettingsContent {
-  autoresizing-mask: contain | width;
-  padding: 8 0 10 0;
-  spacing: 8;
-}
-
-/* Sentence-case eyebrow over a hairline rule, the same section language every
-   route uses - `#main .sectionEyebrow` and `#main .sectionRule` in MainView.css
-   carry the type and the rule fill, so only geometry belongs here. The 6px
-   spacing is the gap the design puts between the eyebrow and its rule; the
-   8px below it is `#quickSettingsContent`'s own spacing. */
-#quickSettingsContent .quickSection {
+/* `.qs-list` is the only scrolling part of the drawer; the six items fit every
+   viewport this ships on, so the list is laid out plainly and MainView clamps
+   the panel rather than a scroll view being introduced for content that never
+   overflows. */
+#quickList {
   autoresizing-mask: contain | width;
   axis: vertical;
-  spacing: 6;
+  padding: 10 12 10 12;
+  spacing: 0;
 }
 
-#quickSettingsContent .quickSectionSpaced {
-  padding: 6 0 0 0;
-}
-
-#quickSettingsContent .quickSectionHeader {
+/* `.qs-group`: the 11px label over each half of the list. The design pads it
+   14/6 with the first group tightened to 4 at the top. */
+#quickSettingsDrawer .quickGroup {
   autoresizing-mask: width;
-  axis: horizontal;
-  distribution: default;
-  height: 20;
-  spacing: 8;
+  height: 31;
+  min-height: 31;
+  padding: 14 10 6 10;
 }
 
-#quickSettingsContent .quickSectionHeader .sectionEyebrow {
+#quickSettingsDrawer .quickGroupFirst {
+  height: 21;
+  min-height: 21;
+  padding: 4 10 6 10;
+}
+
+#quickSettingsDrawer .quickGroup > Text {
   alignment: middle-left;
-  height: 20;
-  max-width: 264;
-  min-width: 264;
-  width: 264;
+  color: #5f7488;
+  font-size: 11;
+  font-style: regular;
 }
 
-/* The drawer's audience knows the cvar names, and this is the one route that
-   can afford to print them; the helper section prints its on/off count here
-   instead, so the group reads without parsing three checkboxes. */
-#quickSettingsContent .quickSectionStatus {
+/* `.qs-item`: label left, hint right, one flat wash on hover and focus. The
+   framework's Button chrome is removed outright - the design's item is a row of
+   text, not a control with a frame - and the hint is a second subview rather
+   than part of the title, because a Label owns exactly one Text and the two
+   halves take different colors. */
+#quickSettingsDrawer .quickItem {
+  autoresizing-mask: width;
+  background-color: transparent;
+  bevel: none;
+  border-color: transparent;
+  border-width: 0;
+  height: 38;
+  max-height: 38;
+  min-height: 38;
+  min-width: 0;
+  padding: 12 10 12 10;
+}
+
+#quickSettingsDrawer .quickItem > Text {
   alignment: middle-left;
-  height: 20;
-  max-width: 160;
-  min-width: 160;
-  width: 160;
+  color: #dde8f1;
+  font-size: 14;
+  font-style: regular;
 }
 
-#quickSettingsContent .quickSectionStatus > Text {
+#quickSettingsDrawer .quickItemHint {
+  alignment: middle-right;
+  autoresizing-mask: none;
+  height: 38;
+  max-height: 38;
+  min-height: 38;
+  min-width: 0;
+}
+
+#quickSettingsDrawer .quickItemHint > Text {
   alignment: middle-right;
   color: #74899b;
-  font-size: 11;
-}
-
-#quickSettingsContent .sectionRule {
-  autoresizing-mask: width;
-}
-
-#quickSettingsContent Input {
-  autoresizing-mask: width;
-  min-height: 44;
-}
-
-#quickSettingsContent Input > Label {
-  max-width: 236;
-  min-width: 236;
-  width: 236;
-}
-
-#quickSettingsContent Input > Label > Text {
-  color: #c2d1dc;
   font-size: 12;
+  font-style: regular;
 }
 
-#quickSettingsContent Input > Control {
-  min-height: 44;
-  max-width: 180;
-  min-width: 180;
-  width: 180;
+/* Hover and focus share one wash in the design - there is no separate focus
+   ring on a drawer item, because the drawer is a list and the wash is already
+   unambiguous against six unwashed neighbours. */
+#quickSettingsDrawer .quickItem:hover,
+#quickSettingsDrawer .quickItem:focused,
+#quickSettingsDrawer .quickItem:highlighted {
+  background-color: #22557f57;
+  border-color: transparent;
+  border-width: 0;
 }
 
-#quickSettingsContent Slider {
-  min-height: 44;
-  max-width: 180;
-  min-width: 180;
-  width: 180;
+#quickSettingsDrawer .quickItem:hover > Text,
+#quickSettingsDrawer .quickItem:focused > Text,
+#quickSettingsDrawer .quickItem:highlighted > Text {
+  color: #f4f8fb;
 }
 
-/* Slider::layoutSubviews takes the readout's width out of the bar, so the
-   180px control is bar plus number rather than bar alone. */
-#quickSettingsContent Slider Text {
-  color: #dde8f1;
-  font-size: 12;
+/* `.qs-foot` and `.qs-item.danger`: the two destructive items, in brand red on
+   a red wash rather than the blue one. */
+#quickFoot {
+  autoresizing-mask: contain | width;
+  axis: vertical;
+  padding: 10 12 18 12;
+  spacing: 0;
 }
 
-#quickSettingsContent Slider > .bar {
-  background-color: #203b4b;
-  height: 4;
+#quickSettingsDrawer .quickDanger > Text {
+  color: #dc7488;
 }
 
-#quickSettingsContent Slider > .bar > .handle {
-  background-color: #5a9bc2;
-  border-color: #9bcce8;
-  border-width: 1;
-  min-height: 22;
-  min-width: 12;
+#quickSettingsDrawer .quickDanger:hover,
+#quickSettingsDrawer .quickDanger:focused,
+#quickSettingsDrawer .quickDanger:highlighted {
+  background-color: #a5444e4d;
 }
 
-#quickSettingsContent Slider:hover > .bar > .handle,
-#quickSettingsContent Slider:focused > .bar > .handle {
-  background-color: #80c2e8;
-  border-color: #d3efff;
-}
-
-#quickSettingsContent Slider:focused > .bar {
-  background-color: #396c88;
-}
-
-#quickSettingsContent Checkbox {
-  alignment: middle-right;
-  min-height: 44;
-  max-width: 180;
-  min-width: 180;
-  width: 180;
-}
-
-#quickSettingsContent Checkbox > Control {
-  alignment: middle-right;
-  background-color: #0b1c28;
-  border-color: #385f79;
-  border-width: 1;
-  bevel: none;
-  min-height: 28;
-  min-width: 28;
-  padding: 7 7 7 7;
-}
-
-#quickSettingsContent Checkbox:hover > Control {
-  background-color: #102b3d;
-  border-color: #5f91b2;
-}
-
-#quickSettingsContent Checkbox:focused > Control {
-  background-color: #123148;
-  border-color: #8bc9ed;
-  border-width: 2;
-}
-
-#quickSettingsDrawer Button {
-  background-color: #0c2232;
-  border-color: #365f7b;
-  border-width: 1;
-  bevel: none;
-  min-height: 42;
-  padding: 7 10 7 10;
-}
-
-#quickSettingsDrawer Button > Text {
-  color: #e7f0f6;
-  font-size: 11;
-  font-style: bold;
-}
-
-#quickSettingsDrawer Button:hover {
-  background-color: #153349;
-  border-color: #6095b8;
-}
-
-#quickSettingsDrawer Button:focused {
-  background-color: #16384f;
-  border-color: #8bc9ed;
-  border-width: 2;
-}
-
-#quickSettingsDrawer Button:highlighted {
-  background-color: #214a68;
-  border-color: #a9daf5;
-  bevel: inset;
-}
-
-#quickSettingsDrawer Button:disabled {
-  background-color: #09141c;
-  border-color: #263b49;
-}
-
-#quickSettingsDrawer Button:disabled > Text {
-  color: #657b8a;
-}
-
-/* `distribution: fill-equally` sizes each button to half the row and then
-   calls layoutIfNeeded on it - which, under the framework's
-   `Button { autoresizing-mask: contain }`, shrinks it straight back to its
-   title width. Dropping the mask is what makes the halves stick. */
-#quickFooter Button {
-  autoresizing-mask: none;
-  min-width: 0;
+#quickSettingsDrawer .quickDanger:hover > Text,
+#quickSettingsDrawer .quickDanger:focused > Text,
+#quickSettingsDrawer .quickDanger:highlighted > Text {
+  color: #f4c6cb;
 }

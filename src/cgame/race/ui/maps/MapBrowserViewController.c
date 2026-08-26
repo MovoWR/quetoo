@@ -345,6 +345,7 @@ static void setMapDetailInfo(MapBrowserViewController *self,
     formatPersonalTimeMs(best_ms, pb_ms));
   $(self->mapRunsLabel->text, setText,
     ranked_runs > 0 ? va("%d ranked", ranked_runs) : _unset);
+  $(self->mapWorldRecordLabel->text, setText, formatTimeMs(best_ms));
 }
 
 static void setMapDetailTimes(MapBrowserViewController *self,
@@ -443,6 +444,29 @@ static void setSelectedMap(MapBrowserViewController *self,
   setButtonEnabled(self->timesButton, selected);
   setButtonEnabled(self->voteButton, selected);
   setButtonEnabled(self->nominateButton, selected);
+
+  // `replay wr` plays a recording back against the running BSP, so the
+  // record for any map other than the loaded one has nothing to play
+  // against - the button is offered, but only where it can work.
+  const char *loaded = cgi.ConfigString(CS_BSP);
+  setButtonEnabled(self->watchRecordButton,
+                   selected && loaded && *loaded &&
+                   !q_strcmp(loaded, self->selectedMap));
+}
+
+static void requestPage(MapBrowserViewController *self, int32_t page,
+                        const char *prefix, const char *scope);
+
+/**
+ * @brief TextViewDelegate for the filter slot.
+ * @details The design filters live - one input, no Search button - so every
+ * edit re-requests the first page for the new prefix.
+ */
+static void didEditFilter(TextView *textView) {
+
+  MapBrowserViewController *self = textView->delegate.self;
+
+  requestPage(self, 1, filterText(self), self->scope);
 }
 
 static void requestPage(MapBrowserViewController *self, int32_t page,
@@ -475,8 +499,6 @@ static void didClickCommand(Button *button) {
     requestPage(self, page->page - 1, self->prefix, self->scope);
   } else if (!q_strcmp(identifier, "maps_next")) {
     requestPage(self, page->page + 1, self->prefix, self->scope);
-  } else if (!q_strcmp(identifier, "maps_filter")) {
-    requestPage(self, 1, filterText(self), self->scope);
   } else if (!q_strcmp(identifier, "maps_refresh")) {
     requestPage(self, self->page, self->prefix, self->scope);
   } else if (!q_strcmp(identifier, "maps_info_tab")) {
@@ -489,6 +511,9 @@ static void didClickCommand(Button *button) {
     requestMapTimes(self->selectedMap);
   } else if (!q_strcmp(identifier, "maps_vote") && *self->selectedMap) {
     cgi.Cbuf(va("race vote map %s\n", self->selectedMap));
+  } else if (!q_strcmp(identifier, "maps_watch_wr") && *self->selectedMap) {
+    cgi.Cbuf("replay wr\n");
+    cgi.SetKeyDest(KEY_GAME);
   } else if (!q_strcmp(identifier, "maps_nominate") && *self->selectedMap) {
     cgi.Cbuf(va("nominate %s\n", self->selectedMap));
   }
@@ -596,7 +621,7 @@ static void addColumnWithTitle(TableView *tableView, const char *identifier,
 static void loadView(ViewController *view_controller) {
   super(ViewController, view_controller, loadView);
   MapBrowserViewController *self = (MapBrowserViewController *) view_controller;
-  Button *filter, *refresh;
+  Button *refresh;
   Outlet outlets[] = MakeOutlets(
     MakeOutlet("maps", &self->mapsTableView),
     MakeOutlet("maps_times_table", &self->timesTableView),
@@ -610,7 +635,6 @@ static void loadView(ViewController *view_controller) {
     MakeOutlet("maps_next", &self->nextButton),
     MakeOutlet("maps_scope_all", &self->allScopeTab),
     MakeOutlet("maps_scope_pb", &self->personalScopeTab),
-    MakeOutlet("maps_filter", &filter),
     MakeOutlet("maps_refresh", &refresh),
     MakeOutlet("maps_details_pages", &self->detailsPages),
     MakeOutlet("maps_info_page", &self->infoPage),
@@ -626,12 +650,14 @@ static void loadView(ViewController *view_controller) {
     MakeOutlet("maps_detail_author", &self->mapAuthorLabel),
     MakeOutlet("maps_detail_pb", &self->mapPersonalBestLabel),
     MakeOutlet("maps_detail_runs", &self->mapRunsLabel),
+    MakeOutlet("maps_detail_world", &self->mapWorldRecordLabel),
     MakeOutlet("maps_record_world", &self->worldRecordChipLabel),
     MakeOutlet("maps_record_local", &self->personalRecordChipLabel),
     MakeOutlet("maps_detail_times", &self->mapTimesLabel),
     MakeOutlet("maps_detail_stats", &self->mapStatsLabel),
     MakeOutlet("maps_times", &self->timesButton),
     MakeOutlet("maps_vote", &self->voteButton),
+    MakeOutlet("maps_watch_wr", &self->watchRecordButton),
     MakeOutlet("maps_nominate", &self->nominateButton));
 
   View *view = $$(View, viewWithResourceName,
@@ -673,9 +699,10 @@ static void loadView(ViewController *view_controller) {
   self->timesTableView->control.selection = ControlSelectionNone;
 
   Button *buttons[] = {
-    self->previousButton, self->nextButton, filter, refresh,
+    self->previousButton, self->nextButton, refresh,
     self->infoTab, self->timesTab,
-    self->timesButton, self->voteButton, self->nominateButton,
+    self->timesButton, self->voteButton, self->watchRecordButton,
+    self->nominateButton,
     self->allScopeTab, self->personalScopeTab
   };
   for (size_t i = 0; i < lengthof(buttons); i++) {
@@ -683,6 +710,10 @@ static void loadView(ViewController *view_controller) {
       .self = self, .didClick = didClickCommand
     };
   }
+
+  self->filterTextView->delegate = (TextViewDelegate) {
+    .self = self, .didEdit = didEditFilter
+  };
 
   sizeTableToRows(self->mapsTableView, 0, RACE_MAP_LIST_MAX_HEIGHT);
   sizeTableToRows(self->timesTableView, 0, RACE_MAP_TIMES_MAX_HEIGHT);

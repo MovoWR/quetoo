@@ -55,6 +55,7 @@ cguidir = \
 
 cgui_DATA = \
 	$(srcdir)/ui/DialogViewController.css \
+	$(srcdir)/ui/conback.png \
 	$(srcdir)/ui/hud_input_attack.png \
 	$(srcdir)/ui/hud_input_crouch.png \
 	$(srcdir)/ui/hud_input_down.png \
@@ -62,12 +63,25 @@ cgui_DATA = \
 	$(srcdir)/ui/hud_input_left.png \
 	$(srcdir)/ui/hud_input_right.png \
 	$(srcdir)/ui/hud_input_up.png
+cguibackgroundsdir = \
+	@PKGLIBDIR@/race/ui/backgrounds
+
+cguibackgrounds_DATA = \
+	$(srcdir)/ui/backgrounds/0.png \
+	$(srcdir)/ui/backgrounds/1.png \
+	$(srcdir)/ui/backgrounds/2.png \
+	$(srcdir)/ui/backgrounds/3.png \
+	$(srcdir)/ui/backgrounds/4.png \
+	$(srcdir)/ui/backgrounds/5.png
+
 cguiadmindir = \
 	@PKGLIBDIR@/race/ui/admin
 
 cguiadmin_DATA = \
 	$(srcdir)/ui/admin/AdminViewController.css \
-	$(srcdir)/ui/admin/AdminViewController.json
+	$(srcdir)/ui/admin/AdminViewController.json \
+	$(srcdir)/ui/admin/WeaponLabViewController.css \
+	$(srcdir)/ui/admin/WeaponLabViewController.json
 
 cguifontsdir = \
 	@PKGLIBDIR@/race/ui/fonts
@@ -81,9 +95,7 @@ cguicontrolsdir = \
 cguicontrols_DATA = \
 	$(srcdir)/ui/controls/ControlsViewController.json \
 	$(srcdir)/ui/controls/MovementCombatViewController.css \
-	$(srcdir)/ui/controls/MovementCombatViewController.json \
-	$(srcdir)/ui/controls/ResponseServiceViewController.css \
-	$(srcdir)/ui/controls/ResponseServiceViewController.json
+	$(srcdir)/ui/controls/MovementCombatViewController.json
 
 cguicreditsdir = \
 	@PKGLIBDIR@/race/ui/credits
@@ -104,6 +116,10 @@ cguimaindir = \
 
 cguimain_DATA = \
 	$(srcdir)/ui/main/LoadingViewController.css \
+	$(srcdir)/ui/main/LoadingViewController.json \
+	$(srcdir)/ui/main/loading_lockup.png \
+	$(srcdir)/ui/main/menu_lockup.png \
+	$(srcdir)/ui/main/menu_mark.png \
 	$(srcdir)/ui/main/MainView.css \
 	$(srcdir)/ui/main/MainView.json \
 	$(srcdir)/ui/main/QuickSettingsViewController.css \
@@ -190,6 +206,8 @@ cgame_la_SOURCES = \
 	cg_race_finish_report.c \
 	cg_race_hud.c \
 	cg_race_client_file.c \
+	cg_race_dashboard_layout.c \
+	cg_race_dashboard_layout.h \
 	cg_race_message.c \
 	cg_race_markers.c \
 	cg_race_practice_markers.c \
@@ -230,11 +248,11 @@ cgame_la_SOURCES = \
 	ui/CvarTextView.c \
 	ui/DialogViewController.c \
 	ui/admin/AdminViewController.c \
+	ui/admin/WeaponLabViewController.c \
 	ui/controls/ControlsViewController.c \
 	ui/controls/CrosshairView.c \
 	ui/controls/MovementCombatViewController.c \
 	ui/controls/RaceBindTextView.c \
-	ui/controls/ResponseServiceViewController.c \
 	ui/credits/CreditsViewController.c \
 	ui/editor/EditorViewController.c \
 	ui/editor/EntityView.c \
@@ -248,8 +266,14 @@ cgame_la_SOURCES = \
 	ui/main/ActiveVoteViewController.c \
 	ui/main/ColumnsView.c \
 	ui/main/RaceSlider.c \
+	ui/main/SpeedGridView.c \
+	ui/main/SpeedGridView.h \
+	ui/main/LoadingGridView.c \
+	ui/main/LoadingGridView.h \
 	ui/main/MainView.c \
 	ui/main/MainViewController.c \
+	ui/main/QuickSettingsHostView.c \
+	ui/main/QuickSettingsHostView.h \
 	ui/main/QuickSettingsViewController.c \
 	ui/main/UpdateViewController.c \
 	ui/maps/MapBrowserViewController.c \

@@ -20,6 +20,7 @@
 #include "cg_race_replay.h"
 #include "cg_race_training.h"
 #include "cg_race_vote.h"
+#include "cg_race_weapon_tuning.h"
 #include "cg_strafe_helper.h"
 #include "race_physics.h"
 #include "race_wire.h"
@@ -454,7 +455,7 @@ static void Cg_RaceHud_DrawTopStack(const player_state_t *ps) {
   const int32_t center = cgi.context->w / 2;
   const int32_t gap = Cg_RaceHud_Scale(RACE_HUD_STACK_GAP);
   const color_t accent = Cg_RaceHud_ModeAccent(ps);
-  int32_t y = Cg_RaceHud_Edge();
+  int32_t y = Maxi(Cg_RaceHud_Edge(), cg_race_hud.top_stack_bottom);
 
   const char *tag = Cg_RaceHud_ModeLabel(
     (race_mode_t) ps->stats[STAT_RACE_MODE]);
@@ -730,6 +731,12 @@ static void Cg_RaceHud_DrawHyperblasterClimbHelper(const player_state_t *ps) {
     return;
   }
 
+  float tuned_range = 0.f;
+  bool overridden = false;
+  if (!Cg_RaceWeaponTuning_ClimbPresentation(&tuned_range, &overridden)) {
+    return;
+  }
+
   const vec3_t start = cgi.view->origin;
   const vec3_t end = Vec3_Fmaf(start, MAX_WORLD_DIST, cgi.view->forward);
   const cm_trace_t trace = cgi.Trace(
@@ -739,7 +746,9 @@ static void Cg_RaceHud_DrawHyperblasterClimbHelper(const player_state_t *ps) {
   }
 
   const float distance = Vec3_Distance(ps->pm_state.origin, trace.end);
-  const cg_race_climb_state_t state = Cg_Race_ClimbState(distance);
+  const cg_race_climb_state_t state = overridden
+    ? Cg_Race_ClimbStateForRange(distance, tuned_range)
+    : Cg_Race_ClimbState(distance);
   const char *text = Cg_Race_ClimbLabel(state);
   color_t color;
   if (state == CG_RACE_CLIMB_READY) {
@@ -816,12 +825,37 @@ static void Cg_RaceHud_DrawAnalyticalSplit(void) {
                           comparisons, Cg_RaceHud_Dim(.72f));
 }
 
+static int32_t Cg_RaceHud_DrawWeaponTuningWarning(void) {
+  const char *warning = Cg_RaceWeaponTuning_Warning();
+  if (!warning) {
+    return 0;
+  }
+  int32_t height;
+  const int32_t y = Cg_RaceHud_Scale(18.f);
+  Cg_RaceHud_BindFont(RACE_FONT_LABEL, &height);
+  Cg_RaceHud_DrawCentered(cgi.context->w / 2, y, warning,
+                          Cg_RaceHud_Warn());
+  cgi.BindFont(NULL, NULL, NULL);
+  return y + height + Cg_RaceHud_Scale(RACE_HUD_STACK_GAP);
+}
+
 static void Cg_RaceHud_DrawElements(const player_state_t *ps,
                                     cg_hud_layout_t *layout) {
-  (void) layout;
+
+  // Cg_DrawHud draws the map clock itself, at `layout.stat_y`, the moment this
+  // hook returns - flush to the right edge, in the stat column's white, with no
+  // caption and no inset, which reads as a clipped number in the corner. Race
+  // owns that reading: it is the bottom-right "Map time" slot that
+  // Cg_RaceHud_DrawClock places with the rest of the cluster, and two clocks
+  // showing one number is worse than either alone. `stat_y` is the contract's
+  // one lever over where that row lands - the header's "a module may arrange
+  // them as it likes" - so the row is sent past the bottom of the context
+  // rather than left to overprint the corner.
+  layout->stat_y = cgi.context->h;
+
   Cg_RaceTraining_UpdateFrame(ps);
   Cg_RaceTraining_DrawStrafeHelper(ps);
-  cg_race_hud.top_stack_bottom = 0;
+  cg_race_hud.top_stack_bottom = Cg_RaceHud_DrawWeaponTuningWarning();
 
   if (!Cg_Race_RunHudVisible(
         cg_draw_hud->integer, !ps->stats[STAT_TIME], editor->value,

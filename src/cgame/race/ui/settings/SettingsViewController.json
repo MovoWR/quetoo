@@ -31,6 +31,29 @@
               "settingsFilter"
             ],
             "defaultText": "Filter settings"
+          },
+          {
+            "class": "StackView",
+            "identifier": "settingsPresetSlot",
+            "classNames": [
+              "settingsPresetSlot"
+            ],
+            "subviews": [
+              {
+                "class": "Label",
+                "classNames": [
+                  "settingsPresetLabel"
+                ],
+                "text": { "text": "Quality" }
+              },
+              {
+                "class": "StackView",
+                "identifier": "settingsPresetHost",
+                "classNames": [
+                  "settingsPresetHost"
+                ]
+              }
+            ]
           }
         ]
       },
@@ -112,53 +135,7 @@
             "classNames": [
               "settingsHint"
             ],
-            "text": {
-              "text": ""
-            }
-          },
-          {
-            "class": "StackView",
-            "classNames": [
-              "settingsFooterCommit"
-            ],
-            "subviews": [
-              {
-                "class": "Label",
-                "identifier": "settingsDirtyStatus",
-                "classNames": [
-                  "settingsStatus",
-                  "settingsDirtyStatus"
-                ],
-                "text": {
-                  "text": ""
-                }
-              },
-              {
-                "class": "StackView",
-                "classNames": [
-                  "settingsFooterActions"
-                ],
-                "subviews": [
-                  {
-                    "class": "Button",
-                    "identifier": "revertChanges",
-                    "title": {
-                      "text": "Revert changes"
-                    }
-                  },
-                  {
-                    "class": "Button",
-                    "identifier": "applyChanges",
-                    "classNames": [
-                      "primaryButton"
-                    ],
-                    "title": {
-                      "text": "Apply"
-                    }
-                  }
-                ]
-              }
-            ]
+            "text": {}
           }
         ]
       }

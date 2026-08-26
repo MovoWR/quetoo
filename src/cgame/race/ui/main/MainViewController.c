@@ -71,20 +71,55 @@ static void didClickQuickSettings(Button *button) {
   $(this, setQuickSettingsVisible, this->mainView->quickSettingsHost->hidden);
 }
 
-static void didCloseQuickSettings(ident self) {
-  $((MainViewController *) self, setQuickSettingsVisible, false);
+/**
+ * @brief Sets or clears a Control state flag, notifying only on a change.
+ */
+static void setControlFlag(Control *control, unsigned int flag, bool set) {
+
+  if (control == NULL) {
+    return;
+  }
+
+  const unsigned int state = control->state;
+  if (set) {
+    control->state |= flag;
+  } else {
+    control->state &= ~flag;
+  }
+
+  if (state != control->state) {
+    $(control, stateDidChange);
+  }
 }
 
-static void didShowAllControls(ident self) {
-  MainViewController *this = self;
-  $(this, setQuickSettingsVisible, false);
-  $(this, navigateToViewController, _ControlsViewController());
+/**
+ * @brief Shows or hides the footer's commit pair and repaints its count.
+ */
+static void refreshCommitChrome(MainViewController *this,
+                                const char *status, bool warn);
+
+/**
+ * @brief ButtonDelegate for the footer's Apply.
+ */
+static void didClickApplyChanges(Button *button) {
+
+  MainViewController *this = button->delegate.self;
+
+  if (this->commitDelegate.didApply) {
+    this->commitDelegate.didApply(this->commitDelegate.self);
+  }
 }
 
-static void didShowAllSettings(ident self) {
-  MainViewController *this = self;
-  $(this, setQuickSettingsVisible, false);
-  $(this, navigateToViewController, _SettingsViewController());
+/**
+ * @brief ButtonDelegate for the footer's Revert.
+ */
+static void didClickRevertChanges(Button *button) {
+
+  MainViewController *this = button->delegate.self;
+
+  if (this->commitDelegate.didRevert) {
+    this->commitDelegate.didRevert(this->commitDelegate.self);
+  }
 }
 
 /**
@@ -102,11 +137,11 @@ static void quit(ident data) {
 }
 
 /**
- * @brief ButtonDelegate for Quit confirmation.
+ * @brief Raises the Quit confirmation.
+ * @details Reached from the footer button and from the tier-1 drawer's foot,
+ * so it takes the controller rather than the Button that happened to send it.
  */
-static void didClickQuit(Button *button) {
-
-  MainViewController *this = button->delegate.self;
+static void confirmQuit(MainViewController *this) {
 
   const Dialog dialog = {
     .message = "Are you sure you want to quit to the desktop?",
@@ -133,11 +168,10 @@ static void disconnect(ident data) {
 }
 
 /**
- * @brief ButtonDelegate for Disconnect.
+ * @brief Raises the Disconnect confirmation.
+ * @details Reached from the footer button and from the tier-1 drawer's foot.
  */
-static void didClickDisconnect(Button *button) {
-
-  MainViewController *this = button->delegate.self;
+static void confirmDisconnect(MainViewController *this) {
 
   const Dialog dialog = {
     .message = "Disconnect from the current server?",
@@ -154,6 +188,70 @@ static void didClickDisconnect(Button *button) {
     $(confirmButton, addClassName, "dangerButton");
   }
 
+}
+
+/**
+ * @brief ButtonDelegate for Quit confirmation.
+ */
+static void didClickQuit(Button *button) {
+  confirmQuit(button->delegate.self);
+}
+
+/**
+ * @brief ButtonDelegate for Disconnect.
+ */
+static void didClickDisconnect(Button *button) {
+  confirmDisconnect(button->delegate.self);
+}
+
+/**
+ * @brief QuickSettingsViewControllerDelegate for every tier-1 drawer item.
+ * @details The drawer reports the chosen item and does none of them itself, so
+ * each arm here is the shell action the tier-2 chrome already offers - which is
+ * what keeps Disconnect and Quit behind the same confirmation dialogs as their
+ * footer buttons rather than growing a second, quieter path to the same two
+ * irreversible things.
+ *
+ * Every arm closes the drawer first. `Resume` hands input back to the game,
+ * which the shell's own Escape handling would otherwise fight over; `Full menu`
+ * closes it and stops, because the tier-2 menu is already behind the drawer.
+ */
+static void didSelectQuickSettingsItem(ident self, QuickSettingsItem item) {
+
+  MainViewController *this = self;
+
+  $(this, setQuickSettingsVisible, false);
+
+  switch (item) {
+    case QuickSettingsItemResume:
+      cgi.SetKeyDest(KEY_GAME);
+      break;
+    case QuickSettingsItemRestartRun:
+      cgi.Cbuf("kill\n");
+      cgi.SetKeyDest(KEY_GAME);
+      break;
+    case QuickSettingsItemWatchBest:
+      cgi.Cbuf("replay pb\n");
+      cgi.SetKeyDest(KEY_GAME);
+      break;
+    case QuickSettingsItemSpectate:
+      cgi.Cbuf("mode spectator\n");
+      cgi.SetKeyDest(KEY_GAME);
+      break;
+    case QuickSettingsItemCallVote:
+      $(this, navigateToViewController, _VotingViewController());
+      break;
+    case QuickSettingsItemFullMenu:
+      break;
+    case QuickSettingsItemDisconnect:
+      confirmDisconnect(this);
+      break;
+    case QuickSettingsItemQuit:
+      confirmQuit(this);
+      break;
+    default:
+      break;
+  }
 }
 
 #pragma mark - Object
@@ -178,6 +276,8 @@ static void dealloc(Object *self) {
   release(this->resumeButton);
   release(this->homeButton);
   release(this->disconnectButton);
+  release(this->applyButton);
+  release(this->revertButton);
 
   super(Object, self, dealloc);
 }
@@ -373,12 +473,6 @@ static void loadView(ViewController *self) {
     .data = _SettingsViewController()
   });
 
-  $(this, primaryButton, "Voting", &(const ButtonDelegate) {
-    .didClick = didClickNavigateViewController,
-    .self = self,
-    .data = _VotingViewController()
-  });
-
   $(this, primaryButton, "Maps", &(const ButtonDelegate) {
     .didClick = didClickNavigateViewController,
     .self = self,
@@ -397,13 +491,23 @@ static void loadView(ViewController *self) {
     .data = _AdminViewController()
   });
 
-  $(this, secondaryButton, "Quick settings", &(const ButtonDelegate) {
+  $(this, secondaryButton, "Quick menu", &(const ButtonDelegate) {
     .didClick = didClickQuickSettings,
     .self = self
   });
 
   $(this, secondaryButton, "Resume", &(const ButtonDelegate) {
     .didClick = didClickResume,
+    .self = self
+  });
+
+  $(this, secondaryButton, "Revert", &(const ButtonDelegate) {
+    .didClick = didClickRevertChanges,
+    .self = self
+  });
+
+  $(this, secondaryButton, "Apply", &(const ButtonDelegate) {
+    .didClick = didClickApplyChanges,
     .self = self
   });
 
@@ -432,9 +536,7 @@ static void loadView(ViewController *self) {
   assert(this->quickSettingsViewController);
   this->quickSettingsViewController->delegate = (QuickSettingsViewControllerDelegate) {
     .self = self,
-    .didClose = didCloseQuickSettings,
-    .didShowControls = didShowAllControls,
-    .didShowSettings = didShowAllSettings
+    .didSelectItem = didSelectQuickSettingsItem
   };
   $(self, addChildViewController, (ViewController *) this->quickSettingsViewController);
   $(this->mainView->quickSettingsHost,
@@ -451,14 +553,13 @@ static void refreshAdminCapabilities(MainViewController *this,
                                      uint32_t capabilities) {
 
   if (this->adminButton) {
-    this->adminButton->control.view.hidden = capabilities == 0;
 
-    if (capabilities == 0) {
-      ViewController *topViewController = $(this->navigationViewController, topViewController);
-      if (topViewController && $((Object *) topViewController, isKindOfClass, _AdminViewController())) {
-        $(this, navigateToViewController, _HomeViewController());
-      }
-    }
+    // The tab is offered only to a session that holds something. A session that
+    // *loses* everything while the route is open is not evicted, though: the
+    // design answers that case with its own dismissal - "Admin route hidden",
+    // naming the 0x00 mask and where `radmin` lives - and being thrown back to
+    // Home explains nothing about why the route went away.
+    this->adminButton->control.view.hidden = capabilities == 0;
   }
 }
 
@@ -498,9 +599,6 @@ static void refreshEscState(MainViewController *this) {
     return;
   }
 
-  HomeViewController_RefreshPlayerActions(
-    cgi.client ? &cgi.client->frame.ps : NULL);
-
   // MainView invokes this during draw on the stock host. Rebuilding table rows
   // here would happen after ObjectivelyMVC's theme and layout passes, leaving
   // those fresh rows unstyled for the frame and repeating the problem forever.
@@ -508,6 +606,9 @@ static void refreshEscState(MainViewController *this) {
   // transition needs the shell-wide refresh and its deterministic Home route.
   if (!this->menuActive) {
     $(this, refreshRoster);
+  } else {
+    HomeViewController_RefreshPlayerActions(
+      cgi.client ? &cgi.client->frame.ps : NULL);
   }
 }
 
@@ -542,7 +643,15 @@ static void refreshRoster(MainViewController *this) {
   $((View *) this->mainView, updateBindings);
 
   if (menuActive && !this->menuActive) {
+
     $(this, navigateToViewController, _HomeViewController());
+
+    // The design opens the tier-1 drawer here, on the KEY_GAME -> KEY_UI
+    // transition Escape causes - the engine consumes the key itself, so the
+    // transition is the only hook available. That is not done: a drawer over
+    // every entry to the menu reads as the menu being blocked, because the
+    // scrim covers the tier-2 routes until it is dismissed. The drawer is
+    // opened deliberately, from Quick menu in the header, instead.
     if (this->resumeButton) {
       $((View *) this->resumeButton, becomeKeyResponder);
     }
@@ -576,6 +685,28 @@ static void refreshVote(MainViewController *this) {
 }
 
 /**
+ * @brief The selected route's name, for the drawer's `<Route> - Esc resumes`.
+ * @details Read back from the route strip rather than tracked separately, so
+ * the drawer cannot name a route the strip is not showing. Falls back to the
+ * design's own word for the drawer when nothing is selected yet.
+ */
+static const char *currentRouteName(const MainViewController *this) {
+
+  for (size_t i = 0; i < this->numRouteButtons; i++) {
+
+    const Control *control = (const Control *) this->routeButtons[i];
+    if (control->state & ControlStateSelected) {
+      const char *title = this->routeButtons[i]->title->text;
+      if (title && *title) {
+        return title;
+      }
+    }
+  }
+
+  return "Menu";
+}
+
+/**
  * @brief Opens or closes the shell-owned quick-settings drawer.
  */
 static void setQuickSettingsVisible(MainViewController *this, bool visible) {
@@ -597,10 +728,12 @@ static void setQuickSettingsVisible(MainViewController *this, bool visible) {
   }
 
   if (visible) {
+    // The drawer names the route it was opened over, and resolves its key hints
+    // from the player's live bindings - both can change while it is closed.
+    $(this->quickSettingsViewController, setRouteName, currentRouteName(this));
     $(this->quickSettingsViewController, refresh);
-    if (this->quickSettingsViewController->sensitivity) {
-      $((View *) this->quickSettingsViewController->sensitivity, becomeKeyResponder);
-    }
+    $((View *) this->quickSettingsViewController->items[QuickSettingsItemResume],
+      becomeKeyResponder);
   }
 
   View *view = (View *) this->mainView;
@@ -633,6 +766,19 @@ static void viewWillAppear(ViewController *self) {
       $(alloc(DialogViewController), initWithDialog, &dialog);
     $(self, addChildViewController, viewController);
   }
+}
+
+/**
+ * @see ViewController::viewWillDisappear(ViewController *)
+ */
+static void viewWillDisappear(ViewController *self) {
+
+  MainViewController *this = (MainViewController *) self;
+  this->menuActive = false;
+  dismissDialogs(self);
+  $(this, setQuickSettingsVisible, false);
+
+  super(ViewController, self, viewWillDisappear);
 }
 
 /**
@@ -686,6 +832,8 @@ static MainViewController *init(MainViewController *self) {
  */
 static void selectRoute(MainViewController *self, Class *clazz) {
 
+  bool onStrip = false;
+
   for (size_t i = 0; i < self->numRouteButtons; i++) {
     Control *control = (Control *) self->routeButtons[i];
     View *view = (View *) control;
@@ -695,6 +843,19 @@ static void selectRoute(MainViewController *self, Class *clazz) {
       $(view, addClassName, "activeRoute");
       $(self->mainView->windowTitle->text, setText,
         self->routeButtons[i]->title->text);
+      onStrip = true;
+
+      // The design gives Home a lockup where every other route takes the plain
+      // route title, and the two are alternatives rather than a stack.
+      const bool lockup = clazz == _HomeViewController();
+      if (self->mainView->windowLockup) {
+        if (lockup && self->mainView->windowLockup->image == NULL) {
+          $(self->mainView->windowLockup, setImageWithResourceName,
+            "ui/main/menu_lockup.png");
+        }
+        self->mainView->windowLockup->view.hidden = !lockup;
+      }
+      self->mainView->windowTitle->view.hidden = lockup;
     } else {
       control->state &= ~ControlStateSelected;
       $(view, removeClassName, "activeRoute");
@@ -702,6 +863,21 @@ static void selectRoute(MainViewController *self, Class *clazz) {
     if (oldState != control->state) {
       $(control, stateDidChange);
     }
+  }
+
+  // A route that is not on the strip still has to name itself. The design ships
+  // seven tabs and reaches voting from the tier-1 drawer and from Maps instead,
+  // so without this the header would keep whatever route the player came from -
+  // "Credits" over a ballot.
+  if (!onStrip) {
+
+    self->mainView->windowTitle->view.hidden = false;
+    if (self->mainView->windowLockup) {
+      self->mainView->windowLockup->view.hidden = true;
+    }
+
+    $(self->mainView->windowTitle->text, setText,
+      clazz == _VotingViewController() ? "Voting" : "Race");
   }
 }
 
@@ -757,6 +933,12 @@ static void navigateToViewController(MainViewController *self, Class *clazz) {
   assert(clazz);
 
   $(self, setQuickSettingsVisible, false);
+
+  // The outgoing route's viewWillDisappear also clears this; doing it here as
+  // well is what makes a stale delegate impossible rather than merely unlikely.
+  self->commitDelegate = (RaceCommitDelegate) { 0 };
+  refreshCommitChrome(self, NULL, false);
+
   selectRoute(self, clazz);
 
   ViewController *topViewController = $(self->navigationViewController, topViewController);
@@ -793,6 +975,7 @@ static void navigateToViewController(MainViewController *self, Class *clazz) {
 
   View *mainView = (View *) self->mainView;
   mainView->needsLayout = true;
+  $(mainView, layoutIfNeeded);
 
   release(viewController);
 }
@@ -838,9 +1021,9 @@ static void secondaryButton(MainViewController *self, const char *title, const B
   button->control.view.identifier = q_strdup(title);
   assert(button->control.view.identifier);
   button->delegate = *delegate;
-  // Resume is the one filled action in the bars. Quick settings and Disconnect
+  // Resume is the one filled action in the bars. Quick menu and Disconnect
   // are ghosts, and danger is reserved for Quit alone.
-  if (strcmp(title, "Quick settings") == 0) {
+  if (strcmp(title, "Quick menu") == 0) {
     self->quickSettingsButton = (Button *) retain(button);
     $((View *) button, addClassName, "ghostAction");
     $((View *) self->mainView->topActions, addSubview, (View *) button);
@@ -848,6 +1031,16 @@ static void secondaryButton(MainViewController *self, const char *title, const B
     self->resumeButton = (Button *) retain(button);
     $((View *) button, addClassName, "primaryAction");
     $((View *) self->mainView->topActions, addSubview, (View *) button);
+  } else if (strcmp(title, "Revert") == 0) {
+    self->revertButton = (Button *) retain(button);
+    $((View *) button, addClassName, "ghostAction");
+    $((View *) button, addClassName, "commitAction");
+    $((View *) self->mainView->secondaryMenu, addSubview, (View *) button);
+  } else if (strcmp(title, "Apply") == 0) {
+    self->applyButton = (Button *) retain(button);
+    $((View *) button, addClassName, "primaryAction");
+    $((View *) button, addClassName, "commitAction");
+    $((View *) self->mainView->secondaryMenu, addSubview, (View *) button);
   } else {
     if (strcmp(title, "Disconnect") == 0) {
       self->disconnectButton = (Button *) retain(button);
@@ -873,6 +1066,8 @@ static void initialize(Class *clazz) {
   ((ViewControllerInterface *) clazz->interface)->loadView = loadView;
   ((ViewControllerInterface *) clazz->interface)->respondToEvent = respondToEvent;
   ((ViewControllerInterface *) clazz->interface)->viewWillAppear = viewWillAppear;
+  ((ViewControllerInterface *) clazz->interface)->viewWillDisappear =
+    viewWillDisappear;
 
   ((MainViewControllerInterface *) clazz->interface)->init = init;
   ((MainViewControllerInterface *) clazz->interface)->navigateToViewController = navigateToViewController;
@@ -929,10 +1124,90 @@ void MainViewController_RefreshEscState(void) {
   }
 }
 
+void MainViewController_CloseQuickSettings(void) {
+  if (activeMainViewController) {
+    $(activeMainViewController, setQuickSettingsVisible, false);
+  }
+}
+
 void MainViewController_RefreshVote(void) {
   if (activeMainViewController) {
     $(activeMainViewController, refreshVote);
   }
+}
+
+static void refreshCommitChrome(MainViewController *this,
+                                const char *status, bool warn) {
+
+  const bool staged = this->commitDelegate.didApply != NULL;
+  const bool dirty = staged && status && *status;
+
+  if (this->applyButton) {
+    this->applyButton->control.view.hidden = !staged;
+    setControlFlag((Control *) this->applyButton, ControlStateDisabled, !dirty);
+  }
+  if (this->revertButton) {
+    this->revertButton->control.view.hidden = !staged;
+    setControlFlag((Control *) this->revertButton, ControlStateDisabled, !dirty);
+  }
+
+  Label *commitStatus = this->mainView ? this->mainView->commitStatus : NULL;
+  if (commitStatus) {
+
+    $(commitStatus->text, setText, dirty ? status : "");
+
+    View *view = (View *) commitStatus;
+    const bool wasWarn = $(view, hasClassName, "warn");
+    if ((dirty && warn) != wasWarn) {
+      if (dirty && warn) {
+        $(view, addClassName, "warn");
+      } else {
+        $(view, removeClassName, "warn");
+      }
+    }
+  }
+
+  View *view = (View *) this->mainView;
+  view->needsLayout = true;
+  $(view, layoutIfNeeded);
+}
+
+void MainViewController_SetCommitDelegate(const RaceCommitDelegate *delegate) {
+
+  if (activeMainViewController == NULL) {
+    return;
+  }
+
+  activeMainViewController->commitDelegate = delegate
+    ? *delegate
+    : (RaceCommitDelegate) { 0 };
+
+  refreshCommitChrome(activeMainViewController, NULL, false);
+}
+
+void MainViewController_SetCommitStatus(const char *status, bool warn) {
+
+  if (activeMainViewController) {
+    refreshCommitChrome(activeMainViewController, status, warn);
+  }
+}
+
+void MainViewController_SetRouteEyebrow(const char *text, bool offline) {
+
+  if (activeMainViewController == NULL ||
+      activeMainViewController->mainView == NULL) {
+    return;
+  }
+
+  MainView *mainView = activeMainViewController->mainView;
+
+  q_strlcpy(mainView->eyebrowOverride, text ? text : "",
+            sizeof(mainView->eyebrowOverride));
+  mainView->eyebrowOffline = offline;
+
+  View *view = (View *) mainView;
+  view->needsLayout = true;
+  $(view, layoutIfNeeded);
 }
 
 #undef _Class

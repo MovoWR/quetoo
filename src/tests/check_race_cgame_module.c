@@ -26,8 +26,10 @@
 #include "cg_race_training.h"
 #include "cg_race_weapon_tuning.h"
 #include "race_hook.h"
+#include "ui/admin/WeaponLabViewController.h"
 #include "ui/home/HomeViewController.h"
 #include "ui/main/MainViewController.h"
+#include "ui/main/SpeedGridView.h"
 #include "ui/voting/VotingViewController.h"
 
 cg_import_t cgi;
@@ -39,6 +41,7 @@ typedef enum {
   EVENT_ADMIN_AUTH_MESSAGE,
   EVENT_WEAPON_TUNING_CLEAR,
   EVENT_WEAPON_TUNING_UPDATE,
+  EVENT_WEAPON_TUNING_UI_REFRESH,
   EVENT_WEAPON_TUNING_MESSAGE,
   EVENT_BARRIER_CLEAR,
   EVENT_MAP_CLEAR,
@@ -64,7 +67,9 @@ typedef enum {
   EVENT_REPLAY_MESSAGE,
   EVENT_BARRIER_LOAD,
   EVENT_PRACTICE_LOAD,
-  EVENT_REPLAY_LOAD
+  EVENT_REPLAY_LOAD,
+  EVENT_HOME_PLAYER_ACTIONS_REFRESH,
+  EVENT_MAIN_ESC_REFRESH
 } race_cgame_event_t;
 
 static race_cgame_event_t events[64];
@@ -128,6 +133,9 @@ void Cg_RacePhysics_Init(void) { }
 void Cg_RacePhysics_Shutdown(void) { }
 void Cg_RacePhysics_Clear(void) { Record(EVENT_PHYSICS_CLEAR); }
 bool Cg_RacePhysics_Synchronized(void) { return physics_synchronized; }
+// SpeedGridView's rendering behavior is covered by the focused presentation
+// and production CGAME builds. This coordinator fixture only owns its init call.
+void SpeedGridView_Init(void) { }
 void Cg_RaceFinishReport_Init(void) { }
 void Cg_RaceFinishReport_Clear(void) { Record(EVENT_FINISH_CLEAR); }
 bool Cg_RaceFinishReport_ParseMessage(const int32_t command) {
@@ -196,6 +204,9 @@ bool Cg_RaceWeaponTuning_ParseMessage(const int32_t command) {
   Record(EVENT_WEAPON_TUNING_MESSAGE);
   return weapon_tuning_owns;
 }
+void WeaponLabViewController_RefreshAuthoritativeState(void) {
+  Record(EVENT_WEAPON_TUNING_UI_REFRESH);
+}
 bool Cg_RaceMapBrowser_ParseMessage(const int32_t command) {
   (void) command;
   Record(EVENT_MAP_MESSAGE);
@@ -219,9 +230,10 @@ void Cg_RaceBarriers_Draw(void) { Record(EVENT_BARRIER_DRAW); }
 void HomeViewController_ClearState(void) { }
 void HomeViewController_RefreshPlayerActions(const player_state_t *ps) {
   (void) ps;
+  Record(EVENT_HOME_PLAYER_ACTIONS_REFRESH);
 }
 void MainViewController_ClearState(void) { Record(EVENT_MAIN_CLEAR); }
-void MainViewController_RefreshEscState(void) { }
+void MainViewController_RefreshEscState(void) { Record(EVENT_MAIN_ESC_REFRESH); }
 void MainViewController_RefreshAdmin(const player_state_t *ps) { (void) ps; }
 void MainViewController_RefreshVote(void) { }
 void VotingViewController_Refresh(const player_state_t *ps) { (void) ps; }
@@ -526,11 +538,13 @@ uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
 
   ResetEvents();
   Cg_Module_Update();
-  const race_cgame_event_t update[] = {
-    EVENT_WEAPON_TUNING_UPDATE
+  Cg_Module_UpdateUi(NULL);
+  const race_cgame_event_t update_ui[] = {
+    EVENT_WEAPON_TUNING_UPDATE, EVENT_WEAPON_TUNING_UI_REFRESH,
+    EVENT_MAIN_ESC_REFRESH
   };
-  MODULE_CHECK(EventsEqual(update, lengthof(update)),
-               "frame sync updates authoritative weapon tuning");
+  MODULE_CHECK(EventsEqual(update_ui, lengthof(update_ui)),
+               "frame sync and UI refresh retain their separate owners");
 
   profile_owns = true;
   admin_auth_owns = false;

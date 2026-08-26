@@ -53,12 +53,23 @@ struct MapBrowserViewController {
   Label *mapAuthorLabel;
   Label *mapPersonalBestLabel;
   Label *mapRunsLabel;
+  Label *mapWorldRecordLabel;
   Label *worldRecordChipLabel;
   Label *personalRecordChipLabel;
   Label *mapTimesLabel;
   Label *mapStatsLabel;
   Button *timesButton;
   Button *voteButton;
+
+  /**
+   * @brief "Watch world record".
+   * @details Enabled only for the map that is actually loaded. `replay wr`
+   * plays back a recording against the running BSP, so there is nothing to
+   * watch for a map the server is not on - the design's button lives on the
+   * selected map's pane, and this is the honest reading of it.
+   */
+  Button *watchRecordButton;
+
   Button *nominateButton;
   char selectedMap[32];
   int32_t page;

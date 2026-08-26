@@ -11,7 +11,8 @@ EXTRA_DIST = \
  	pyproject.toml \
 	skyfu.py \
 	symbolicate_dmp.py \
-	verify_projects.py
+	verify_projects.py \
+	verify_race_ui.py
 
 .PHONY: install-tools
 install-tools:

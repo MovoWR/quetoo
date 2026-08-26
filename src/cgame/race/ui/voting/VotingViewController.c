@@ -18,19 +18,6 @@
 
 #define _Class _VotingViewController
 
-typedef struct {
-  const char *command;
-  race_physics_preset_id_t preset;
-} voting_physics_action_t;
-
-static const voting_physics_action_t physicsActions[] = {
-  { RACE_PHYSICS_PRESET_QUETOO_COMMON_V1_KEY,
-    RACE_PHYSICS_PRESET_QUETOO_COMMON_V1 },
-  { RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY,
-    RACE_PHYSICS_PRESET_QUETOO_FIX_V1 },
-  { RACE_PHYSICS_PRESET_Q2_V1_KEY, RACE_PHYSICS_PRESET_Q2 }
-};
-
 static VotingViewController *activeVotingViewController;
 
 static void refreshVotingState(VotingViewController *self,
@@ -67,30 +54,6 @@ static void setControlEnabled(Control *control, const bool enabled) {
   }
 
   const unsigned int oldState = control->state;
-  if (enabled) {
-    control->state &= ~ControlStateDisabled;
-  } else {
-    prepareControlForDisable(control);
-    control->state |= ControlStateDisabled;
-  }
-  if (oldState != control->state) {
-    $(control, stateDidChange);
-  }
-}
-
-static void setButtonState(Button *button, const bool selected,
-                           const bool enabled) {
-  if (!button) {
-    return;
-  }
-
-  Control *control = (Control *) button;
-  const unsigned int oldState = control->state;
-  if (selected) {
-    control->state |= ControlStateSelected;
-  } else {
-    control->state &= ~ControlStateSelected;
-  }
   if (enabled) {
     control->state &= ~ControlStateDisabled;
   } else {
@@ -317,11 +280,18 @@ static void didClickBallot(Button *button) {
 
 static void didClickPhysics(Button *button) {
   VotingViewController *self = button->delegate.self;
-  const char *physics = button->delegate.data;
+  const Option *option = $(self->physicsTarget, selectedOption);
+  const char *physics = option ? option->value : NULL;
   if (physics) {
     cgi.Cbuf(va("race vote physics %s\n", physics));
     setFeedback(self, "Physics vote requested · check the live ballot or server response");
   }
+}
+
+static void didSelectPhysics(Select *select, Option *option) {
+  VotingViewController *self = select->delegate.self;
+  (void) option;
+  refreshVotingState(self, cgi.client ? &cgi.client->frame.ps : NULL);
 }
 
 static void didClickMapVote(Button *button) {
@@ -467,11 +437,21 @@ static void refreshPhysics(VotingViewController *self,
                  : current
                    ? va("CURRENT · %s", current->short_name)
                    : "CURRENT · UNKNOWN");
-  for (size_t i = 0u; i < lengthof(physicsActions); i++) {
-    const bool selected = config && config->preset == physicsActions[i].preset;
-    setButtonState(self->physicsButtons[i], selected,
-                   canPropose && !selected);
+
+  if (current && self->displayedPhysics != current->id) {
+    $(self->physicsTarget, selectOptionWithValue, (ident) current->key);
+    self->displayedPhysics = current->id;
   }
+
+  const Option *option = $(self->physicsTarget, selectedOption);
+  const race_physics_preset_descriptor_t *selected = option
+    ? Race_Physics_PresetForKey(option->value)
+    : NULL;
+  const bool alreadyCurrent = config && selected &&
+    config->preset == selected->id;
+  setControlEnabled((Control *) self->physicsTarget, canPropose);
+  setControlEnabled((Control *) self->physicsButton,
+                    canPropose && selected && !alreadyCurrent);
 }
 
 static void refreshNextMap(VotingViewController *self,
@@ -624,9 +604,8 @@ static void loadView(ViewController *viewController) {
     MakeOutlet("vote_no", &self->noButton),
     MakeOutlet("ballotActionCaption", &self->actionCaption),
     MakeOutlet("currentPhysics", &self->currentPhysics),
-    MakeOutlet("vote_physics_quetoo", &self->physicsButtons[0]),
-    MakeOutlet("vote_physics_quetoo_fix", &self->physicsButtons[1]),
-    MakeOutlet("vote_physics_q2", &self->physicsButtons[2]),
+    MakeOutlet("vote_physics_target", &self->physicsTarget),
+    MakeOutlet("vote_physics_start", &self->physicsButton),
     MakeOutlet("vote_map_target", &self->mapTarget),
     MakeOutlet("vote_map_start", &self->mapButton),
     MakeOutlet("vote_kick_target", &self->kickTarget),
@@ -671,13 +650,23 @@ static void loadView(ViewController *viewController) {
     .data = "race vote no\n",
     .didClick = didClickBallot
   };
-  for (size_t i = 0u; i < lengthof(self->physicsButtons); i++) {
-    self->physicsButtons[i]->delegate = (ButtonDelegate) {
-      .self = self,
-      .data = (ident) physicsActions[i].command,
-      .didClick = didClickPhysics
-    };
+  size_t numPresets;
+  const race_physics_preset_descriptor_t *presets =
+    Race_Physics_Presets(&numPresets);
+  for (size_t i = 0u; i < numPresets; i++) {
+    if (presets[i].available) {
+      $(self->physicsTarget, addOption, presets[i].name,
+        (ident) presets[i].key);
+    }
   }
+  self->physicsTarget->delegate = (SelectDelegate) {
+    .self = self,
+    .didSelectOption = didSelectPhysics
+  };
+  self->physicsButton->delegate = (ButtonDelegate) {
+    .self = self,
+    .didClick = didClickPhysics
+  };
   self->mapButton->delegate = (ButtonDelegate) {
     .self = self,
     .didClick = didClickMapVote

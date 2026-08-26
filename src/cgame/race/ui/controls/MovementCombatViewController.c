@@ -115,8 +115,8 @@ typedef struct {
   /**
    * @brief The client-shipped keys for this command, primary first.
    * @details SDL_SCANCODE_UNKNOWN means the slot ships empty. Race commands
-   * ship unbound by design - see cgame/race/autoexec.cfg - so the whole Race
-   * half of the roster is defaults-empty, and any key on it reads as modified.
+   * ship unbound by design, so the whole Race half of the roster is
+   * defaults-empty, and any key on it reads as modified.
    */
   SDL_Scancode defaults[CONTROLS_SLOT_COUNT];
 } ControlDescriptor;
@@ -795,6 +795,13 @@ static View *makeRow(MovementCombatViewController *self, size_t row) {
   $((View *) right, addClassName, "rowRight");
   right->axis = StackViewAxisHorizontal;
   right->view.alignment = ViewAlignmentMiddleRight;
+
+  // A slider is dragged, not clicked, so it gets a wider cell than the bind
+  // pills beside it. The cell is right-pinned, so the extra width runs leftward
+  // and the field column still ends on one edge.
+  if (descriptor->kind == ControlRowSlider) {
+    $((View *) right, addClassName, "sliderCell");
+  }
 
   if (descriptor->kind == ControlRowBind) {
 

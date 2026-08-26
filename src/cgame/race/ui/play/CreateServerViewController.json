@@ -56,7 +56,7 @@
                           "classNames": [ "rowLeft" ],
                           "subviews": [
                             { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Player slots" } },
-                            { "class": "Label", "classNames": [ "rowCaption" ], "hidden": true, "identifier": "maxClientsCaption", "text": { "text": "" } }
+                            { "class": "Label", "classNames": [ "rowCaption" ], "hidden": true, "identifier": "maxClientsCaption", "text": {} }
                           ]
                         },
                         {
@@ -144,7 +144,7 @@
                   "classNames": [ "sectionHead" ],
                   "subviews": [
                     { "class": "Label", "classNames": [ "sectionEyebrow" ], "text": { "text": "Race rules" } },
-                    { "class": "Label", "identifier": "rulesMeta", "classNames": [ "sectionMeta" ], "text": { "text": "" } }
+                    { "class": "Label", "identifier": "rulesMeta", "classNames": [ "sectionMeta" ], "text": {} }
                   ]
                 },
                 { "class": "View", "classNames": [ "sectionRule" ] },
@@ -224,7 +224,7 @@
                           "classNames": [ "rowLeft" ],
                           "subviews": [
                             { "class": "Label", "classNames": [ "rowLabel" ], "text": { "text": "Time limit" } },
-                            { "class": "Label", "classNames": [ "rowCaption" ], "hidden": true, "identifier": "timeLimitCaption", "text": { "text": "" } }
+                            { "class": "Label", "classNames": [ "rowCaption" ], "hidden": true, "identifier": "timeLimitCaption", "text": {} }
                           ]
                         },
                         {

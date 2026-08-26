@@ -54,6 +54,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Objectively.lib;ObjectivelyMVC.lib;SDL3.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/Brepro %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
@@ -77,17 +78,28 @@
     <ClCompile Include="..\src\tests\check_race_native.c" />
     <ClCompile Include="..\src\tests\check_race_cgame_module.c" />
     <ClCompile Include="..\src\tests\check_race_persistence_native.c" />
+    <ClCompile Include="..\src\tests\check_race_ui_native.c" />
     <ClCompile Include="..\src\cgame\race\cg_module.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_admin_command.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_client_file.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_dashboard_layout.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_double_jump.c" />
     <ClCompile Include="..\src\cgame\race\cg_score_model.c" />
     <ClCompile Include="..\src\cgame\race\cg_team_mode.c" />
+    <ClCompile Include="..\src\cgame\race\ui\main\QuickSettingsHostView.c" />
     <ClCompile Include="..\src\game\race\race_clip.c" />
     <ClCompile Include="..\src\game\race\race_hook.c" />
     <ClCompile Include="..\src\game\race\race_kick_broker.c" />
     <ClCompile Include="..\src\game\race\race_persistence.c" />
     <ClCompile Include="..\src\game\race\race_projectile_observer.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\ObjectivelyMVC\ObjectivelyMVC.vs15\ObjectivelyMVC.vcxproj">
+      <Project>{ad4ceb0f-306e-4d57-b579-503239939766}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Objectively\Objectively.vs15\Objectively.vcxproj">
+      <Project>{3e6b97c6-1f51-4d72-bdfe-1d492f5eda6c}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
