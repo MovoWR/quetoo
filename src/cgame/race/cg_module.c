@@ -21,15 +21,18 @@
 
 
 #include "cg_local.h"
+#include "cg_module_compat.h"
 #include "cg_race_hud.h"
 #include "cg_race_finish_report.h"
 #include "cg_race_barriers.h"
+#include "cg_race_double_jump.h"
 #include "cg_race_map_browser.h"
 #include "cg_race_markers.h"
 #include "cg_race_physics.h"
 #include "cg_race_practice_markers.h"
 #include "cg_race_replay.h"
 #include "cg_race_training.h"
+#include "cg_race_weapon_tuning.h"
 #include "ui/home/HomeViewController.h"
 #include "ui/main/MainViewController.h"
 #include "ui/voting/VotingViewController.h"
@@ -46,6 +49,8 @@ static void Cg_RaceJumpers_f(void) {
  * @brief Installs the module-owned Race HUD on the existing additive HUD chain.
  */
 void Cg_Module_Init(void) {
+  Cg_RaceDoubleJump_Init();
+  Cg_RaceWeaponTuning_Init();
   Cg_RacePhysics_Init();
   Cg_RaceFinishReport_Init();
   Cg_RaceHud_Init();
@@ -64,6 +69,8 @@ void Cg_Module_Init(void) {
  * @brief Releases all Race CGAME subsystem state.
  */
 void Cg_Module_Shutdown(void) {
+  Cg_RaceDoubleJump_Clear();
+  Cg_RaceWeaponTuning_Clear();
   Cg_RaceBarriers_Clear();
   Cg_RaceReplay_Clear();
   Cg_RaceFinishReport_Clear();
@@ -73,13 +80,16 @@ void Cg_Module_Shutdown(void) {
 }
 
 bool Cg_Module_ParseMessage(const int32_t command) {
-  return Cg_RaceHud_ParseMessage(command) ||
+  return Cg_RaceWeaponTuning_ParseMessage(command) ||
+         Cg_RaceHud_ParseMessage(command) ||
          Cg_RaceFinishReport_ParseMessage(command) ||
          Cg_RaceMapBrowser_ParseMessage(command) ||
          Cg_RaceReplay_ParseMessage(command);
 }
 
 void Cg_Module_ClearState(void) {
+  Cg_RaceDoubleJump_Clear();
+  Cg_RaceWeaponTuning_Clear();
   MainViewController_ClearState();
   Cg_RaceMapBrowser_Clear();
   Cg_RaceFinishReport_Clear();
@@ -92,7 +102,8 @@ void Cg_Module_ClearState(void) {
 }
 
 bool Cg_Module_DisablePrediction(void) {
-  return Cg_ReplayActive() || !Cg_RacePhysics_Synchronized();
+  return Cg_ReplayActive() || !Cg_HookPullSpeedValid() ||
+         !Cg_RacePhysics_Synchronized();
 }
 
 /**
@@ -111,6 +122,9 @@ void Cg_Module_PreparePredictionCommand(pm_move_t *pm,
                                         const size_t index,
                                         const size_t count) {
   Cg_RaceBarriers_PreparePredictionCommand(index);
+  if (index + 1u == count) {
+    Cg_RaceDoubleJump_Preview(&pm->cmd);
+  }
   Cg_RaceTraining_PreparePredictionCommand(pm, index, count);
 }
 
@@ -180,6 +194,10 @@ void Cg_Module_PopulateScene(void) {
   Cg_RaceMarkers_Draw();
   Cg_RacePracticeMarkers_Draw();
   Cg_RaceReplay_PopulateScene();
+}
+
+void Cg_Module_Update(void) {
+  Cg_RaceWeaponTuning_Update();
 }
 
 void Cg_Module_UpdateUi(const player_state_t *ps) {

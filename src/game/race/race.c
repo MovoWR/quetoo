@@ -15,11 +15,13 @@
 #include "race_physics_service.h"
 #include "race_replay_service.h"
 #include "race_replay_playback_service.h"
+#include "race_weapon_tuning_service.h"
 #include "race_settings_service.h"
 #include "race_trigger.h"
 #include "race_vote_service.h"
 #include "race_vote_menu_service.h"
 #include "race_wire.h"
+#include "race_weapon_movement.h"
 
 static ConfigureLevel Race_ConfigureLevel_Previous;
 static InitMedia Race_InitMedia_Previous;
@@ -76,6 +78,7 @@ static void Race_ConfigureLevel(void) {
 
   Race_PhysicsService_ConfigureLevel(g_level.name);
   Race_SettingsService_Load(g_level.name);
+  Race_WeaponTuningService_ConfigureLevel();
   Race_MapStateService_Load(g_level.name);
   Race_ReplayService_ConfigureLevel(g_level.name);
   Race_ReplayPlaybackService_ConfigureLevel();
@@ -125,6 +128,7 @@ static void Race_InitItem(g_item_t *it) {
   }
 
   Race_InitItem_Previous(it);
+  Race_WeaponMovement_InitItem(it);
 }
 
 static void Race_ClientKill(g_client_t *cl) {
@@ -230,11 +234,16 @@ bool Race_Start(g_client_t *cl) {
   cl->race_run.start_speed = speed;
   cl->race_run.current_speed = speed;
   cl->race_run.top_speed = speed;
+  if (cl->entity->move_type == MOVE_TYPE_NO_CLIP) {
+    Race_MarkInvalid(cl, RACE_INVALID_NOCLIP);
+  }
 
   G_Debug("client=%s start time=%u mode=%s speed=%g\n",
           cl->persistent.net_name, g_level.time,
           Race_ModeName(cl->race_run.mode), speed);
-  if (!Race_ReplayService_Start(cl) && cl->race_run.mode == RACE_MODE_RACE) {
+  if (Race_WeaponTuningService_Rankable() &&
+      !Race_ReplayService_Start(cl) &&
+      cl->race_run.mode == RACE_MODE_RACE) {
     Race_MarkInvalid(cl, RACE_INVALID_REPLAY_CAPACITY);
   }
   gi.ClientPrint(cl, PRINT_HIGH, "^2Race started!^7 Speed: %.1f\n", speed);
@@ -452,7 +461,10 @@ bool Race_Finish(g_client_t *cl) {
           cl->persistent.net_name, cl->race_run.elapsed_time,
           Race_ModeName(cl->race_run.mode), valid);
 
-  if (cl->race_run.mode == RACE_MODE_RACE && Race_Mode(cl) == RACE_MODE_RACE && valid) {
+  if (Race_WeaponTuningService_Rankable() &&
+      cl->race_run.mode == RACE_MODE_RACE &&
+      Race_Mode(cl) == RACE_MODE_RACE &&
+      cl->entity->move_type != MOVE_TYPE_NO_CLIP && valid) {
     race_leaderboard_evaluation_t evaluation;
     uint64_t replay_id;
     if (Race_ReplayService_Finish(cl, &evaluation, &replay_id)) {

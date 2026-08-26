@@ -21,6 +21,7 @@
 
 #include "bg_pmove.h"
 #include "race_physics.h"
+#include "race_pmove_policy.h"
 #include "race_training.h"
 
 /**
@@ -38,31 +39,23 @@ const box3_t PM_CROUCHED_BOUNDS = {
   .maxs = { {  16.f,  16.f,  6.f } }
 };
 
-static box3_t Pm_PlayerBoundsForPhysics(
-    const bool ducked, const race_physics_family_id_t family,
-    const race_physics_preset_id_t preset) {
+static box3_t Pm_PlayerBoundsForPolicy(
+    const bool ducked, const race_pmove_policy_t *policy) {
   box3_t bounds = Box3_Scale(
     ducked ? PM_CROUCHED_BOUNDS : PM_BOUNDS, PM_SCALE);
-
-  if (family != RACE_PHYSICS_FAMILY_Q2) {
-    return bounds;
-  }
-
-  switch (preset) {
-    case RACE_PHYSICS_PRESET_Q2:
-      bounds.maxs.z = ducked ? 4.f : 32.f;
-      return bounds;
-    case RACE_PHYSICS_PRESET_QUETOO_FIX_V1:
-      bounds.maxs.z = ducked ? 6.f : 32.f;
-      return bounds;
-    default:
-      return bounds;
-  }
+  bounds.maxs.z = ducked ? policy->ducked_max_z : policy->standing_max_z;
+  return bounds;
 }
 
 box3_t Pm_PlayerBounds(const bool ducked) {
   const race_physics_config_t *config = Race_Physics_Current();
-  return Pm_PlayerBoundsForPhysics(ducked, config->family, config->preset);
+  const race_physics_preset_descriptor_t *preset =
+    Race_Physics_Preset(config->preset);
+  const race_pmove_policy_t *policy = preset
+    ? Race_PmovePolicy(preset->pm_policy)
+    : NULL;
+  assert(policy);
+  return Pm_PlayerBoundsForPolicy(ducked, policy);
 }
 
 static const box3_t PM_DEAD_BOUNDS = {
@@ -77,7 +70,7 @@ static const box3_t PM_GIBLET_BOUNDS = {
 
 static pm_move_t *pm;
 static race_physics_family_id_t pm_physics_family;
-static race_physics_preset_id_t pm_physics_preset;
+static const race_pmove_policy_t *pm_physics_policy;
 static race_physics_q2_snap_mode_t pm_q2_snap_mode;
 static race_strafe_observer_t pm_strafe_observer;
 static void *pm_strafe_observer_context;
@@ -94,8 +87,30 @@ void Pm_RaceTraining_ClearObserver(void) {
 }
 
 static box3_t Pm_CurrentPlayerBounds(const bool ducked) {
-  return Pm_PlayerBoundsForPhysics(
-    ducked, pm_physics_family, pm_physics_preset);
+  return Pm_PlayerBoundsForPolicy(ducked, pm_physics_policy);
+}
+
+/**
+ * @brief Binds one complete immutable physics identity for the current move or
+ * focused test entry point.
+ */
+static void Pm_BindPhysics(void) {
+  const race_physics_config_t *config = Race_Physics_Current();
+  const race_physics_preset_descriptor_t *preset = config
+    ? Race_Physics_Preset(config->preset)
+    : NULL;
+  const race_pmove_policy_t *policy = preset
+    ? Race_PmovePolicy(preset->pm_policy)
+    : NULL;
+
+  assert(config);
+  assert(preset);
+  assert(policy);
+  assert(preset->family == config->family);
+
+  pm_physics_family = config->family;
+  pm_physics_policy = policy;
+  pm_q2_snap_mode = config->q2_snap_mode;
 }
 
 #define MAX_CLIP_PLANES  6
@@ -115,18 +130,10 @@ static box3_t Pm_CurrentPlayerBounds(const bool ducked) {
 
 #define PM_Q2_GROUND_NORMAL_MIN          .7f
 #define PM_Q2_GROUND_PROBE_DIST          .25f
-#define PM_Q2_RAMP_GROUND_LOSS_Q2      180.f
-#define PM_Q2_RAMP_GROUND_LOSS_FIX      80.f
 #define PM_Q2_UPWARD_SPEED_EPSILON       .1f
-#define PM_Q2_TRICK_JUMP_SPEED          40.f
 
 static bool Pm_Q2FamilyPhysics(void) {
   return pm_physics_family == RACE_PHYSICS_FAMILY_Q2;
-}
-
-static bool Pm_Q2FixPhysics(void) {
-  return Pm_Q2FamilyPhysics() &&
-         pm_physics_preset == RACE_PHYSICS_PRESET_QUETOO_FIX_V1;
 }
 
 #if defined(RACE_PHYSICS_TEST)
@@ -280,6 +287,11 @@ static struct {
    * @brief The player's ground interaction.
    */
   cm_trace_t ground;
+
+  /**
+   * @brief Transient DP2 rising-ramp contact for the current movement command.
+   */
+  bool ramp_contact_slide;
 
   /**
    * @brief The clipping planes per slide-move.
@@ -637,17 +649,110 @@ static void Pm_Q2StepSlideMove(void) {
   pm->s.velocity.z = lower_velocity.z;
 }
 
+/**
+ * @brief Performs DP2's fraction-aware raised slide candidate and guarded
+ * settlement trace while retaining Q2's horizontal candidate selection.
+ */
+static void Pm_Dp2StepSlideMove(void) {
+
+  const vec3_t start_origin = pm->s.origin;
+  const vec3_t start_velocity = pm->s.velocity;
+
+  Pm_SlideMove();
+
+  const vec3_t lower_origin = pm->s.origin;
+  const vec3_t lower_velocity = pm->s.velocity;
+
+  const vec3_t up = Vec3_Fmaf(start_origin, PM_Q2_STEP_HEIGHT, Vec3_Up());
+  const cm_trace_t step_up = Pm_Trace(start_origin, up, pm->bounds);
+  const float step_fraction = step_up.fraction;
+
+  if (step_up.all_solid) {
+    return;
+  }
+
+  pm->s.origin = step_up.end;
+  pm->s.velocity = start_velocity;
+
+  Pm_SlideMove();
+
+  const float down_min = pm->s.origin.z - PM_Q2_STEP_HEIGHT * step_fraction;
+  vec3_t down = pm->s.origin;
+
+  if (start_origin.z - pm_physics_policy->step_down_extra < down_min &&
+      step_fraction == 1.f &&
+      !(pm->s.flags & PMF_TIME_WATER_JUMP)) {
+    down.z = start_origin.z - pm_physics_policy->step_down_extra;
+  } else {
+    down.z = down_min;
+  }
+
+  const float upper_end_z = pm->s.origin.z;
+  cm_trace_t step_down = Pm_Trace(pm->s.origin, down, pm->bounds);
+
+  if (step_down.all_solid) {
+    box3_t inset = pm->bounds;
+    inset.mins.x += pm_physics_policy->step_inset;
+    inset.mins.y += pm_physics_policy->step_inset;
+    inset.maxs.x -= pm_physics_policy->step_inset;
+    inset.maxs.y -= pm_physics_policy->step_inset;
+    inset.maxs.z -= pm_physics_policy->step_inset;
+    step_down = Pm_Trace(pm->s.origin, down, inset);
+  }
+
+  if (!step_down.all_solid) {
+    pm->s.origin = step_down.end;
+
+    if (pm->s.origin.z < down_min) {
+      pm->s.origin.z = down_min;
+    }
+
+    if (pm->s.origin.z < lower_origin.z) {
+      pm->s.origin.z = upper_end_z > lower_origin.z
+        ? lower_origin.z
+        : upper_end_z;
+    }
+  }
+
+  const float lower_distance = Vec2_DistanceSquared(Vec3_XY(lower_origin),
+                                                     Vec3_XY(start_origin));
+  const float upper_distance = Vec2_DistanceSquared(Vec3_XY(pm->s.origin),
+                                                     Vec3_XY(start_origin));
+
+  if (lower_distance > upper_distance ||
+      step_down.plane.normal.z < PM_STEP_NORMAL) {
+    pm->s.origin = lower_origin;
+    pm->s.velocity = lower_velocity;
+    return;
+  }
+
+  pm->s.velocity.z = lower_velocity.z;
+}
+
 #if defined(RACE_PHYSICS_TEST)
 void Pm_Q2StepSlideMoveForTest(pm_move_t *move) {
+  Pm_BindPhysics();
   pm = move;
-  pm_physics_family = RACE_PHYSICS_FAMILY_Q2;
+
+  if (pm_physics_policy->step_variant == RACE_PM_STEP_DP2) {
+    pm->bounds = Pm_CurrentPlayerBounds(!!(pm->s.flags & PMF_DUCKED));
+  }
 
   memset(&pm_locals, 0, sizeof(pm_locals));
   pm_locals.previous_origin = pm->s.origin;
   pm_locals.previous_velocity = pm->s.velocity;
   pm_locals.time = pm->cmd.msec * .001f;
 
-  Pm_Q2StepSlideMove();
+  switch (pm_physics_policy->step_variant) {
+    case RACE_PM_STEP_Q2:
+      Pm_Q2StepSlideMove();
+      break;
+    case RACE_PM_STEP_DP2:
+      Pm_Dp2StepSlideMove();
+      break;
+    default:
+      assert(false);
+  }
 }
 #endif
 
@@ -685,7 +790,16 @@ static void Pm_StepDown(const cm_trace_t *trace) {
 static void Pm_StepSlideMove(void) {
 
   if (Pm_Q2FamilyPhysics()) {
-    Pm_Q2StepSlideMove();
+    switch (pm_physics_policy->step_variant) {
+      case RACE_PM_STEP_Q2:
+        Pm_Q2StepSlideMove();
+        break;
+      case RACE_PM_STEP_DP2:
+        Pm_Dp2StepSlideMove();
+        break;
+      default:
+        assert(false);
+    }
     return;
   }
 
@@ -1084,9 +1198,7 @@ static void Pm_ClearGround(void) {
  * preset.
  */
 static float Pm_Q2RampGroundLossSpeed(void) {
-  return Pm_Q2FixPhysics()
-    ? PM_Q2_RAMP_GROUND_LOSS_FIX
-    : PM_Q2_RAMP_GROUND_LOSS_Q2;
+  return pm_physics_policy->ramp_ground_loss_speed;
 }
 
 /**
@@ -1094,7 +1206,7 @@ static float Pm_Q2RampGroundLossSpeed(void) {
  * Quake II disables trick probing.
  */
 static bool Pm_Q2CheckTrickJump(void) {
-  if (!Pm_Q2FixPhysics()) {
+  if (!pm_physics_policy->trick_probe) {
     return false;
   }
 
@@ -1122,14 +1234,22 @@ static bool Pm_Q2CheckTrickJump(void) {
  * policy. Accepted traces classify contact without sinking the player origin.
  */
 static void Pm_Q2CheckGround(void) {
-  if (pm->s.flags & (PMF_JUMPED | PMF_TIME_PUSHED | PMF_ON_LADDER)) {
+  pm_locals.ramp_contact_slide = false;
+
+  const bool ladder_blocks_ground =
+    (pm->s.flags & PMF_ON_LADDER) &&
+    !pm_physics_policy->ladder_retains_ground;
+  if ((pm->s.flags & (PMF_JUMPED | PMF_TIME_PUSHED)) ||
+      ladder_blocks_ground) {
     if (pm->s.flags & PMF_TIME_PUSHED) {
       Pm_ClearGround();
     }
     return;
   }
 
-  if (pm->s.velocity.z > Pm_Q2RampGroundLossSpeed()) {
+  if (pm->s.velocity.z > Pm_Q2RampGroundLossSpeed() &&
+      (!pm_physics_policy->ramp_ground_loss_requires_jump_held ||
+       (pm->s.flags & PMF_JUMP_HELD))) {
     Pm_ClearGround();
     return;
   }
@@ -1166,6 +1286,12 @@ static void Pm_Q2CheckGround(void) {
     // automatic jump edge. Release and a later fresh press clear it in Pm_Init.
     pm->s.flags |= PMF_ON_GROUND;
     pm->ground = trace;
+
+    if (pm_physics_policy->ramp_contact_slide &&
+        pm->s.velocity.z > pm_physics_policy->ramp_ground_loss_speed &&
+        !(pm->s.flags & PMF_JUMP_HELD)) {
+      pm_locals.ramp_contact_slide = true;
+    }
   } else {
     Pm_ClearGround();
   }
@@ -1259,9 +1385,7 @@ static void Pm_CheckGround(void) {
 #if defined(RACE_PHYSICS_TEST)
 void Pm_Q2CheckGroundForTest(pm_move_t *move,
                              const vec3_t previous_velocity) {
-  const race_physics_config_t *config = Race_Physics_Current();
-  pm_physics_family = config->family;
-  pm_physics_preset = config->preset;
+  Pm_BindPhysics();
   pm = move;
   memset(&pm_locals, 0, sizeof(pm_locals));
   pm_locals.previous_origin = move->s.origin;
@@ -1406,6 +1530,30 @@ static void Pm_CheckDuck(void) {
  *
  * @return True if a jump occurs, false otherwise.
  */
+static bool Pm_Dp2CheckJump(void) {
+  pm->s.flags |= PMF_JUMP_HELD;
+  Pm_ClearGround();
+  memset(&pm_locals.ground, 0, sizeof(pm_locals.ground));
+
+  if (pm->s.velocity.z >= pm_physics_policy->jump_speed_max) {
+    return false;
+  }
+
+  float jump = pm_physics_policy->jump_impulse;
+  if (pm->s.velocity.z + jump > pm_physics_policy->jump_speed_max) {
+    jump = pm_physics_policy->jump_speed_max - pm->s.velocity.z;
+  }
+
+  pm->s.velocity.z += jump;
+  if (pm->s.velocity.z < jump) {
+    pm->s.velocity.z = jump;
+  }
+
+  pm->s.flags |= PMF_JUMPED;
+  Pm_Debug("DP2 jump: %d\n", pm->cmd.up);
+  return true;
+}
+
 static bool Pm_CheckJump(void) {
 
   if (Pm_CheckHookJump()) {
@@ -1469,6 +1617,18 @@ static bool Pm_CheckJump(void) {
     return false;
   }
 
+  if (q2) {
+    switch (pm_physics_policy->jump_variant) {
+      case RACE_PM_JUMP_STANDARD:
+        break;
+      case RACE_PM_JUMP_DP2:
+        return Pm_Dp2CheckJump();
+      default:
+        assert(false);
+        return false;
+    }
+  }
+
   // finally, do the jump
   float jump = Maxf(0.f, pm->s.params.speed_jump);
 
@@ -1478,8 +1638,9 @@ static bool Pm_CheckJump(void) {
   }
 
   // adding the trick jump if eligible
-  if (Pm_Q2FixPhysics() && (pm->s.flags & PMF_TIME_TRICK_JUMP)) {
-    jump += PM_Q2_TRICK_JUMP_SPEED;
+  if (pm_physics_policy->trick_probe &&
+      (pm->s.flags & PMF_TIME_TRICK_JUMP)) {
+    jump += pm_physics_policy->trick_jump_speed;
 
     pm->s.flags &= ~PMF_TIME_TRICK_JUMP;
     pm->s.time = 0;
@@ -1548,11 +1709,13 @@ static void Pm_CheckLadder(void) {
   if (attach) {
     pm->s.flags |= PMF_ON_LADDER;
 
-    memset(&pm->ground, 0, sizeof(pm->ground));
-    pm->s.flags &= ~(PMF_ON_GROUND | PMF_DUCKED);
+    if (!pm_physics_policy->ladder_retains_ground) {
+      memset(&pm->ground, 0, sizeof(pm->ground));
+      pm->s.flags &= ~(PMF_ON_GROUND | PMF_DUCKED);
 
-    if (q2 && pm->cmd.up > 0) {
-      pm->s.flags |= PMF_JUMP_HELD;
+      if (q2 && pm->cmd.up > 0) {
+        pm->s.flags |= PMF_JUMP_HELD;
+      }
     }
   }
 }
@@ -2071,6 +2234,7 @@ static void Pm_Q2Friction(void) {
 
   float drop = 0.f;
   if (((pm->s.flags & PMF_ON_GROUND) && pm_locals.ground.ent &&
+       !pm_locals.ramp_contact_slide &&
        !(pm_locals.ground.surface & SURF_SLICK)) ||
       (pm->s.flags & PMF_ON_LADDER)) {
     const float control = Maxf(pm->s.params.speed_stop, speed);
@@ -2157,6 +2321,56 @@ static void Pm_Q2GroundMove(void) {
 }
 
 /**
+ * @brief Handles DP2's rising-ramp contact path. Direction-aligned contact
+ * keeps its incoming vertical speed for one command and uses air-like
+ * acceleration; rejected contact falls back to Q2 ground movement.
+ */
+static void Pm_Dp2GroundMove(void) {
+  Pm_Debug("%s\n", vtos(pm->s.origin));
+
+  const vec3_t velocity = Pm_Q2WishVelocity();
+  float speed;
+  const vec3_t dir = Vec3_NormalizeLength(velocity, &speed);
+  const float max_speed = Maxf(0.f, (pm->s.flags & PMF_DUCKED)
+    ? pm->s.params.speed_ducked
+    : pm->s.params.speed_ground);
+  speed = Clampf(speed, 0.f, max_speed);
+
+  if (speed < PM_STOP_EPSILON) {
+    speed = 0.f;
+  }
+
+  if (pm->s.velocity.z > 0.f &&
+      pm->s.velocity.z < pm_physics_policy->bump_up_speed_max) {
+    pm->s.velocity.z = 0.f;
+  }
+
+  float accel = Maxf(0.f, pm->s.params.accel_ground);
+  if (pm_locals.ramp_contact_slide) {
+    vec3_t current_dir = pm->s.velocity;
+    current_dir.z = 0.f;
+    current_dir = Vec3_Normalize(current_dir);
+
+    if (Vec3_Dot(current_dir, dir) >
+        pm_physics_policy->ramp_slide_direction_min) {
+      accel = pm_physics_policy->ramp_slide_accel;
+    } else {
+      pm_locals.ramp_contact_slide = false;
+      Pm_Q2Friction();
+      Pm_Q2GroundMove();
+      return;
+    }
+  }
+
+  Pm_Gravity();
+  Pm_Accelerate(dir, speed, accel);
+
+  if (pm->s.velocity.x || pm->s.velocity.y) {
+    Pm_StepSlideMove();
+  }
+}
+
+/**
  * @brief Runs the complete Q2-family movement order after initial
  * ladder/hook/duck, water and ground classification.
  */
@@ -2184,7 +2398,20 @@ static void Pm_Q2Move(void) {
   } else if (pm->s.flags & PMF_ON_LADDER) {
     Pm_Q2LadderMove();
   } else if (pm->s.flags & PMF_ON_GROUND) {
-    Pm_Q2GroundMove();
+    switch (pm_physics_policy->ground_variant) {
+      case RACE_PM_GROUND_Q2:
+        Pm_Q2GroundMove();
+        break;
+      case RACE_PM_GROUND_DP2:
+        if (pm_locals.ramp_contact_slide) {
+          Pm_Dp2GroundMove();
+        } else {
+          Pm_Q2GroundMove();
+        }
+        break;
+      default:
+        assert(false);
+    }
   } else {
     Pm_Q2AirMove();
   }
@@ -2404,15 +2631,17 @@ static void Pm_SnapPosition(void) {
 #if defined(RACE_PHYSICS_TEST)
 void Pm_Q2InitialSnapPositionForTest(pm_move_t *move,
                                      vec3_t previous_origin) {
+  Pm_BindPhysics();
+  assert(Pm_Q2FamilyPhysics());
   pm = move;
-  pm_physics_family = RACE_PHYSICS_FAMILY_Q2;
   pm_locals.previous_origin = previous_origin;
   Pm_Q2InitialSnapPosition();
 }
 
 void Pm_Q2SnapPositionForTest(pm_move_t *move, vec3_t previous_origin) {
+  Pm_BindPhysics();
+  assert(Pm_Q2FamilyPhysics());
   pm = move;
-  pm_physics_family = RACE_PHYSICS_FAMILY_Q2;
   pm_locals.previous_origin = previous_origin;
   Pm_SnapPosition();
 }
@@ -2529,9 +2758,8 @@ static void Pm_CheckViewStep(void) {
 
 #if defined(RACE_PHYSICS_TEST)
 static void Pm_Q2TestContext(pm_move_t *move, const vec3_t angles) {
-  const race_physics_config_t *config = Race_Physics_Current();
-  pm_physics_family = config->family;
-  pm_physics_preset = config->preset;
+  Pm_BindPhysics();
+  assert(Pm_Q2FamilyPhysics());
   pm = move;
   pm->angles = angles;
   pm->bounds = Pm_CurrentPlayerBounds(!!(pm->s.flags & PMF_DUCKED));
@@ -2587,10 +2815,7 @@ bool Pm_Q2CheckJumpForTest(pm_move_t *move, const vec3_t angles) {
  * authoritative or predicted movement state, respectively.
  */
 void Pm_Move(pm_move_t *pm_move) {
-  const race_physics_config_t *config = Race_Physics_Current();
-  pm_physics_family = config->family;
-  pm_physics_preset = config->preset;
-  pm_q2_snap_mode = config->q2_snap_mode;
+  Pm_BindPhysics();
 
   pm = pm_move;
 

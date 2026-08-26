@@ -135,7 +135,28 @@
     <ClInclude Include="..\src\game\race\race_physics.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\game\race\race_hook.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\game\race\race_physics_service.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_pmove_policy.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_movement.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_types.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_service.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_wire.h">
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\game\race\race_publication.h">
@@ -443,7 +464,25 @@
     <ClCompile Include="..\src\game\race\race_physics.c">
       <Filter>src\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\game\race\race_hook.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\game\race\race_physics_service.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_pmove_policy.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_movement.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_tuning.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_tuning_service.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_tuning_wire.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_publication.c">

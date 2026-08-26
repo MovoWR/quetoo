@@ -1063,6 +1063,16 @@ void G_Ai_Node_Render(void) {
 
 #define AI_NODE_MAGIC ('Q' | '2' << 8 | 'N' << 16 | 'S' << 24)
 #define AI_NODE_VERSION 2
+#define AI_NODE_MAX_FILE_BYTES (64u * 1024u * 1024u)
+
+typedef struct {
+  uint16_t id;
+  uint16_t reserved;
+  float cost;
+} ai_node_file_link_t;
+
+_Static_assert(sizeof(ai_node_file_link_t) == 8u,
+               "Navigation v2 requires eight-byte link records");
 
 /**
  * @brief Initializes the navigation node system and loads the .nav file for the current map.
@@ -1085,9 +1095,19 @@ void G_Ai_InitNodes(void) {
   }
 
   file_t *file = gi.OpenFile(filename);
-  int32_t magic, version;
-  
-  gi.ReadFile(file, &magic, sizeof(magic), 1);
+  if (!file) {
+    G_Warn("Could not open navigation file %s\n", filename);
+    return;
+  }
+  int32_t magic = 0, version = 0;
+  uint32_t num_nodes = 0u;
+  size_t file_bytes = sizeof(magic) + sizeof(version) + sizeof(num_nodes);
+  size_t total_links = 0u;
+
+  if (gi.ReadFile(file, &magic, sizeof(magic), 1) != 1) {
+    goto invalid;
+  }
+  magic = LittleLong(magic);
 
   if (magic != AI_NODE_MAGIC) {
     G_Warn("Nav file invalid format!\n");
@@ -1095,7 +1115,10 @@ void G_Ai_InitNodes(void) {
     return;
   }
 
-  gi.ReadFile(file, &version, sizeof(version), 1);
+  if (gi.ReadFile(file, &version, sizeof(version), 1) != 1) {
+    goto invalid;
+  }
+  version = LittleLong(version);
 
   if (version != AI_NODE_VERSION) {
     G_Warn("Nav file out of date!\n");
@@ -1103,8 +1126,11 @@ void G_Ai_InitNodes(void) {
     return;
   }
 
-  uint32_t num_nodes;
-  gi.ReadFile(file, &num_nodes, sizeof(num_nodes), 1);
+  if (gi.ReadFile(file, &num_nodes, sizeof(num_nodes), 1) != 1 ||
+      (num_nodes = (uint32_t) LittleLong((int32_t) num_nodes)) >
+        (uint32_t) AI_NODE_INVALID) {
+    goto invalid;
+  }
 
   g_ai_nodes = $(alloc(Vector), initWithSize, sizeof(ai_node_t));
 
@@ -1115,16 +1141,36 @@ void G_Ai_InitNodes(void) {
 
   G_Ai_Node_InvalidateSpatialIndex();
 
-  size_t total_links = 0;
-
   for (size_t i = 0; i < g_ai_nodes->count; i++) {
     ai_node_t *node = AI_NODE(g_ai_nodes, i);
 
-    gi.ReadFile(file, &node->position, sizeof(node->position), 1);
+    if (file_bytes > AI_NODE_MAX_FILE_BYTES - sizeof(node->position) -
+                     sizeof(uint32_t) ||
+        gi.ReadFile(file, &node->position, sizeof(node->position), 1) != 1) {
+      goto invalid;
+    }
+    node->position = LittleVec3(node->position);
+    if (!isfinite(node->position.x) || !isfinite(node->position.y) ||
+        !isfinite(node->position.z) ||
+        fabsf(node->position.x) > MAX_WORLD_COORD ||
+        fabsf(node->position.y) > MAX_WORLD_COORD ||
+        fabsf(node->position.z) > MAX_WORLD_COORD) {
+      goto invalid;
+    }
+    file_bytes += sizeof(node->position);
 
     uint32_t num_links;
-  
-    gi.ReadFile(file, &num_links, sizeof(num_links), 1);
+
+    if (gi.ReadFile(file, &num_links, sizeof(num_links), 1) != 1) {
+      goto invalid;
+    }
+    num_links = (uint32_t) LittleLong((int32_t) num_links);
+    file_bytes += sizeof(num_links);
+    if (num_links > num_nodes ||
+        num_links > (AI_NODE_MAX_FILE_BYTES - file_bytes) /
+                      sizeof(ai_node_file_link_t)) {
+      goto invalid;
+    }
 
     if (num_links) {
       node->links = $(alloc(Vector), initWithSize, sizeof(ai_link_t));
@@ -1134,7 +1180,20 @@ void G_Ai_InitNodes(void) {
         $(node->links, add, &link);
       }
 
-      gi.ReadFile(file, node->links->elements, sizeof(ai_link_t), num_links);
+      for (size_t l = 0; l < num_links; l++) {
+        ai_node_file_link_t encoded;
+        if (gi.ReadFile(file, &encoded, sizeof(encoded), 1) != 1) {
+          goto invalid;
+        }
+        ai_link_t *link = AI_LINK(node->links, l);
+        link->id = (ai_node_id_t) LittleShort((int16_t) encoded.id);
+        link->cost = LittleFloat(encoded.cost);
+        if (encoded.reserved || link->id >= num_nodes ||
+            !isfinite(link->cost) || link->cost < 0.f) {
+          goto invalid;
+        }
+      }
+      file_bytes += num_links * sizeof(ai_node_file_link_t);
       total_links += num_links;
 
       G_Ai_Node_Unlink(i, i);
@@ -1156,6 +1215,13 @@ void G_Ai_InitNodes(void) {
       g_ai_player_roam.file_links += (uint32_t) node->links->count;
     }
   }
+  return;
+
+invalid:
+  gi.CloseFile(file);
+  G_Ai_ShutdownNodes();
+  G_Warn("Navigation file %s is truncated, malformed, or exceeds safe bounds\n",
+         filename);
 }
 
 /**
@@ -1249,26 +1315,36 @@ void G_Ai_SaveNodes(void) {
   }
 
   file_t *file = gi.OpenFileWrite(filename);
-  int32_t magic = AI_NODE_MAGIC;
-  int32_t version = AI_NODE_VERSION;
+  int32_t magic = LittleLong(AI_NODE_MAGIC);
+  int32_t version = LittleLong(AI_NODE_VERSION);
   
   gi.WriteFile(file, &magic, sizeof(magic), 1);
   gi.WriteFile(file, &version, sizeof(version), 1);
 
-  const uint32_t num_nodes = (uint32_t) g_ai_nodes->count;
+  const uint32_t num_nodes = (uint32_t) LittleLong(
+    (int32_t) g_ai_nodes->count);
   gi.WriteFile(file, &num_nodes, sizeof(num_nodes), 1);
 
   for (size_t i = 0; i < g_ai_nodes->count; i++) {
     const ai_node_t *node = AI_NODE(g_ai_nodes, i);
 
-    gi.WriteFile(file, &node->position, sizeof(node->position), 1);
+    const vec3_t position = LittleVec3(node->position);
+    gi.WriteFile(file, &position, sizeof(position), 1);
 
     if (node->links) {
-      const uint32_t num_links = (uint32_t) node->links->count;
+      const uint32_t num_links = (uint32_t) LittleLong(
+        (int32_t) node->links->count);
       gi.WriteFile(file, &num_links, sizeof(num_links), 1);
-      gi.WriteFile(file, node->links->elements, sizeof(ai_link_t), node->links->count);
+      for (size_t l = 0; l < node->links->count; l++) {
+        const ai_link_t *link = AI_LINK(node->links, l);
+        const ai_node_file_link_t encoded = {
+          .id = (uint16_t) LittleShort((int16_t) link->id),
+          .cost = LittleFloat(link->cost)
+        };
+        gi.WriteFile(file, &encoded, sizeof(encoded), 1);
+      }
     } else {
-      uint32_t len = 0;
+      uint32_t len = (uint32_t) LittleLong(0);
       gi.WriteFile(file, &len, sizeof(len), 1);
     }
   }

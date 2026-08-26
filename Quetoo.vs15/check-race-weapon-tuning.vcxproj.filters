@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src\tests">
+      <UniqueIdentifier>{78D6C939-1D97-4F59-93E0-68B17744A211}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\game\race">
+      <UniqueIdentifier>{99B61DA8-41E1-4D86-8CA5-0A815DB91F6A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\cgame\race">
+      <UniqueIdentifier>{A1240824-16F9-477A-A528-BA40E0317A80}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\cgame\race\cg_race_weapon_tuning.h">
+      <Filter>src\cgame\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_types.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_service.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_wire.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\tests\check_race_weapon_tuning.c">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tests\check_race_weapon_tuning_service.c">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_weapon_tuning.c">
+      <Filter>src\cgame\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_tuning.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_tuning_service.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_tuning_wire.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\qstring.c">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

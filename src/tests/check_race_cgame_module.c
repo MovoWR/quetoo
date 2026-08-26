@@ -11,6 +11,7 @@
 #include "cg_local.h"
 #include "cg_module_compat.h"
 #include "cg_race_barriers.h"
+#include "cg_race_double_jump.h"
 #include "cg_race_finish_report.h"
 #include "cg_race_hud.h"
 #include "cg_race_map_browser.h"
@@ -19,6 +20,8 @@
 #include "cg_race_practice_markers.h"
 #include "cg_race_replay.h"
 #include "cg_race_training.h"
+#include "cg_race_weapon_tuning.h"
+#include "race_hook.h"
 #include "ui/home/HomeViewController.h"
 #include "ui/main/MainViewController.h"
 #include "ui/voting/VotingViewController.h"
@@ -27,6 +30,9 @@ cg_import_t cgi;
 cg_state_t cg_state;
 
 typedef enum {
+  EVENT_WEAPON_TUNING_CLEAR,
+  EVENT_WEAPON_TUNING_UPDATE,
+  EVENT_WEAPON_TUNING_MESSAGE,
   EVENT_BARRIER_CLEAR,
   EVENT_MAP_CLEAR,
   EVENT_FINISH_CLEAR,
@@ -62,8 +68,10 @@ static bool hud_owns;
 static bool finish_owns;
 static bool map_owns;
 static bool replay_owns;
+static bool weapon_tuning_owns;
 static bool replay_active;
 static bool physics_synchronized = true;
+static bool hook_pull_speed_valid = true;
 
 #define MODULE_CHECK(condition, label) do { \
   assertions++; \
@@ -125,6 +133,7 @@ bool Cg_RaceReplay_ParseMessage(const int32_t command) {
 }
 void Cg_RaceReplay_PopulateScene(void) { Record(EVENT_REPLAY_DRAW); }
 bool Cg_ReplayActive(void) { return replay_active; }
+bool Cg_HookPullSpeedValid(void) { return hook_pull_speed_valid; }
 void Cg_RaceTraining_Init(void) { }
 void Cg_RaceTraining_Clear(void) { Record(EVENT_TRAINING_CLEAR); }
 void Cg_RaceTraining_PreparePredictionCommand(
@@ -144,6 +153,18 @@ void Cg_RaceTraining_CompletePredictionCommand(
 void Cg_RaceTraining_CompletePrediction(const pm_move_t *pm) {
   (void) pm;
   Record(EVENT_TRAINING_COMPLETE);
+}
+void Cg_RaceWeaponTuning_Init(void) { }
+void Cg_RaceWeaponTuning_Clear(void) {
+  Record(EVENT_WEAPON_TUNING_CLEAR);
+}
+void Cg_RaceWeaponTuning_Update(void) {
+  Record(EVENT_WEAPON_TUNING_UPDATE);
+}
+bool Cg_RaceWeaponTuning_ParseMessage(const int32_t command) {
+  (void) command;
+  Record(EVENT_WEAPON_TUNING_MESSAGE);
+  return weapon_tuning_owns;
 }
 bool Cg_RaceMapBrowser_ParseMessage(const int32_t command) {
   (void) command;
@@ -180,7 +201,13 @@ cl_entity_t *Cg_Self(void) {
 }
 
 static cvar_t module_cvar = { .name = "cg_show_jumpers", .integer = 1 };
-static cmd_t module_cmd;
+static cvar_t up_speed_cvar = {
+  .name = "cl_up_speed",
+  .value = 300.f
+};
+static cmd_t module_cmds[8];
+static size_t num_module_cmds;
+static uint32_t common_move_calls;
 
 static cvar_t *AddCvar(const char *name, const char *value,
                        const uint32_t flags, const char *description) {
@@ -191,34 +218,145 @@ static cvar_t *AddCvar(const char *name, const char *value,
   return &module_cvar;
 }
 
+static cvar_t *GetCvar(const char *name) {
+  return !strcmp(name, up_speed_cvar.name) ? &up_speed_cvar : NULL;
+}
+
 static cmd_t *AddCmd(const char *name, CmdExecuteFunc execute,
                      const uint32_t flags, const char *description) {
-  module_cmd = (cmd_t) {
+  if (num_module_cmds == lengthof(module_cmds)) {
+    return NULL;
+  }
+
+  cmd_t *cmd = module_cmds + num_module_cmds++;
+  *cmd = (cmd_t) {
     .name = name,
     .description = description,
     .Execute = execute,
     .flags = flags
   };
-  return &module_cmd;
+  return cmd;
+}
+
+static cmd_t *FindCmd(const char *name) {
+  for (size_t i = 0; i < num_module_cmds; i++) {
+    if (!strcmp(module_cmds[i].name, name)) {
+      return module_cmds + i;
+    }
+  }
+  return NULL;
+}
+
+static void KeyDown(button_t *button) {
+  if (!(button->state & BUTTON_STATE_HELD)) {
+    button->keys[0] = 1u;
+    button->state |= BUTTON_STATE_HELD | BUTTON_STATE_DOWN;
+  }
+}
+
+static void KeyUp(button_t *button) {
+  memset(button, 0, sizeof(*button));
+}
+
+void Cg_Move(pm_cmd_t *cmd) {
+  (void) cmd;
+  common_move_calls++;
 }
 
 uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
   memset(&cgi, 0, sizeof(cgi));
+  memset(module_cmds, 0, sizeof(module_cmds));
+  num_module_cmds = 0;
+  common_move_calls = 0;
   cgi.AddCvar = AddCvar;
+  cgi.GetCvar = GetCvar;
   cgi.AddCmd = AddCmd;
+  cgi.KeyDown = KeyDown;
+  cgi.KeyUp = KeyUp;
+
+  float hook_speed = -1.f;
+  MODULE_CHECK(Race_HookPullSpeed_Parse("0", &hook_speed) &&
+               hook_speed == 0.f &&
+               Race_HookPullSpeed_Parse("800", &hook_speed) &&
+               hook_speed == RACE_HOOK_PULL_SPEED_DEFAULT &&
+               Race_HookPullSpeed_Parse("11586", &hook_speed) &&
+               hook_speed == RACE_HOOK_PULL_SPEED_MAX,
+               "paired hook speed parser accepts its complete bounded range");
+  static const char *invalid_hook_speeds[] = {
+    "", " 800", "800 ", "800junk", "-1", "11587", "nan", "inf",
+    "-inf", "1e999"
+  };
+  for (size_t i = 0; i < lengthof(invalid_hook_speeds); i++) {
+    hook_speed = 123.f;
+    MODULE_CHECK(!Race_HookPullSpeed_Parse(invalid_hook_speeds[i],
+                                           &hook_speed) &&
+                 hook_speed == 123.f,
+                 "paired hook speed parser rejects hostile text transactionally");
+  }
+
   Cg_Module_Init();
-  MODULE_CHECK(!strcmp(module_cmd.name, "jumpers") && module_cmd.Execute,
-               "module initialization registers jumpers command");
+  cmd_t *double_jump_down = FindCmd("+double_jump");
+  cmd_t *double_jump_up = FindCmd("-double_jump");
+  cmd_t *jumpers = FindCmd("jumpers");
+  MODULE_CHECK(double_jump_down && double_jump_down->Execute &&
+               double_jump_up && double_jump_up->Execute &&
+               jumpers && jumpers->Execute,
+               "module initialization registers Race input commands");
+
+  double_jump_down->Execute();
+  pm_cmd_t preview = { .msec = 8 };
+  Cg_RaceDoubleJump_Preview(&preview);
+  Cg_RaceDoubleJump_Preview(&preview);
+  MODULE_CHECK(preview.up == 2400,
+               "prediction preview is repeatable without double-adding");
+
+  pm_cmd_t first = { .msec = 8 };
+  Cg_RaceDoubleJump_Move(&first);
+  MODULE_CHECK(first.up == 2400 && common_move_calls == 1u,
+               "first finalized command jumps and delegates common movement");
+
+  pm_cmd_t neutral_preview = { .msec = 8 };
+  Cg_RaceDoubleJump_Preview(&neutral_preview);
+  pm_cmd_t neutral = { .msec = 8 };
+  Cg_RaceDoubleJump_Move(&neutral);
+  MODULE_CHECK(neutral_preview.up == 0 && neutral.up == 0,
+               "second command releases jump in prediction and final input");
+
+  pm_cmd_t second_preview = { .msec = 8 };
+  Cg_RaceDoubleJump_Preview(&second_preview);
+  pm_cmd_t second = { .msec = 8 };
+  Cg_RaceDoubleJump_Move(&second);
+  MODULE_CHECK(second_preview.up == 2400 && second.up == 2400,
+               "third command restores jump symmetrically");
+
+  double_jump_down->Execute();
+  pm_cmd_t repeated = { .msec = 8 };
+  Cg_RaceDoubleJump_Move(&repeated);
+  MODULE_CHECK(repeated.up == 2400,
+               "repeated key down does not restart the sequence");
+
+  double_jump_up->Execute();
+  pm_cmd_t released = { .msec = 8 };
+  Cg_RaceDoubleJump_Preview(&released);
+  MODULE_CHECK(released.up == 0,
+               "physical release cancels the sequence");
+
+  double_jump_down->Execute();
 
   ResetEvents();
   Cg_Module_ClearState();
   const race_cgame_event_t clear[] = {
-    EVENT_MAIN_CLEAR, EVENT_MAP_CLEAR, EVENT_FINISH_CLEAR, EVENT_HUD_CLEAR,
+    EVENT_WEAPON_TUNING_CLEAR, EVENT_MAIN_CLEAR, EVENT_MAP_CLEAR,
+    EVENT_FINISH_CLEAR, EVENT_HUD_CLEAR,
     EVENT_REPLAY_CLEAR, EVENT_PRACTICE_CLEAR, EVENT_PHYSICS_CLEAR,
     EVENT_TRAINING_CLEAR, EVENT_BARRIER_CLEAR
   };
   MODULE_CHECK(EventsEqual(clear, lengthof(clear)),
                "module clear-state order and barrier reset");
+  pm_cmd_t cleared = { .msec = 8 };
+  Cg_RaceDoubleJump_Preview(&cleared);
+  MODULE_CHECK(cleared.up == 0,
+               "module clear state cancels held double jump input");
 
   ResetEvents();
   pm_move_t pm = { };
@@ -253,34 +391,57 @@ uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
   MODULE_CHECK(EventsEqual(scene, lengthof(scene)),
                "scene delegation order");
 
+  ResetEvents();
+  Cg_Module_Update();
+  const race_cgame_event_t update[] = {
+    EVENT_WEAPON_TUNING_UPDATE
+  };
+  MODULE_CHECK(EventsEqual(update, lengthof(update)),
+               "frame sync updates authoritative weapon tuning");
+
+  weapon_tuning_owns = true;
+  hud_owns = finish_owns = map_owns = replay_owns = false;
+  ResetEvents();
+  const race_cgame_event_t weapon_tuning_message[] = {
+    EVENT_WEAPON_TUNING_MESSAGE
+  };
+  MODULE_CHECK(Cg_Module_ParseMessage(77) &&
+               EventsEqual(weapon_tuning_message,
+                           lengthof(weapon_tuning_message)),
+               "weapon tuning owns its server message first");
+
+  weapon_tuning_owns = false;
   hud_owns = true;
   finish_owns = map_owns = replay_owns = false;
   ResetEvents();
-  MODULE_CHECK(Cg_Module_ParseMessage(77) && num_events == 1u &&
-               events[0] == EVENT_HUD_MESSAGE,
+  MODULE_CHECK(Cg_Module_ParseMessage(78) && num_events == 2u &&
+               events[0] == EVENT_WEAPON_TUNING_MESSAGE &&
+               events[1] == EVENT_HUD_MESSAGE,
                "message first owner short-circuits");
 
   hud_owns = false;
   finish_owns = true;
   ResetEvents();
   const race_cgame_event_t finish_message[] = {
-    EVENT_HUD_MESSAGE, EVENT_FINISH_MESSAGE
+    EVENT_WEAPON_TUNING_MESSAGE, EVENT_HUD_MESSAGE, EVENT_FINISH_MESSAGE
   };
-  MODULE_CHECK(Cg_Module_ParseMessage(78) &&
+  MODULE_CHECK(Cg_Module_ParseMessage(79) &&
                EventsEqual(finish_message, lengthof(finish_message)),
                "message later owner short-circuits");
 
   finish_owns = false;
   ResetEvents();
   const race_cgame_event_t fallthrough[] = {
-    EVENT_HUD_MESSAGE, EVENT_FINISH_MESSAGE, EVENT_MAP_MESSAGE,
+    EVENT_WEAPON_TUNING_MESSAGE, EVENT_HUD_MESSAGE,
+    EVENT_FINISH_MESSAGE, EVENT_MAP_MESSAGE,
     EVENT_REPLAY_MESSAGE
   };
-  MODULE_CHECK(!Cg_Module_ParseMessage(79) &&
+  MODULE_CHECK(!Cg_Module_ParseMessage(80) &&
                EventsEqual(fallthrough, lengthof(fallthrough)),
                "stock-command fallthrough remains unowned");
 
   replay_active = false;
+  hook_pull_speed_valid = true;
   physics_synchronized = true;
   MODULE_CHECK(!Cg_Module_DisablePrediction(),
                "prediction enabled while synchronized");
@@ -288,6 +449,10 @@ uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
   MODULE_CHECK(Cg_Module_DisablePrediction(),
                "replay disables prediction");
   replay_active = false;
+  hook_pull_speed_valid = false;
+  MODULE_CHECK(Cg_Module_DisablePrediction(),
+               "invalid hook tuning disables prediction");
+  hook_pull_speed_valid = true;
   physics_synchronized = false;
   MODULE_CHECK(Cg_Module_DisablePrediction(),
                "unsynchronized physics disables prediction");

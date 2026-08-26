@@ -21,6 +21,8 @@
 
 #include "g_local.h"
 #include "race_projectile_compat.h"
+#include "race_weapon_movement.h"
+#include "race_weapon_tuning_service.h"
 
 /**
  * @brief Adds a fraction of the player's velocity to the given projectile.
@@ -28,7 +30,10 @@
 static void G_PlayerProjectile(g_entity_t *ent, const float scale) {
 
   if (ent->owner) {
-    const float s = scale * g_player_projectile->value;
+    // Active tuning passes the captured effective inheritance fraction. The
+    // legacy path retains common's live global multiplier byte-for-byte.
+    const float s = ent->race_weapon_tuning_generation
+      ? scale : scale * g_player_projectile->value;
     ent->velocity = Vec3_Fmaf(ent->velocity, s, ent->owner->velocity);
   } else {
     G_Debug("No owner for %s\n", etos(ent));
@@ -518,6 +523,20 @@ void G_GrenadeProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t
   projectile->owner = attacker;
   projectile->mod = mod;
 
+  const bool tuned = Race_WeaponMovement_StampProjectile(
+    RACE_WEAPON_FIRE_GRENADE, emitter, attacker, projectile);
+  if (tuned) {
+    speed = Race_WeaponTuningService_IntForPreset(
+      projectile->race_physics_preset,
+      RACE_WEAPON_TUNING_STANDARD_GRENADE_SPEED, speed);
+    knockback = Race_WeaponTuningService_IntForPreset(
+      projectile->race_physics_preset,
+      RACE_WEAPON_TUNING_STANDARD_GRENADE_KNOCKBACK, knockback);
+    timer = Race_WeaponTuningService_UintForPreset(
+      projectile->race_physics_preset,
+      RACE_WEAPON_TUNING_STANDARD_GRENADE_FUSE_MS, timer);
+  }
+
   projectile->s.origin = start;
   projectile->bounds = bounds;
   projectile->s.angles = Vec3_Euler(dir);
@@ -528,7 +547,11 @@ void G_GrenadeProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t
   projectile->velocity = Vec3_Fmaf(projectile->velocity, RandomRangef(90.f, 110.f), up);
   projectile->velocity = Vec3_Fmaf(projectile->velocity, RandomRangef(-10.f, 10.f), right);
 
-  G_PlayerProjectile(projectile, 0.33);
+  G_PlayerProjectile(projectile, tuned
+    ? Race_WeaponTuningService_FloatForPreset(
+        projectile->race_physics_preset,
+        RACE_WEAPON_TUNING_GRENADE_INHERIT_FRACTION, .33f)
+    : .33f);
 
   projectile->solid = SOLID_PROJECTILE;
   projectile->mass = 75.f;
@@ -569,6 +592,9 @@ void G_QuakeGrenadeProjectile(g_entity_t *emitter, g_entity_t *attacker, const v
   projectile->owner = attacker;
   projectile->spawn_flags = QUAKE_GRENADE;
 
+  Race_WeaponMovement_StampProjectile(
+    RACE_WEAPON_FIRE_QUAKE_GRENADE, emitter, attacker, projectile);
+
   projectile->s.origin = start;
   projectile->bounds = bounds;
   projectile->s.angles = Vec3_Euler(dir);
@@ -579,7 +605,7 @@ void G_QuakeGrenadeProjectile(g_entity_t *emitter, g_entity_t *attacker, const v
   projectile->velocity = Vec3_Fmaf(projectile->velocity, RandomRangef(90.f, 110.f), up);
   projectile->velocity = Vec3_Fmaf(projectile->velocity, RandomRangef(-10.f, 10.f), right);
 
-  G_PlayerProjectile(projectile, 0.33);
+  G_PlayerProjectile(projectile, .33f);
 
   if (G_ImmediateWall(emitter, projectile)) {
     projectile->s.origin = emitter->s.origin;
@@ -610,6 +636,14 @@ void G_HandGrenadeProjectile(g_entity_t *ent, g_entity_t *projectile, vec3_t con
 
   const box3_t bounds = Box3f(4.f, 4.f, 4.f);
 
+  const bool tuned = Race_WeaponMovement_StampProjectile(
+    RACE_WEAPON_FIRE_HAND_GRENADE, ent, NULL, projectile);
+  if (tuned) {
+    knockback = Race_WeaponTuningService_IntForPreset(
+      projectile->race_physics_preset,
+      RACE_WEAPON_TUNING_HAND_GRENADE_KNOCKBACK, knockback);
+  }
+
   vec3_t forward, right, up;
 
   projectile->s.origin = start;
@@ -623,7 +657,11 @@ void G_HandGrenadeProjectile(g_entity_t *ent, g_entity_t *projectile, vec3_t con
   projectile->velocity = Vec3_Fmaf(projectile->velocity, RandomRangef(-10.f, 10.f), right);
 
   // add some of the player's velocity to the projectile
-  G_PlayerProjectile(projectile, 0.33);
+  G_PlayerProjectile(projectile, tuned
+    ? Race_WeaponTuningService_FloatForPreset(
+        projectile->race_physics_preset,
+        RACE_WEAPON_TUNING_GRENADE_INHERIT_FRACTION, .33f)
+    : .33f);
 
   projectile->spawn_flags = HAND_GRENADE;
 
@@ -733,6 +771,17 @@ void G_RocketProjectile(g_entity_t *emitter, g_entity_t *attacker, const vec3_t 
   g_entity_t *projectile = G_AllocEntity(__func__);
   projectile->owner = attacker;
   projectile->mod = mod;
+
+  const bool tuned = Race_WeaponMovement_StampProjectile(
+    RACE_WEAPON_FIRE_ROCKET, emitter, attacker, projectile);
+  if (tuned) {
+    speed = Race_WeaponTuningService_IntForPreset(
+      projectile->race_physics_preset,
+      RACE_WEAPON_TUNING_STANDARD_ROCKET_SPEED, speed);
+    knockback = Race_WeaponTuningService_IntForPreset(
+      projectile->race_physics_preset,
+      RACE_WEAPON_TUNING_STANDARD_ROCKET_KNOCKBACK, knockback);
+  }
   projectile->spawn_flags = OBSERVED_ROCKET;
 
   projectile->s.origin = start;
@@ -775,6 +824,9 @@ void G_QuakeRocketProjectile(g_entity_t *emitter, g_entity_t *attacker, const ve
   g_entity_t *projectile = G_AllocEntity(__func__);
   projectile->owner = attacker;
   projectile->spawn_flags = QUAKE_ROCKET;
+
+  Race_WeaponMovement_StampProjectile(
+    RACE_WEAPON_FIRE_QUAKE_ROCKET, emitter, attacker, projectile);
 
   projectile->s.origin = start;
   projectile->bounds = bounds;
@@ -842,7 +894,16 @@ static void G_HyperblasterProjectile_Touch(g_entity_t *ent, g_entity_t *other, c
       vec3_t v;
       v = Vec3_Subtract(ent->s.origin, ent->owner->s.origin);
 
-      if (Vec3_Length(v) < 32.0) { // hyperblaster climbing
+      const race_physics_preset_descriptor_t *preset =
+        Race_WeaponMovement_ProjectilePreset(ent);
+      race_hyperblaster_climb_parameters_t parameters;
+      vec3_t climb_delta;
+      if (Race_WeaponTuningService_ProjectileHyperParameters(
+            ent, preset ? preset->hyperblaster_climb_range : 32.f,
+            g_balance_hyperblaster_climb_knockback->value, &parameters) &&
+          Race_WeaponMovement_HyperClimbDelta(
+            v, trace->plane.normal, ent->owner->velocity,
+            &parameters, &climb_delta)) { // hyperblaster climbing
         G_Damage(&(g_damage_t) {
           .target = ent->owner,
           .inflictor = ent,
@@ -856,7 +917,7 @@ static void G_HyperblasterProjectile_Touch(g_entity_t *ent, g_entity_t *other, c
           .mod = MOD_HYPERBLASTER_CLIMB
         });
 
-        ent->owner->velocity.z += g_balance_hyperblaster_climb_knockback->value;
+        ent->owner->velocity = Vec3_Add(ent->owner->velocity, climb_delta);
       }
     }
 
@@ -890,6 +951,16 @@ void G_HyperblasterProjectile(g_entity_t *emitter, g_entity_t *attacker, const v
 
   g_entity_t *projectile = G_AllocEntity(__func__);
   projectile->owner = attacker;
+
+  const bool tuned = Race_WeaponMovement_StampProjectile(
+    RACE_WEAPON_FIRE_HYPERBLASTER, emitter, attacker, projectile);
+  if (tuned) {
+    speed = Race_WeaponTuningService_IntForPreset(
+      projectile->race_physics_preset, RACE_WEAPON_TUNING_HYPER_SPEED, speed);
+    knockback = Race_WeaponTuningService_IntForPreset(
+      projectile->race_physics_preset, RACE_WEAPON_TUNING_HYPER_KNOCKBACK,
+      knockback);
+  }
 
   projectile->s.origin = start;
   projectile->bounds = bounds;

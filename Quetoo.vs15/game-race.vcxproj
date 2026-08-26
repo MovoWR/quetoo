@@ -39,6 +39,7 @@
     <ClInclude Include="..\src\game\race\race_admin_types.h" />
     <ClInclude Include="..\src\game\race\race_cmds.h" />
     <ClInclude Include="..\src\game\race\race_finish_report.h" />
+    <ClInclude Include="..\src\game\race\race_hook.h" />
     <ClInclude Include="..\src\game\race\race_leaderboard.h" />
     <ClInclude Include="..\src\game\race\race_leaderboard_wire.h" />
     <ClInclude Include="..\src\game\race\race_logic.h" />
@@ -53,6 +54,12 @@
     <ClInclude Include="..\src\game\race\race_persistence.h" />
     <ClInclude Include="..\src\game\race\race_physics.h" />
     <ClInclude Include="..\src\game\race\race_physics_service.h" />
+    <ClInclude Include="..\src\game\race\race_pmove_policy.h" />
+    <ClInclude Include="..\src\game\race\race_weapon_movement.h" />
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_types.h" />
+    <ClInclude Include="..\src\game\race\race_weapon_tuning.h" />
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_service.h" />
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_wire.h" />
     <ClInclude Include="..\src\game\race\race_publication.h" />
     <ClInclude Include="..\src\game\race\race_profile.h" />
     <ClInclude Include="..\src\game\race\race_profiles.h" />
@@ -103,6 +110,7 @@
     <ClCompile Include="..\src\game\race\race_admin_store.c" />
     <ClCompile Include="..\src\game\race\race_cmds.c" />
     <ClCompile Include="..\src\game\race\race_finish_report.c" />
+    <ClCompile Include="..\src\game\race\race_hook.c" />
     <ClCompile Include="..\src\game\race\race_leaderboard.c" />
     <ClCompile Include="..\src\game\race\race_leaderboard_wire.c" />
     <ClCompile Include="..\src\game\race\race_logic.c" />
@@ -117,6 +125,11 @@
     <ClCompile Include="..\src\game\race\race_persistence.c" />
     <ClCompile Include="..\src\game\race\race_physics.c" />
     <ClCompile Include="..\src\game\race\race_physics_service.c" />
+    <ClCompile Include="..\src\game\race\race_pmove_policy.c" />
+    <ClCompile Include="..\src\game\race\race_weapon_movement.c" />
+    <ClCompile Include="..\src\game\race\race_weapon_tuning.c" />
+    <ClCompile Include="..\src\game\race\race_weapon_tuning_service.c" />
+    <ClCompile Include="..\src\game\race\race_weapon_tuning_wire.c" />
     <ClCompile Include="..\src\game\race\race_publication.c" />
     <ClCompile Include="..\src\game\race\race_profile.c" />
     <ClCompile Include="..\src\game\race\race_profiles.c" />

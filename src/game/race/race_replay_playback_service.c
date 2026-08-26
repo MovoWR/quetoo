@@ -20,6 +20,7 @@
 #include "race_replay_store.h"
 #include "race_physics.h"
 #include "race_vote_service.h"
+#include "race_weapon_tuning_service.h"
 
 #define RACE_REPLAY_PLAYBACK_MAX_SESSIONS 8u
 #define RACE_REPLAY_STATE_SEND_MSEC RACE_REPLAY_TICK_MSEC
@@ -545,6 +546,11 @@ static bool Race_ReplayPlaybackService_Select(
 static bool Race_ReplayPlaybackService_Start(
   g_client_t *cl, const char *selector, const bool playback,
   const bool start_race) {
+  if (!Race_WeaponTuningService_Rankable()) {
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "Replay and raceline start are blocked during weapon tuning.\n");
+    return false;
+  }
   int32_t slot;
   race_leaderboard_record_t record;
   race_replay_source_t source;

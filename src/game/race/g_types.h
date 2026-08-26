@@ -32,6 +32,7 @@
 #include "bg_pmove.h"
 #include "game/game.h"
 #include "race_admin_types.h"
+#include "race_physics.h"
 #include "race_training.h"
 #include "race_types.h"
 
@@ -45,7 +46,7 @@
  * @brief Game protocol version (protocol minor version). To be incremented
  * whenever the game protocol changes.
  */
-#define PROTOCOL_MINOR 1060
+#define PROTOCOL_MINOR 1066
 
 /**
  * @brief Game-specific server protocol commands. These are parsed directly by
@@ -67,6 +68,7 @@ typedef enum {
   SV_CMD_RACE_MAP_BROWSER_DETAIL,
   SV_CMD_RACE_FINISH_REPORT,
   SV_CMD_RACE_SPLIT,
+  SV_CMD_RACE_WEAPON_TUNING,
 } g_sv_packet_cmd_t;
 
 /**
@@ -99,6 +101,7 @@ typedef enum {
 #define CS_RACE_LEADERBOARD (CS_GAME + 11) // v1\count\name\time_ms\date_unix_s...
 #define CS_RACE_VOTE_INFO (CS_GAME + 12) // active yes/no vote status
 #define CS_RACE_VOTE_MENU (CS_GAME + 13) // end-of-map map-choice vote
+#define CS_RACE_WEAPON_TUNING_STATUS (CS_GAME + 14) // compact authoritative tuning state
 
 /**
  * @brief Player state statistics (inventory, score, etc).
@@ -1963,6 +1966,45 @@ struct g_entity_s {
   uint8_t race_barrier_id;
   bool race_gate_invert;
   bool race_barrier_valid;
+
+  /**
+   * @brief Semantic preset that owned this player-fired projectile.
+   * @details Zero remains INVALID for unscoped mapper, turret, death-drop and
+   * other legacy projectile callers.
+   */
+  race_physics_preset_id_t race_physics_preset;
+
+  /**
+   * @brief GAME-only weapon movement profile stamped at player fire time.
+   */
+  race_weapon_profile_id_t race_weapon_profile;
+
+  /**
+   * @brief Exact player fire path that constructed this projectile.
+   */
+  race_weapon_fire_kind_t race_weapon_fire_kind;
+
+  /**
+   * @brief Authoritative tuning generation captured for this accepted shot.
+   * @details Zero means that the projectile was spawned outside an active
+   * tuning session and therefore retains the legacy live-cvar behavior.
+   */
+  uint64_t race_weapon_tuning_generation;
+
+  /**
+   * @brief Impact-time tuning values copied at projectile construction.
+   * @details Effective-snapshot mutations clear older projectiles, but these
+   * stamps also make the ownership explicit and keep an impact self-contained.
+   */
+  float race_weapon_self_knockback;
+  float race_weapon_hyper_climb_range;
+  float race_weapon_hyper_climb_impulse_z;
+  float race_weapon_hyper_climb_in;
+  float race_weapon_hyper_climb_velocity_boost;
+  float race_weapon_hyper_climb_3d;
+  float race_weapon_hyper_climb_3d_up;
+  float race_weapon_hyper_climb_3d_side;
+  float race_weapon_hyper_climb_3d_in;
 };
 
 typedef struct g_entity_s g_entity_t;

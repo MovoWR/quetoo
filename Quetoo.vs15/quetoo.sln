@@ -92,6 +92,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "race-portability-fixture", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "check-race-native", "check-race-native.vcxproj", "{B721E7D9-5A8C-4AC2-A9F2-C10335E00001}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "check-race-weapon-tuning", "check-race-weapon-tuning.vcxproj", "{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "check-race-weapon-movement", "check-race-weapon-movement.vcxproj", "{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "quemap", "quemap.vcxproj", "{082FC21A-6D83-4960-9C9E-5C4B71409E92}"
 	ProjectSection(ProjectDependencies) = postProject
 		{2F1C792E-6243-462B-AF0D-E2554E77D5C5} = {2F1C792E-6243-462B-AF0D-E2554E77D5C5}
@@ -312,6 +316,22 @@ Global
 		{B721E7D9-5A8C-4AC2-A9F2-C10335E00001}.Release|Win32.Build.0 = Release|Win32
 		{B721E7D9-5A8C-4AC2-A9F2-C10335E00001}.Release|x64.ActiveCfg = Release|x64
 		{B721E7D9-5A8C-4AC2-A9F2-C10335E00001}.Release|x64.Build.0 = Release|x64
+		{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}.Debug|Win32.Build.0 = Debug|Win32
+		{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}.Debug|x64.ActiveCfg = Debug|x64
+		{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}.Debug|x64.Build.0 = Debug|x64
+		{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}.Release|Win32.ActiveCfg = Release|Win32
+		{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}.Release|Win32.Build.0 = Release|Win32
+		{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}.Release|x64.ActiveCfg = Release|x64
+		{A1240824-7A2F-4CF0-A5D4-8E5F7B901001}.Release|x64.Build.0 = Release|x64
+		{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}.Debug|Win32.Build.0 = Debug|Win32
+		{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}.Debug|x64.ActiveCfg = Debug|x64
+		{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}.Debug|x64.Build.0 = Debug|x64
+		{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}.Release|Win32.ActiveCfg = Release|Win32
+		{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}.Release|Win32.Build.0 = Release|Win32
+		{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}.Release|x64.ActiveCfg = Release|x64
+		{E53D0B6E-2F1A-4C3D-9A7B-5E8F10203040}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

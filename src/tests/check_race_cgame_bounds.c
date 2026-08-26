@@ -53,7 +53,8 @@ START_TEST(_Race_CgameDuckingUsesEffectiveStandingHull) {
   static const race_physics_preset_id_t presets[] = {
     RACE_PHYSICS_PRESET_INVALID,
     RACE_PHYSICS_PRESET_Q2,
-    RACE_PHYSICS_PRESET_QUETOO_FIX_V1
+    RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
+    RACE_PHYSICS_PRESET_DP2_V1
   };
 
   for (size_t i = 0; i < lengthof(presets); i++) {

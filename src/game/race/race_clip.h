@@ -28,7 +28,7 @@ typedef struct {
 
 /**
  * @brief Sweeps `bounds` from `start` to `end` against the supplied convex BSP
- * brushes using Quetoo v1.0.79's exact epsilon and plane-selection rules.
+ * brushes using the pinned Quetoo source's epsilon and plane-selection rules.
  */
 cm_trace_t Race_ClipBoxToBrushes(const vec3_t start, const vec3_t end,
                                  const box3_t bounds,

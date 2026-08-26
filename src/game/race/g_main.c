@@ -21,6 +21,7 @@
 
 #include "g_local.h"
 #include "race_module_compat.h"
+#include "race_weapon_tuning_service.h"
 
 g_import_t gi;
 g_export_t ge;
@@ -1091,6 +1092,7 @@ void G_Init(void) {
   // first frame rather than whatever garbage/unsupported value it was started
   // with; the level's own gameplay resolution (G_worldspawn) is unaffected
   G_CoerceGameplay();
+  Race_WeaponTuningService_PostInit();
 
   // set these to false to avoid spurious game restarts and alerts on init
       g_cheats->modified =

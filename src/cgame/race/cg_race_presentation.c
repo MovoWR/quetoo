@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "cg_race_presentation.h"
+#include "race_physics.h"
 
 const char *Cg_Race_ModeLabel(race_mode_t mode) {
   switch (mode) {
@@ -96,14 +97,24 @@ bool Cg_Race_RunHudVisible(const bool enabled, const bool intermission,
          (!spectator || chasing);
 }
 
-cg_race_climb_state_t Cg_Race_ClimbState(const float distance) {
-  if (distance < 32.f) {
+cg_race_climb_state_t Cg_Race_ClimbStateForRange(const float distance,
+                                                 const float range) {
+  if (distance < range) {
     return CG_RACE_CLIMB_READY;
   }
-  if (distance < 64.f) {
+  if (distance < range * 2.f) {
     return CG_RACE_CLIMB_CLOSER;
   }
   return CG_RACE_CLIMB_TOO_FAR;
+}
+
+cg_race_climb_state_t Cg_Race_ClimbState(const float distance) {
+  const race_physics_config_t *config = Race_Physics_Current();
+  const race_physics_preset_descriptor_t *preset = config
+    ? Race_Physics_Preset(config->preset)
+    : NULL;
+  const float range = preset ? preset->hyperblaster_climb_range : 32.f;
+  return Cg_Race_ClimbStateForRange(distance, range);
 }
 
 const char *Cg_Race_ClimbLabel(const cg_race_climb_state_t state) {

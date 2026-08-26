@@ -174,6 +174,9 @@
     <ClInclude Include="..\src\cgame\race\cg_race_barriers.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_double_jump.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_hud.h">
       <Filter>src\race</Filter>
     </ClInclude>
@@ -249,6 +252,9 @@
     <ClInclude Include="..\src\cgame\race\cg_race_vote.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_weapon_tuning.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\race\ui\main\ActiveVoteViewController.h">
       <Filter>src\race\ui\main</Filter>
     </ClInclude>
@@ -298,6 +304,18 @@
       <Filter>src\game\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\game\race\race_physics.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_hook.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_pmove_policy.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_types.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_wire.h">
       <Filter>src\game\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\game\race\race_training.h">
@@ -503,6 +521,9 @@
     <ClCompile Include="..\src\cgame\race\cg_race_vote.c">
       <Filter>src\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_weapon_tuning.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\cgame\race\ui\main\ActiveVoteViewController.c">
       <Filter>src\race\ui\main</Filter>
     </ClCompile>
@@ -543,6 +564,9 @@
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_barriers.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_double_jump.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_input_viewer.c">
@@ -783,6 +807,15 @@
       <Filter>src\game\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_physics.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_hook.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_pmove_policy.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_tuning_wire.c">
       <Filter>src\game\race</Filter>
     </ClCompile>
   </ItemGroup>

@@ -51,6 +51,7 @@ cg_race_hud_layout_t Cg_Race_HudLayout(int32_t screen_width,
 bool Cg_Race_RunHudVisible(bool enabled, bool intermission, bool editor,
                            bool scores, bool spectator, bool chasing);
 cg_race_climb_state_t Cg_Race_ClimbState(float distance);
+cg_race_climb_state_t Cg_Race_ClimbStateForRange(float distance, float range);
 const char *Cg_Race_ClimbLabel(cg_race_climb_state_t state);
 bool Cg_Race_DescribeMarker(const char *classname, bool checkpoint_is_integer,
                             int32_t checkpoint, cg_race_marker_descriptor_t *descriptor);

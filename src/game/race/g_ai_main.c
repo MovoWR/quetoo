@@ -1260,6 +1260,10 @@ static uint32_t G_Ai_Move(g_client_t *cl, pm_cmd_t *cmd) {
   pm.DebugMask = gi.DebugMask;
   pm.debug_mask = DEBUG_PMOVE_SERVER;
 
+  // These Pm_Move calls are AI lookahead only. Their traces must not mutate
+  // the authoritative one-way-wall state consumed by the client's real move.
+  const uint64_t oneway_latches = cl->race_oneway_latches;
+
   // perform a move; predict our next frame
   Pm_Move(&pm);
 
@@ -1272,6 +1276,7 @@ static uint32_t G_Ai_Move(g_client_t *cl, pm_cmd_t *cmd) {
     cl->ai->lookahead_frame = g_level.frame_num;
     cl->ai->lookahead_no_ground = !pm_ahead.ground.ent;
   }
+  cl->race_oneway_latches = oneway_latches;
 
   // predicted ground is gone
   if (ent->ground.ent && (cl->ai->lookahead_no_ground || !pm.ground.ent)) {

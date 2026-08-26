@@ -20,6 +20,7 @@
  */
 
 #include "g_local.h"
+#include "race_weapon_tuning_service.h"
 #include "bg_pmove.h"
 #include "race_module_compat.h"
 #include <time.h>
@@ -302,12 +303,19 @@ static int32_t G_CheckArmor(g_entity_t *ent, const vec3_t pos, const vec3_t norm
  * @brief The tail of the `G_ModifyDamage` chain, applying the quad damage
  * powerup. Features holding their own modifiers install over the top.
  */
+static const g_entity_t *g_modify_damage_inflictor;
+
 static void G_ModifyDamage_Common(g_entity_t *target, g_entity_t *attacker, int32_t *damage, int32_t *knockback) {
 
   if (attacker->client) {
     if (attacker->client->inventory[POWERUP_QUAD]) {
-      *damage *= QUAD_DAMAGE_FACTOR;
-      *knockback *= QUAD_KNOCKBACK_FACTOR;
+      const bool tuned_self_hit = target == attacker &&
+        g_modify_damage_inflictor &&
+        g_modify_damage_inflictor->race_weapon_tuning_generation;
+      if (!tuned_self_hit) {
+        *damage *= QUAD_DAMAGE_FACTOR;
+        *knockback *= QUAD_KNOCKBACK_FACTOR;
+      }
     }
   }
 }
@@ -383,7 +391,10 @@ void G_Damage(const g_damage_t *dmg) {
     }
   }
 
+  const g_entity_t *previous_inflictor = g_modify_damage_inflictor;
+  g_modify_damage_inflictor = inflictor;
   G_ModifyDamage(target, attacker, &damage, &knockback);
+  g_modify_damage_inflictor = previous_inflictor;
 
   // friendly fire avoidance
   if (target != attacker && g_level.teams) {
@@ -434,7 +445,8 @@ void G_Damage(const g_damage_t *dmg) {
     const float mass = Clampf(target->mass, 1.0, 1000.0);
 
     if (target == attacker) { // self knockback (rocket jump / grenade jump / plasma climb)
-      knockback *= g_self_knockback->value;
+      knockback *= Race_WeaponTuningService_ProjectileSelfKnockback(
+        inflictor, g_self_knockback->value);
     }
 
     knockback_vel = Vec3_Scale(ndir, knockback * 100.f / sqrtf(mass));

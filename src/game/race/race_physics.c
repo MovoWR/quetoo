@@ -19,67 +19,10 @@
 static bool Race_Physics_FieldEquals(const char *field, size_t length,
                                      const char *expected);
 
-static const race_physics_family_descriptor_t race_physics_families[] = {
-  {
-    .id = RACE_PHYSICS_FAMILY_QUETOO,
-    .key = RACE_PHYSICS_FAMILY_QUETOO_KEY,
-    .name = "Current Quetoo",
-    .available = true
-  },
-  {
-    .id = RACE_PHYSICS_FAMILY_Q2,
-    .key = RACE_PHYSICS_FAMILY_Q2_KEY,
-    .name = "Q2",
-    .available = true
-  }
-};
-
-static const race_physics_preset_descriptor_t race_physics_presets[] = {
-  {
-    .id = RACE_PHYSICS_PRESET_QUETOO_COMMON_V1,
-    .family = RACE_PHYSICS_FAMILY_QUETOO,
-    .key = RACE_PHYSICS_PRESET_QUETOO_COMMON_V1_KEY,
-    .name = "Current common Quetoo",
-    .short_name = "Quetoo",
-    .ruleset = RACE_PHYSICS_PRESET_QUETOO_COMMON_V1_KEY,
-    .available = true,
-    .rankable = true
-  },
-  {
-    .id = RACE_PHYSICS_PRESET_Q2,
-    .family = RACE_PHYSICS_FAMILY_Q2,
-    .key = RACE_PHYSICS_PRESET_Q2_V1_KEY,
-    .name = "Quake II",
-    .short_name = "Q2",
-    .ruleset = RACE_PHYSICS_PRESET_Q2_V1_KEY,
-    .available = true,
-    .rankable = true
-  },
-  {
-    .id = RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
-    .family = RACE_PHYSICS_FAMILY_Q2,
-    .key = RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY,
-    .name = "Legacy Quetoo Fix hybrid",
-    .short_name = "Quetoo Fix",
-    .ruleset = RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY,
-    .available = true,
-    .rankable = true
-  }
-};
-
-static const race_physics_config_t race_physics_default = {
-  .version = RACE_PHYSICS_CONFIG_VERSION,
-  .family = RACE_PHYSICS_FAMILY_Q2,
-  .preset = RACE_PHYSICS_PRESET_Q2,
-  .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_NEAREST
-};
-
 /**
- * @brief The complete, map-fixed movement vectors for named Q2 presets.
- *
- * These are the sole source of parameter values used by GAME, deterministic
- * movement tests and validation builds. CGAME consumes the selected vector
- * from authoritative `pm_state_t.params` snapshots instead of selecting it.
+ * @brief Complete map-fixed movement vectors for named Q2 presets.
+ * @details GAME hydrates these values. CGAME consumes the authoritative
+ * `pm_state_t.params` snapshot and compares it with the selected descriptor.
  */
 static const pm_params_t race_physics_q2_v1_params = {
   .gravity = 800,
@@ -135,11 +78,118 @@ static const pm_params_t race_physics_quetoo_fix_v1_params = {
   .speed_water_jump = 420.f
 };
 
+typedef struct {
+  const char *alias;
+  const char *preset_key;
+} race_physics_selector_alias_t;
+
+static const race_physics_selector_alias_t race_physics_selector_aliases[] = {
+  {
+    .alias = RACE_PHYSICS_SELECTOR_Q2_KEY,
+    .preset_key = RACE_PHYSICS_PRESET_Q2_V1_KEY
+  },
+  {
+    .alias = RACE_PHYSICS_SELECTOR_QUAKE2_KEY,
+    .preset_key = RACE_PHYSICS_PRESET_Q2_V1_KEY
+  },
+  {
+    .alias = RACE_PHYSICS_SELECTOR_DP2_KEY,
+    .preset_key = RACE_PHYSICS_PRESET_DP2_V1_KEY
+  }
+};
+
+static const race_physics_family_descriptor_t race_physics_families[] = {
+  {
+    .id = RACE_PHYSICS_FAMILY_QUETOO,
+    .key = RACE_PHYSICS_FAMILY_QUETOO_KEY,
+    .name = "Current Quetoo",
+    .available = true
+  },
+  {
+    .id = RACE_PHYSICS_FAMILY_Q2,
+    .key = RACE_PHYSICS_FAMILY_Q2_KEY,
+    .name = "Q2",
+    .available = true
+  }
+};
+
+static const race_physics_preset_descriptor_t race_physics_presets[] = {
+  {
+    .id = RACE_PHYSICS_PRESET_QUETOO_COMMON_V1,
+    .family = RACE_PHYSICS_FAMILY_QUETOO,
+    .key = RACE_PHYSICS_PRESET_QUETOO_COMMON_V1_KEY,
+    .name = "Current common Quetoo",
+    .short_name = "Quetoo",
+    .ruleset = RACE_PHYSICS_PRESET_QUETOO_COMMON_V1_KEY,
+    .fixed_params = NULL,
+    .pm_policy = RACE_PM_POLICY_QUETOO_COMMON_V1,
+    .weapon_profile = RACE_WEAPON_PROFILE_LEGACY_LIVE_CVARS_V1,
+    .hyperblaster_climb_range = 32.f,
+    .available = true,
+    .rankable = true
+  },
+  {
+    .id = RACE_PHYSICS_PRESET_Q2,
+    .family = RACE_PHYSICS_FAMILY_Q2,
+    .key = RACE_PHYSICS_PRESET_Q2_V1_KEY,
+    .name = "Quake II",
+    .short_name = "Q2",
+    .ruleset = RACE_PHYSICS_PRESET_Q2_V1_KEY,
+    .ruleset_snap_off = "q2-v1-snap-off",
+    .ruleset_snap_truncate = "q2-v1-snap-truncate",
+    .fixed_params = &race_physics_q2_v1_params,
+    .pm_policy = RACE_PM_POLICY_Q2_V1,
+    .weapon_profile = RACE_WEAPON_PROFILE_LEGACY_LIVE_CVARS_V1,
+    .hyperblaster_climb_range = 32.f,
+    .available = true,
+    .rankable = true
+  },
+  {
+    .id = RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
+    .family = RACE_PHYSICS_FAMILY_Q2,
+    .key = RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY,
+    .name = "Legacy Quetoo Fix hybrid",
+    .short_name = "Quetoo Fix",
+    .ruleset = RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY,
+    .ruleset_snap_off = "quetoo-fix-v1-snap-off",
+    .ruleset_snap_truncate = "quetoo-fix-v1-snap-truncate",
+    .fixed_params = &race_physics_quetoo_fix_v1_params,
+    .pm_policy = RACE_PM_POLICY_QUETOO_FIX_V1,
+    .weapon_profile = RACE_WEAPON_PROFILE_LEGACY_LIVE_CVARS_V1,
+    .hyperblaster_climb_range = 32.f,
+    .available = true,
+    .rankable = true
+  },
+  {
+    .id = RACE_PHYSICS_PRESET_DP2_V1,
+    .family = RACE_PHYSICS_FAMILY_Q2,
+    .key = RACE_PHYSICS_PRESET_DP2_V1_KEY,
+    .name = "Digital Paint: Paintball 2",
+    .short_name = "DP2",
+    .ruleset = RACE_PHYSICS_PRESET_DP2_V1_KEY,
+    .ruleset_snap_off = "dp2-v1-snap-off",
+    .ruleset_snap_truncate = "dp2-v1-snap-truncate",
+    .fixed_params = &race_physics_q2_v1_params,
+    .pm_policy = RACE_PM_POLICY_DP2_V1,
+    .weapon_profile = RACE_WEAPON_PROFILE_LEGACY_LIVE_CVARS_V1,
+    .hyperblaster_climb_range = 32.f,
+    .available = true,
+    .rankable = true
+  }
+};
+
+static const race_physics_config_t race_physics_default = {
+  .version = RACE_PHYSICS_CONFIG_VERSION,
+  .family = RACE_PHYSICS_FAMILY_Q2,
+  .preset = RACE_PHYSICS_PRESET_Q2,
+  .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_TRUNCATE
+};
+
 static race_physics_config_t race_physics_active = {
   .version = RACE_PHYSICS_CONFIG_VERSION,
   .family = RACE_PHYSICS_FAMILY_Q2,
   .preset = RACE_PHYSICS_PRESET_Q2,
-  .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_NEAREST
+  .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_TRUNCATE
 };
 static race_physics_config_provider_t race_physics_provider;
 
@@ -266,7 +316,7 @@ bool Race_Physics_ConfigForPresetKey(const char *key,
     .family = family->id,
     .preset = preset->id,
     .q2_snap_mode = family->id == RACE_PHYSICS_FAMILY_Q2
-      ? RACE_PHYSICS_Q2_SNAP_NEAREST
+      ? RACE_PHYSICS_Q2_SNAP_TRUNCATE
       : RACE_PHYSICS_Q2_SNAP_OFF
   };
   return true;
@@ -279,9 +329,11 @@ bool Race_Physics_ConfigForSelector(const char *selector,
   }
 
   const char *key = selector;
-  if (!strcmp(selector, RACE_PHYSICS_SELECTOR_Q2_KEY) ||
-      !strcmp(selector, RACE_PHYSICS_SELECTOR_QUAKE2_KEY)) {
-    key = RACE_PHYSICS_PRESET_Q2_V1_KEY;
+  for (size_t i = 0; i < lengthof(race_physics_selector_aliases); i++) {
+    if (!strcmp(selector, race_physics_selector_aliases[i].alias)) {
+      key = race_physics_selector_aliases[i].preset_key;
+      break;
+    }
   }
 
   return Race_Physics_ConfigForPresetKey(key, config);
@@ -336,18 +388,9 @@ const char *Race_Physics_ConfigRuleset(const race_physics_config_t *config) {
       config->q2_snap_mode == RACE_PHYSICS_Q2_SNAP_NEAREST) {
     return preset->ruleset;
   }
-  switch (config->preset) {
-    case RACE_PHYSICS_PRESET_Q2:
-      return config->q2_snap_mode == RACE_PHYSICS_Q2_SNAP_OFF
-        ? "q2-v1-snap-off"
-        : "q2-v1-snap-truncate";
-    case RACE_PHYSICS_PRESET_QUETOO_FIX_V1:
-      return config->q2_snap_mode == RACE_PHYSICS_Q2_SNAP_OFF
-        ? "quetoo-fix-v1-snap-off"
-        : "quetoo-fix-v1-snap-truncate";
-    default:
-      return NULL;
-  }
+  return config->q2_snap_mode == RACE_PHYSICS_Q2_SNAP_OFF
+    ? preset->ruleset_snap_off
+    : preset->ruleset_snap_truncate;
 }
 
 bool Race_Physics_FixedParamsForPreset(const race_physics_preset_id_t preset,
@@ -356,16 +399,11 @@ bool Race_Physics_FixedParamsForPreset(const race_physics_preset_id_t preset,
     return false;
   }
 
-  const pm_params_t *fixed;
-  switch (preset) {
-    case RACE_PHYSICS_PRESET_Q2:
-      fixed = &race_physics_q2_v1_params;
-      break;
-    case RACE_PHYSICS_PRESET_QUETOO_FIX_V1:
-      fixed = &race_physics_quetoo_fix_v1_params;
-      break;
-    default:
-      return false;
+  const race_physics_preset_descriptor_t *descriptor =
+    Race_Physics_Preset(preset);
+  const pm_params_t *fixed = descriptor ? descriptor->fixed_params : NULL;
+  if (!fixed) {
+    return false;
   }
 
   *params = *fixed;

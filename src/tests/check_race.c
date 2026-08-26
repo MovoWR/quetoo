@@ -32,6 +32,7 @@
 #endif
 
 #include "cg_race_presentation.h"
+#include "cg_race_double_jump.h"
 #include "cg_input_viewer_math.h"
 #include "cg_strafe_helper_math.h"
 #include "race_admin.h"
@@ -95,6 +96,31 @@ static race_physics_parse_result_t Race_TestPhysicsProvider(
   }
   return race_test_physics_provider_result;
 }
+
+START_TEST(_Race_DoubleJumpInputSequence) {
+  cg_race_double_jump_state_t state = { };
+
+  ck_assert(!Cg_RaceDoubleJumpStateMove(&state, false));
+
+  Cg_RaceDoubleJumpStateDown(&state);
+  ck_assert(Cg_RaceDoubleJumpStateMove(&state, false));
+  ck_assert_int_eq(state.phase, CG_RACE_DOUBLE_JUMP_FIRST_PRESS);
+  ck_assert(Cg_RaceDoubleJumpStateMove(&state, true));
+  ck_assert_int_eq(state.phase, CG_RACE_DOUBLE_JUMP_RELEASE);
+
+  ck_assert(!Cg_RaceDoubleJumpStateMove(&state, false));
+  ck_assert(!Cg_RaceDoubleJumpStateMove(&state, true));
+  ck_assert_int_eq(state.phase, CG_RACE_DOUBLE_JUMP_SECOND_PRESS);
+
+  Cg_RaceDoubleJumpStateDown(&state);
+  ck_assert_int_eq(state.phase, CG_RACE_DOUBLE_JUMP_SECOND_PRESS);
+  ck_assert(Cg_RaceDoubleJumpStateMove(&state, true));
+
+  Cg_RaceDoubleJumpStateUp(&state);
+  ck_assert_int_eq(state.phase, CG_RACE_DOUBLE_JUMP_IDLE);
+  ck_assert(!state.held);
+  ck_assert(!Cg_RaceDoubleJumpStateMove(&state, true));
+} END_TEST
 
 static void Race_TestPersistenceRemove(const char *path) {
   if (path && *path) {
@@ -1500,10 +1526,24 @@ START_TEST(_Race_HudLayoutVisibilityAndClimb) {
   ck_assert(!Cg_Race_RunHudVisible(true, false, false, true, false, false));
   ck_assert(!Cg_Race_RunHudVisible(true, false, false, false, true, false));
 
-  ck_assert_int_eq(Cg_Race_ClimbState(31.99f), CG_RACE_CLIMB_READY);
-  ck_assert_int_eq(Cg_Race_ClimbState(32.f), CG_RACE_CLIMB_CLOSER);
-  ck_assert_int_eq(Cg_Race_ClimbState(63.99f), CG_RACE_CLIMB_CLOSER);
-  ck_assert_int_eq(Cg_Race_ClimbState(64.f), CG_RACE_CLIMB_TOO_FAR);
+  size_t presetCount;
+  const race_physics_preset_descriptor_t *presets =
+    Race_Physics_Presets(&presetCount);
+  for (size_t i = 0u; i < presetCount; i++) {
+    const race_physics_config_t config = {
+      .version = RACE_PHYSICS_CONFIG_VERSION,
+      .family = presets[i].family,
+      .preset = presets[i].id,
+      .q2_snap_mode = presets[i].family == RACE_PHYSICS_FAMILY_Q2
+        ? RACE_PHYSICS_Q2_SNAP_NEAREST
+        : RACE_PHYSICS_Q2_SNAP_OFF
+    };
+    ck_assert(Race_Physics_SetActive(&config));
+    ck_assert_int_eq(Cg_Race_ClimbState(31.99f), CG_RACE_CLIMB_READY);
+    ck_assert_int_eq(Cg_Race_ClimbState(32.f), CG_RACE_CLIMB_CLOSER);
+    ck_assert_int_eq(Cg_Race_ClimbState(63.99f), CG_RACE_CLIMB_CLOSER);
+    ck_assert_int_eq(Cg_Race_ClimbState(64.f), CG_RACE_CLIMB_TOO_FAR);
+  }
   ck_assert_str_eq(Cg_Race_ClimbLabel(CG_RACE_CLIMB_READY), "CLIMB");
   ck_assert_str_eq(Cg_Race_ClimbLabel(CG_RACE_CLIMB_CLOSER), "CLOSER");
   ck_assert_str_eq(Cg_Race_ClimbLabel(CG_RACE_CLIMB_TOO_FAR), "TOO FAR");
@@ -4487,6 +4527,7 @@ START_TEST(_Race_PhysicsCatalogAndRankingPolicy) {
   ck_assert_int_eq(RACE_PHYSICS_PRESET_QUETOO_COMMON_V1, 1);
   ck_assert_int_eq(RACE_PHYSICS_PRESET_Q2, 2);
   ck_assert_int_eq(RACE_PHYSICS_PRESET_QUETOO_FIX_V1, 3);
+  ck_assert_int_eq(RACE_PHYSICS_PRESET_DP2_V1, 4);
   ck_assert_int_eq(RACE_PHYSICS_Q2_SNAP_OFF, 0);
   ck_assert_int_eq(RACE_PHYSICS_Q2_SNAP_NEAREST, 1);
   ck_assert_int_eq(RACE_PHYSICS_Q2_SNAP_TRUNCATE, 2);
@@ -4520,7 +4561,7 @@ START_TEST(_Race_PhysicsCatalogAndRankingPolicy) {
   const race_physics_preset_descriptor_t *presets =
     Race_Physics_Presets(&preset_count);
   ck_assert_ptr_nonnull(presets);
-  ck_assert_uint_eq(preset_count, 3u);
+  ck_assert_uint_eq(preset_count, 4u);
   ck_assert_int_eq(presets[0].id, RACE_PHYSICS_PRESET_QUETOO_COMMON_V1);
   ck_assert_int_eq(presets[0].family, RACE_PHYSICS_FAMILY_QUETOO);
   ck_assert_str_eq(presets[0].key,
@@ -4543,6 +4584,40 @@ START_TEST(_Race_PhysicsCatalogAndRankingPolicy) {
   ck_assert_int_eq(presets[2].family, RACE_PHYSICS_FAMILY_Q2);
   ck_assert(presets[2].available);
   ck_assert(presets[2].rankable);
+  ck_assert_int_eq(presets[3].id, RACE_PHYSICS_PRESET_DP2_V1);
+  ck_assert_int_eq(presets[3].family, RACE_PHYSICS_FAMILY_Q2);
+  ck_assert_str_eq(presets[3].key, RACE_PHYSICS_PRESET_DP2_V1_KEY);
+  ck_assert_str_eq(presets[3].name, "Digital Paint: Paintball 2");
+  ck_assert_str_eq(presets[3].short_name, "DP2");
+  ck_assert_str_eq(presets[3].ruleset, RACE_PHYSICS_PRESET_DP2_V1_KEY);
+  ck_assert(presets[3].available);
+  ck_assert(presets[3].rankable);
+
+  const race_pm_policy_id_t expectedPolicies[] = {
+    RACE_PM_POLICY_QUETOO_COMMON_V1,
+    RACE_PM_POLICY_Q2_V1,
+    RACE_PM_POLICY_QUETOO_FIX_V1,
+    RACE_PM_POLICY_DP2_V1
+  };
+  for (size_t i = 0u; i < preset_count; i++) {
+    ck_assert_int_eq(presets[i].pm_policy, expectedPolicies[i]);
+    ck_assert_int_eq(presets[i].weapon_profile,
+                     RACE_WEAPON_PROFILE_LEGACY_LIVE_CVARS_V1);
+    ck_assert_float_eq(presets[i].hyperblaster_climb_range, 32.f);
+    ck_assert_ptr_nonnull(presets[i].ruleset);
+    if (presets[i].family == RACE_PHYSICS_FAMILY_Q2) {
+      ck_assert_ptr_nonnull(presets[i].ruleset_snap_off);
+      ck_assert_ptr_nonnull(presets[i].ruleset_snap_truncate);
+    } else {
+      ck_assert_ptr_null(presets[i].ruleset_snap_off);
+      ck_assert_ptr_null(presets[i].ruleset_snap_truncate);
+    }
+  }
+  ck_assert_ptr_null(presets[0].fixed_params);
+  ck_assert_ptr_nonnull(presets[1].fixed_params);
+  ck_assert_ptr_nonnull(presets[2].fixed_params);
+  ck_assert_ptr_eq(presets[1].fixed_params, presets[3].fixed_params);
+  ck_assert_ptr_ne(presets[1].fixed_params, presets[2].fixed_params);
   ck_assert_ptr_null(Race_Physics_Preset(RACE_PHYSICS_PRESET_INVALID));
   ck_assert_ptr_null(Race_Physics_PresetForKey(NULL));
   ck_assert_ptr_null(Race_Physics_PresetForKey("unknown"));
@@ -4551,35 +4626,46 @@ START_TEST(_Race_PhysicsCatalogAndRankingPolicy) {
   ck_assert_uint_eq(current->version, RACE_PHYSICS_CONFIG_VERSION);
   ck_assert_int_eq(current->family, RACE_PHYSICS_FAMILY_Q2);
   ck_assert_int_eq(current->preset, RACE_PHYSICS_PRESET_Q2);
-  ck_assert_int_eq(current->q2_snap_mode, RACE_PHYSICS_Q2_SNAP_NEAREST);
+  ck_assert_int_eq(current->q2_snap_mode, RACE_PHYSICS_Q2_SNAP_TRUNCATE);
   ck_assert(Race_Physics_ConfigValid(current));
   ck_assert(Race_Physics_ConfigAvailable(current));
   ck_assert(Race_Physics_ConfigRankable(current));
   ck_assert_str_eq(Race_Physics_ConfigRuleset(current),
-                   RACE_PHYSICS_PRESET_Q2_V1_KEY);
+                   "q2-v1-snap-truncate");
 
   const race_physics_config_t q2 = {
     .version = RACE_PHYSICS_CONFIG_VERSION,
     .family = RACE_PHYSICS_FAMILY_Q2,
     .preset = RACE_PHYSICS_PRESET_Q2,
-    .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_NEAREST
+    .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_TRUNCATE
   };
   const race_physics_config_t quetoo_fix = {
     .version = RACE_PHYSICS_CONFIG_VERSION,
     .family = RACE_PHYSICS_FAMILY_Q2,
     .preset = RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
-    .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_NEAREST
+    .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_TRUNCATE
+  };
+  const race_physics_config_t dp2 = {
+    .version = RACE_PHYSICS_CONFIG_VERSION,
+    .family = RACE_PHYSICS_FAMILY_Q2,
+    .preset = RACE_PHYSICS_PRESET_DP2_V1,
+    .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_TRUNCATE
   };
   ck_assert(Race_Physics_ConfigValid(&q2));
   ck_assert(Race_Physics_ConfigAvailable(&q2));
   ck_assert(Race_Physics_ConfigRankable(&q2));
   ck_assert_str_eq(Race_Physics_ConfigRuleset(&q2),
-                   RACE_PHYSICS_PRESET_Q2_V1_KEY);
+                   "q2-v1-snap-truncate");
   ck_assert(Race_Physics_ConfigValid(&quetoo_fix));
   ck_assert(Race_Physics_ConfigAvailable(&quetoo_fix));
   ck_assert(Race_Physics_ConfigRankable(&quetoo_fix));
   ck_assert_str_eq(Race_Physics_ConfigRuleset(&quetoo_fix),
-                   RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY);
+                   "quetoo-fix-v1-snap-truncate");
+  ck_assert(Race_Physics_ConfigValid(&dp2));
+  ck_assert(Race_Physics_ConfigAvailable(&dp2));
+  ck_assert(Race_Physics_ConfigRankable(&dp2));
+  ck_assert_str_eq(Race_Physics_ConfigRuleset(&dp2),
+                   "dp2-v1-snap-truncate");
 
   race_physics_config_t selected;
   ck_assert(Race_Physics_ConfigForPresetKey(
@@ -4594,6 +4680,12 @@ START_TEST(_Race_PhysicsCatalogAndRankingPolicy) {
   ck_assert(Race_Physics_ConfigForSelector(
     RACE_PHYSICS_PRESET_Q2_V1_KEY, &selected));
   ck_assert(Race_Physics_ConfigEquals(&selected, &q2));
+  ck_assert(Race_Physics_ConfigForSelector(
+    RACE_PHYSICS_SELECTOR_DP2_KEY, &selected));
+  ck_assert(Race_Physics_ConfigEquals(&selected, &dp2));
+  ck_assert(Race_Physics_ConfigForSelector(
+    RACE_PHYSICS_PRESET_DP2_V1_KEY, &selected));
+  ck_assert(Race_Physics_ConfigEquals(&selected, &dp2));
   ck_assert(!Race_Physics_ConfigForSelector("q2pro", &selected));
   ck_assert(!Race_Physics_ConfigForSelector("q2pro-v1", &selected));
   ck_assert(Race_Physics_ConfigForPresetKey(
@@ -4628,7 +4720,7 @@ START_TEST(_Race_PhysicsCatalogAndRankingPolicy) {
 START_TEST(_Race_PhysicsConfigCodec) {
   char wire[RACE_PHYSICS_CONFIG_STRING_SIZE];
   ck_assert(Race_Physics_Encode(Race_Physics_Default(), wire));
-  ck_assert_str_eq(wire, "v2\\q2\\q2-v1\\nearest");
+  ck_assert_str_eq(wire, "v2\\q2\\q2-v1\\truncate");
 
   const race_physics_config_t q2 = {
     .version = RACE_PHYSICS_CONFIG_VERSION,
@@ -4642,6 +4734,12 @@ START_TEST(_Race_PhysicsConfigCodec) {
     .preset = RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
     .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_NEAREST
   };
+  const race_physics_config_t dp2 = {
+    .version = RACE_PHYSICS_CONFIG_VERSION,
+    .family = RACE_PHYSICS_FAMILY_Q2,
+    .preset = RACE_PHYSICS_PRESET_DP2_V1,
+    .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_NEAREST
+  };
   const race_physics_config_t common = {
     .version = RACE_PHYSICS_CONFIG_VERSION,
     .family = RACE_PHYSICS_FAMILY_QUETOO,
@@ -4653,7 +4751,7 @@ START_TEST(_Race_PhysicsConfigCodec) {
   race_physics_config_t decoded;
   ck_assert_int_eq(Race_Physics_Decode(wire, &decoded),
                    RACE_PHYSICS_PARSE_OK);
-  ck_assert(Race_Physics_ConfigEquals(&decoded, Race_Physics_Default()));
+  ck_assert(Race_Physics_ConfigEquals(&decoded, &q2));
 
   ck_assert_int_eq(Race_Physics_Decode(NULL, &decoded),
                    RACE_PHYSICS_PARSE_INVALID_ARGUMENT);
@@ -4688,6 +4786,18 @@ START_TEST(_Race_PhysicsConfigCodec) {
                      "v1\\q2\\q2-v1", &decoded),
                    RACE_PHYSICS_PARSE_OK);
   ck_assert(Race_Physics_ConfigEquals(&decoded, &q2));
+  ck_assert(Race_Physics_Encode(&dp2, wire));
+  ck_assert_str_eq(wire, "v2\\q2\\dp2-v1\\nearest");
+  ck_assert_int_eq(Race_Physics_Decode(wire, &decoded),
+                   RACE_PHYSICS_PARSE_OK);
+  ck_assert(Race_Physics_ConfigEquals(&decoded, &dp2));
+  ck_assert_int_eq(Race_Physics_Decode(
+                     "v1\\q2\\dp2-v1", &decoded),
+                   RACE_PHYSICS_PARSE_OK);
+  ck_assert(Race_Physics_ConfigEquals(&decoded, &dp2));
+  ck_assert_int_eq(Race_Physics_Decode(
+                     "v1\\quetoo\\dp2-v1", &decoded),
+                   RACE_PHYSICS_PARSE_FAMILY_MISMATCH);
   ck_assert_int_eq(Race_Physics_Decode(
                      "v1\\q2\\q2pro-v1", &decoded),
                    RACE_PHYSICS_PARSE_UNKNOWN_PRESET);
@@ -4719,7 +4829,26 @@ START_TEST(_Race_PhysicsConfigCodec) {
   ck_assert(Race_Physics_Encode(&alternate, wire));
   ck_assert_str_eq(wire, "v2\\q2\\q2-v1\\off");
   ck_assert_str_eq(Race_Physics_ConfigRuleset(&alternate),
-                    "q2-v1-snap-off");
+                   "q2-v1-snap-off");
+
+  alternate = dp2;
+  alternate.q2_snap_mode = RACE_PHYSICS_Q2_SNAP_TRUNCATE;
+  ck_assert(Race_Physics_Encode(&alternate, wire));
+  ck_assert_str_eq(wire, "v2\\q2\\dp2-v1\\truncate");
+  ck_assert_int_eq(Race_Physics_Decode(wire, &decoded),
+                   RACE_PHYSICS_PARSE_OK);
+  ck_assert(Race_Physics_ConfigEquals(&decoded, &alternate));
+  ck_assert_str_eq(Race_Physics_ConfigRuleset(&decoded),
+                   "dp2-v1-snap-truncate");
+
+  alternate.q2_snap_mode = RACE_PHYSICS_Q2_SNAP_OFF;
+  ck_assert(Race_Physics_Encode(&alternate, wire));
+  ck_assert_str_eq(wire, "v2\\q2\\dp2-v1\\off");
+  ck_assert_int_eq(Race_Physics_Decode(wire, &decoded),
+                   RACE_PHYSICS_PARSE_OK);
+  ck_assert(Race_Physics_ConfigEquals(&decoded, &alternate));
+  ck_assert_str_eq(Race_Physics_ConfigRuleset(&alternate),
+                   "dp2-v1-snap-off");
 
   ck_assert_int_eq(Race_Physics_Decode(
                      "v2\\q2\\q2-v1\\unknown", &decoded),
@@ -4741,24 +4870,34 @@ START_TEST(_Race_PhysicsConfigCodec) {
 } END_TEST
 
 START_TEST(_Race_PhysicsIdentityParameterAgreement) {
-  race_physics_config_t q2, q2fix, common;
-  pm_params_t q2_params, q2fix_params, arbitrary = { 0 };
+  race_physics_config_t q2, q2fix, dp2, common;
+  pm_params_t q2_params, q2fix_params, dp2_params, arbitrary = { 0 };
   ck_assert(Race_Physics_ConfigForPresetKey(
     RACE_PHYSICS_PRESET_Q2_V1_KEY, &q2));
   ck_assert(Race_Physics_ConfigForPresetKey(
     RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY, &q2fix));
   ck_assert(Race_Physics_ConfigForPresetKey(
+    RACE_PHYSICS_PRESET_DP2_V1_KEY, &dp2));
+  ck_assert(Race_Physics_ConfigForPresetKey(
     RACE_PHYSICS_PRESET_QUETOO_COMMON_V1_KEY, &common));
   ck_assert(Race_Physics_FixedParamsForPreset(q2.preset, &q2_params));
   ck_assert(Race_Physics_FixedParamsForPreset(q2fix.preset, &q2fix_params));
+  ck_assert(Race_Physics_FixedParamsForPreset(dp2.preset, &dp2_params));
 
   ck_assert_msg(Race_Physics_ParamsHash(&q2_params) ==
                   UINT64_C(0xa0238a6a2bf3be4f),
                 "q2-v1 exact parameter bits changed");
+  ck_assert(Race_Physics_ParamsEqual(&dp2_params, &q2_params));
+  ck_assert_msg(Race_Physics_ParamsHash(&dp2_params) ==
+                  UINT64_C(0xa0238a6a2bf3be4f),
+                "dp2-v1 must retain the q2-v1 immutable parameter vector");
+  ck_assert(!Race_Physics_ConfigEquals(&dp2, &q2));
   ck_assert(Race_Physics_ConfigParamsAgree(&q2, &q2_params));
   ck_assert(!Race_Physics_ConfigParamsAgree(&q2, &q2fix_params));
   ck_assert(Race_Physics_ConfigParamsAgree(&q2fix, &q2fix_params));
   ck_assert(!Race_Physics_ConfigParamsAgree(&q2fix, &q2_params));
+  ck_assert(Race_Physics_ConfigParamsAgree(&dp2, &dp2_params));
+  ck_assert(Race_Physics_ConfigParamsAgree(&dp2, &q2_params));
   ck_assert(Race_Physics_ConfigParamsAgree(&common, &arbitrary));
   ck_assert(!Race_Physics_ConfigParamsAgree(NULL, &arbitrary));
   ck_assert(!Race_Physics_ConfigParamsAgree(&q2, NULL));
@@ -4774,6 +4913,8 @@ START_TEST(_Race_PhysicsIdentityParameterAgreement) {
     RACE_PHYSICS_PARSE_OK, true, &q2, &q2fix_params));
   ck_assert(Race_Physics_PredictionReady(
     RACE_PHYSICS_PARSE_OK, true, &q2, &q2_params));
+  ck_assert(Race_Physics_PredictionReady(
+    RACE_PHYSICS_PARSE_OK, true, &dp2, &dp2_params));
 } END_TEST
 
 START_TEST(_Race_PhysicsAuthoritativeAndPredictionLifecycle) {
@@ -5008,6 +5149,7 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_StoredSpawn);
   tcase_add_test(tcase, _Race_StoredSpawnClientIndependence);
   tcase_add_test(tcase, _Race_MovementCollisionPolicy);
+  tcase_add_test(tcase, _Race_DoubleJumpInputSequence);
   tcase_add_test(tcase, _Race_TrainingInputContract);
   tcase_add_test(tcase, _Race_InputViewerLegacyContract);
   tcase_add_test(tcase, _Race_StrafeHelperLegacyMath);

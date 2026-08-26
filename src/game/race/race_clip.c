@@ -2,9 +2,9 @@
  * Race-owned conditional brush collision.
  *
  * The sweep below is a module-owned transcription of the bounded portion of
- * official Quetoo v1.0.79 Cm_BoxTrace / Cm_TraceToBrush_ at commit
- * db9246d073b95dfb8f491eb20c9cc6bdce5b724f. It intentionally preserves the
- * official operation order because trace fractions are prediction data.
+ * Quetoo Cm_BoxTrace / Cm_TraceToBrush_ at the pinned source commit
+ * 3fd1e9253284ad7f5431de17fe503475a9af704b. It intentionally preserves the
+ * upstream operation order because trace fractions are prediction data.
  */
 
 #include "race_clip.h"

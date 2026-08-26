@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src\tests">
+      <UniqueIdentifier>{D2931722-4B7E-4F05-A1E7-8B3C596C7451}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\game\race">
+      <UniqueIdentifier>{BC0A7C31-FDCF-46D2-BB8C-68E2453B7CE3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shared">
+      <UniqueIdentifier>{453C9617-8608-48DE-B50D-2E374AED773A}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\game\race\race_physics.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_weapon_movement.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\tests\check_race_weapon_movement.c">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_physics.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_weapon_movement.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\qstring.c">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

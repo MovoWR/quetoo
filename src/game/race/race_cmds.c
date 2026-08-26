@@ -17,8 +17,14 @@
 #include "race_replay_playback_service.h"
 #include "race_vote_service.h"
 #include "race_vote_menu_service.h"
+#include "race_weapon_tuning_service.h"
 
 bool Race_ClientCommand(g_client_t *cl, const char *cmd) {
+
+  // Claim both forms before the generic `race <replay-selector>` fallback.
+  if (Race_WeaponTuningService_ClientCommand(cl, cmd)) {
+    return true;
+  }
 
   if (Race_VoteMenuService_ClientCommand(cl, cmd)) {
     return true;
@@ -93,6 +99,9 @@ bool Race_ClientCommand(g_client_t *cl, const char *cmd) {
   if (q_strcmp(cmd, "race") == 0) {
     if (gi.Argc() < 2) {
       Race_RequestStart(cl);
+    } else if (q_strcmp(gi.Argv(1), "tune") == 0) {
+      // Already claimed above. Retain a fail-closed guard if dispatch changes.
+      gi.ClientPrint(cl, PRINT_HIGH, "Weapon tuning command unavailable\n");
     } else if (q_strcmp(gi.Argv(1), "admin") == 0) {
       Race_AdminActions_ClientCommand(cl);
     } else if (q_strcmp(gi.Argv(1), "vote") == 0) {

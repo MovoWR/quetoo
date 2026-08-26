@@ -20,7 +20,10 @@
  */
 
 #include "cg_local.h"
+#include "cg_race_double_jump.h"
+#include "cg_race_weapon_tuning.h"
 #include "cg_module_compat.h"
+#include "race_hook.h"
 
 cg_state_t cg_state;
 
@@ -262,11 +265,18 @@ static void Cg_ParseTeamInfo(const char *s) {
  * @brief An updated configuration string has just been received from the server.
  * Refresh related variables and media that aren't managed by the engine.
  */
+#if defined(G_HOOK)
+static bool cg_hook_pull_speed_valid;
+#endif
+
 static void Cg_UpdateConfigString(int32_t i) {
 
   const char *s = cgi.ConfigString(i);
 
   switch (i) {
+    case CS_RACE_WEAPON_TUNING_STATUS:
+      Cg_RaceWeaponTuning_UpdateStatus(s);
+      return;
     case CS_GAMEPLAY:
       cg_state.gameplay = (g_gameplay_id_t) strtol(s, NULL, 10);
       return;
@@ -280,9 +290,17 @@ static void Cg_UpdateConfigString(int32_t i) {
       cg_state.items = (g_items_t) strtol(s, NULL, 10);
       return;
 #if defined(G_HOOK)
-    case CS_HOOK_PULL_SPEED:
-      cg_state.hook_pull_speed = strtof(s, NULL);
+    case CS_HOOK_PULL_SPEED: {
+      float speed;
+      cg_hook_pull_speed_valid = Race_HookPullSpeed_Parse(s, &speed);
+      cg_state.hook_pull_speed = cg_hook_pull_speed_valid
+        ? speed : RACE_HOOK_PULL_SPEED_DEFAULT;
+      if (!cg_hook_pull_speed_valid) {
+        Cg_Warn("Rejected invalid hook pull speed `%s`; prediction is disabled\n",
+                s);
+      }
       return;
+    }
 #endif
     case CS_MAX_CLIENTS:
       cg_state.max_clients = (int32_t) strtol(s, NULL, 10);
@@ -374,6 +392,10 @@ float Cg_GetHookPullSpeed(void) {
 
   return cg_state.hook_pull_speed;
 }
+
+bool Cg_HookPullSpeedValid(void) {
+  return cg_hook_pull_speed_valid;
+}
 #endif
 
 /**
@@ -397,6 +419,9 @@ ListGameplayModes Cg_ListGameplayModes = Cg_ListGameplayModes_Common;
 static void Cg_ClearState(void) {
 
   memset(&cg_state, 0, sizeof(cg_state));
+#if defined(G_HOOK)
+  cg_hook_pull_speed_valid = false;
+#endif
 
   Cg_ClearInput();
 
@@ -456,6 +481,8 @@ static const char *Cg_Nav_KeyBind(const char *bind) {
  * @brief Draws the HUD and scores overlay, or navigation edit mode instructions if active.
  */
 static void Cg_UpdateScreen(const cl_frame_t *frame) {
+
+  Cg_Module_Update();
 
   // hide HUD in nav edit
   if (cg_state.nav_edit) {
@@ -521,7 +548,7 @@ cg_export_t *Cg_LoadCgame(cg_import_t *import) {
   cge.ClearState = Cg_ClearState;
   cge.HandleEvent = Cg_HandleEvent;
   cge.Look = Cg_Look;
-  cge.Move = Cg_Move;
+  cge.Move = Cg_RaceDoubleJump_Move;
   cge.LoadMedia = Cg_LoadMedia;
   cge.FreeMedia = Cg_FreeMedia;
   cge.ParsedMessage = Cg_ParsedMessage;

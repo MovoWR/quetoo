@@ -22,6 +22,7 @@
     <ClInclude Include="..\src\cgame\race\cg_team_mode.h" />
     <ClInclude Include="..\src\cgame\race\cg_module_compat.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_barriers.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_double_jump.h" />
     <ClInclude Include="..\src\cgame\cgame.h" />
     <ClInclude Include="..\src\game\race\bg_item.h" />
     <ClInclude Include="..\src\game\common\bg_pmove.h" />
@@ -41,14 +42,19 @@
     <ClInclude Include="..\src\cgame\race\cg_race_replay.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_training.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_vote.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_weapon_tuning.h" />
     <ClInclude Include="..\src\cgame\race\cg_score.h" />
     <ClInclude Include="..\src\cgame\race\cg_score_model.h" />
     <ClInclude Include="..\src\cgame\race\cg_strafe_helper.h" />
     <ClInclude Include="..\src\cgame\race\cg_strafe_helper_math.h" />
     <ClInclude Include="..\src\game\race\race_replay_transport.h" />
     <ClInclude Include="..\src\game\race\race_physics.h" />
+    <ClInclude Include="..\src\game\race\race_pmove_policy.h" />
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_types.h" />
+    <ClInclude Include="..\src\game\race\race_weapon_tuning_wire.h" />
     <ClInclude Include="..\src\game\race\race_training.h" />
     <ClInclude Include="..\src\game\race\race_finish_report.h" />
+    <ClInclude Include="..\src\game\race\race_hook.h" />
     <ClInclude Include="..\src\game\race\race_leaderboard_wire.h" />
     <ClInclude Include="..\src\game\race\race_map_browser_wire.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_map_browser.h" />
@@ -81,6 +87,7 @@
     <ClCompile Include="..\src\game\race\race_clip.c" />
     <ClCompile Include="..\src\cgame\race\cg_module.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_barriers.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_double_jump.c" />
     <ClCompile Include="..\src\cgame\race\cg_discord.c" />
     <ClCompile Include="..\src\cgame\race\cg_main.c" />
     <ClCompile Include="..\src\cgame\race\cg_media.c" />
@@ -98,6 +105,7 @@
     <ClCompile Include="..\src\cgame\race\cg_race_replay.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_training.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_vote.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_weapon_tuning.c" />
     <ClCompile Include="..\src\cgame\race\cg_score.c" />
     <ClCompile Include="..\src\cgame\race\cg_score_model.c" />
     <ClCompile Include="..\src\cgame\race\ui\home\HomeViewController.c" />
@@ -125,9 +133,12 @@
     <ClCompile Include="..\src\cgame\race\cg_strafe_helper.c" />
     <ClCompile Include="..\src\game\race\race_replay_transport.c" />
     <ClCompile Include="..\src\game\race\race_finish_report.c" />
+    <ClCompile Include="..\src\game\race\race_hook.c" />
     <ClCompile Include="..\src\game\race\race_physics.c" />
+    <ClCompile Include="..\src\game\race\race_pmove_policy.c" />
     <ClCompile Include="..\src\game\race\race_leaderboard_wire.c" />
     <ClCompile Include="..\src\game\race\race_map_browser_wire.c" />
+    <ClCompile Include="..\src\game\race\race_weapon_tuning_wire.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\cgame\race\ui\DialogViewController.css" />

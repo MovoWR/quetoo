@@ -18,6 +18,7 @@
 
 #include "game/common/bg_pmove.h"
 #include "race_physics.h"
+#include "race_pmove_policy.h"
 #include "race_training.h"
 
 box3_t Pm_PlayerBounds(bool ducked);
@@ -32,6 +33,7 @@ uint16_t Pm_Q2TimeForTest(uint16_t msec);
 float Pm_Q2SnapFloatForTest(float value);
 vec3_t Pm_Q2ClipVelocityForTest(vec3_t in, vec3_t normal);
 void Pm_Q2StepSlideMoveForTest(pm_move_t *move);
+void Pm_Q2StepSlideMoveForTest_CgameReference(pm_move_t *move);
 void Pm_Q2CheckGroundForTest(pm_move_t *move, vec3_t previous_velocity);
 void Pm_Q2CheckGroundForTest_CgameReference(pm_move_t *move,
                                              vec3_t previous_velocity);
@@ -100,6 +102,13 @@ static const race_physics_config_t race_pmove_q2_fix_config = {
   .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_NEAREST
 };
 
+static const race_physics_config_t race_pmove_dp2_config = {
+  .version = RACE_PHYSICS_CONFIG_VERSION,
+  .family = RACE_PHYSICS_FAMILY_Q2,
+  .preset = RACE_PHYSICS_PRESET_DP2_V1,
+  .q2_snap_mode = RACE_PHYSICS_Q2_SNAP_NEAREST
+};
+
 static const race_physics_config_t race_pmove_common_config = {
   .version = RACE_PHYSICS_CONFIG_VERSION,
   .family = RACE_PHYSICS_FAMILY_QUETOO,
@@ -128,6 +137,7 @@ typedef enum {
   RACE_PMOVE_WORLD_LEDGE,
   RACE_PMOVE_WORLD_WATER,
   RACE_PMOVE_WORLD_LADDER,
+  RACE_PMOVE_WORLD_LADDER_FLOOR,
   RACE_PMOVE_WORLD_LADDER_NEGATIVE,
   RACE_PMOVE_WORLD_TUNNEL
 } race_pmove_world_t;
@@ -1042,6 +1052,14 @@ static cm_trace_t Race_PmoveTrace(const vec3_t start,
                            CONTENTS_SOLID | CONTENTS_LADDER, 0);
       break;
 
+    case RACE_PMOVE_WORLD_LADDER_FLOOR:
+      Race_PmoveTracePlane(&trace, start, end, bounds, Vec3_Up(), 0.f,
+                           RACE_PMOVE_ENTITY_FLOOR, CONTENTS_SOLID, 0);
+      Race_PmoveTracePlane(&trace, start, end, bounds, Vec3(-1.f, 0.f, 0.f),
+                           -32.f, RACE_PMOVE_ENTITY_LADDER,
+                           CONTENTS_SOLID | CONTENTS_LADDER, 0);
+      break;
+
     case RACE_PMOVE_WORLD_LADDER_NEGATIVE:
       Race_PmoveTracePlane(&trace, start, end, bounds, Vec3(1.f, 0.f, 0.f),
                            -32.f, RACE_PMOVE_ENTITY_LADDER,
@@ -1553,6 +1571,14 @@ static void Race_PmoveUseQ2FixTestPhysics(void) {
   Pm_SetQ2SnapEnabledForTest(false);
 }
 
+static void Race_PmoveUseDp2TestPhysics(void) {
+  Race_Physics_SetProvider(NULL);
+  ck_assert(Race_Physics_SetActive(&race_pmove_dp2_config));
+  ck_assert(Race_Physics_ConfigEquals(Race_Physics_Current(),
+                                     &race_pmove_dp2_config));
+  Pm_SetQ2SnapEnabledForTest(false);
+}
+
 static void Race_PmoveUseQ2SnapTestPhysics(void) {
   Race_PmoveUseQ2TestPhysics();
   Pm_SetQ2SnapEnabledForTest(true);
@@ -1571,6 +1597,9 @@ static void Race_PmoveUseQ2NamedTestPhysics(
       break;
     case RACE_PHYSICS_PRESET_QUETOO_FIX_V1:
       Race_PmoveUseQ2FixTestPhysics();
+      break;
+    case RACE_PHYSICS_PRESET_DP2_V1:
+      Race_PmoveUseDp2TestPhysics();
       break;
     default:
       abort();
@@ -4009,6 +4038,86 @@ START_TEST(_Race_PmoveQ2AiDirectStep) {
                 "direct AI Q2 step changed replicated parameters");
 } END_TEST
 
+START_TEST(_Race_PmoveDp2StepPolicyGameCgame) {
+  const vec3_t origin = Vec3(0.f, 0.f, 24.f);
+  const vec3_t velocity = Vec3(400.f, 0.f, 0.f);
+
+  Race_PmoveUseDp2TestPhysics();
+  Pm_SetQ2AirWishspeedCapForTest(0.f);
+  Race_PmoveQ2StepSetWorld(RACE_PMOVE_Q2_STEP_FLOOR, 0.f);
+  pm_move_t game = Race_PmoveQ2StepSetup(
+    origin, velocity, 50, Race_PmoveQ2StepGameTrace);
+  pm_move_t cgame = Race_PmoveQ2StepSetup(
+    origin, velocity, 50, Race_PmoveQ2StepCgameTrace);
+
+  Pm_Q2StepSlideMoveForTest(&game);
+  Pm_Q2StepSlideMoveForTest_CgameReference(&cgame);
+  Race_PmoveQ2StepAssertMoveParity("DP2 full step", &game, &cgame);
+  ck_assert_uint_eq(race_pmove_q2_step_game_context.num_traces, 4u);
+  const race_pmove_q2_step_trace_t *step_up =
+    race_pmove_q2_step_game_context.traces + 1u;
+  const race_pmove_q2_step_trace_t *step_down =
+    race_pmove_q2_step_game_context.traces + 3u;
+  Race_PmoveAssertVec3("DP2 full step", "step-up start",
+                       step_up->start, origin);
+  Race_PmoveAssertVec3("DP2 full step", "step-up end",
+                       step_up->end, Vec3(0.f, 0.f, 42.f));
+  Race_PmoveAssertFloat("DP2 full step", "step-up fraction",
+                        step_up->fraction, 1.f);
+  Race_PmoveAssertVec3("DP2 full step", "down target",
+                       step_down->end, Vec3(20.f, 0.f, 23.f));
+  Race_PmoveAssertFloat("DP2 full step", "legal settled z",
+                        game.s.origin.z, 24.f);
+  Race_PmoveAssertFloat("DP2 full step", "standing hull maxs.z",
+                        step_up->bounds.maxs.z, 32.f);
+
+  Race_PmoveQ2StepSetWorld(RACE_PMOVE_Q2_STEP_HEADROOM, 0.f);
+  game = Race_PmoveQ2StepSetup(
+    origin, velocity, 50, Race_PmoveQ2StepGameTrace);
+  cgame = Race_PmoveQ2StepSetup(
+    origin, velocity, 50, Race_PmoveQ2StepCgameTrace);
+  Pm_Q2StepSlideMoveForTest(&game);
+  Pm_Q2StepSlideMoveForTest_CgameReference(&cgame);
+  Race_PmoveQ2StepAssertMoveParity("DP2 partial step", &game, &cgame);
+  step_up = race_pmove_q2_step_game_context.traces + 1u;
+  step_down = race_pmove_q2_step_game_context.traces +
+              race_pmove_q2_step_game_context.num_traces - 1u;
+  ck_assert(step_up->fraction > 0.f && step_up->fraction < 1.f);
+  Race_PmoveAssertFloat(
+    "DP2 partial step", "fraction-limited down depth",
+    step_down->start.z - step_down->end.z,
+    18.f * step_up->fraction);
+
+  Race_PmoveQ2StepSetWorld(RACE_PMOVE_Q2_STEP_ALL_SOLID_DOWN, 0.f);
+  game = Race_PmoveQ2StepSetup(
+    origin, velocity, 50, Race_PmoveQ2StepGameTrace);
+  cgame = Race_PmoveQ2StepSetup(
+    origin, velocity, 50, Race_PmoveQ2StepCgameTrace);
+  Pm_Q2StepSlideMoveForTest(&game);
+  Pm_Q2StepSlideMoveForTest_CgameReference(&cgame);
+  Race_PmoveQ2StepAssertMoveParity("DP2 inset retry", &game, &cgame);
+  ck_assert(race_pmove_q2_step_game_context.num_traces >= 2u);
+  const race_pmove_q2_step_trace_t *full_down =
+    race_pmove_q2_step_game_context.traces +
+    race_pmove_q2_step_game_context.num_traces - 2u;
+  const race_pmove_q2_step_trace_t *inset_down = full_down + 1u;
+  ck_assert(full_down->all_solid);
+  ck_assert(inset_down->all_solid);
+  Race_PmoveAssertVec3("DP2 inset retry", "start", inset_down->start,
+                       full_down->start);
+  Race_PmoveAssertVec3("DP2 inset retry", "end", inset_down->end,
+                       full_down->end);
+  Race_PmoveAssertVec3("DP2 inset retry", "inset mins",
+                       inset_down->bounds.mins,
+                       Vec3_Add(full_down->bounds.mins,
+                                Vec3(1.f, 1.f, 0.f)));
+  Race_PmoveAssertVec3("DP2 inset retry", "inset maxs",
+                       inset_down->bounds.maxs,
+                       Vec3_Subtract(full_down->bounds.maxs,
+                                     Vec3(1.f, 1.f, 1.f)));
+
+} END_TEST
+
 typedef enum {
   RACE_PMOVE_Q2_GROUND_HIT,
   RACE_PMOVE_Q2_GROUND_NO_HIT,
@@ -4380,6 +4489,133 @@ START_TEST(_Race_PmoveQ2FixGroundThresholds) {
   ck_assert_uint_eq(landing.s.time, 0u);
 } END_TEST
 
+START_TEST(_Race_PmoveDp2GroundAndJumpPolicy) {
+  const vec3_t origin = Vec3(-64.f, -32.f, 0x1.82p+4f);
+  const vec3_t rising = Vec3(320.f, 0.f, 0x1.680002p+7f);
+  const vec3_t normal = Race_PmoveRampNormal();
+
+  Race_PmoveUseQ2TestPhysics();
+  pm_move_t q2_ground = Race_PmoveSetup(RACE_PMOVE_GROUND_ACCELERATION);
+  q2_ground.s.params = Race_PmoveQ2NamedParams(RACE_PHYSICS_PRESET_Q2);
+  q2_ground.s.velocity.z = 160.f;
+  q2_ground.cmd.msec = 16;
+  Pm_Move(&q2_ground);
+
+  Race_PmoveUseDp2TestPhysics();
+  pm_move_t dp2_ground = Race_PmoveSetup(RACE_PMOVE_GROUND_ACCELERATION);
+  dp2_ground.s.params = Race_PmoveQ2NamedParams(RACE_PHYSICS_PRESET_DP2_V1);
+  dp2_ground.s.velocity.z = 160.f;
+  dp2_ground.cmd.msec = 16;
+  pm_move_t dp2_ground_cgame = dp2_ground;
+  Pm_Move(&dp2_ground);
+  Pm_Move_CgameReference(&dp2_ground_cgame);
+
+  ck_assert_msg(memcmp(&dp2_ground.s, &q2_ground.s,
+                       sizeof(dp2_ground.s)) == 0,
+                "ordinary DP2 ground movement differs from Q2");
+  ck_assert_msg(memcmp(&dp2_ground.s, &dp2_ground_cgame.s,
+                       sizeof(dp2_ground.s)) == 0,
+                "ordinary DP2 GAME/CGAME ground state differs");
+  ck_assert(dp2_ground.s.flags & PMF_ON_GROUND);
+  ck_assert_int_eq(Race_PmoveEntityId(dp2_ground.ground.ent),
+                   RACE_PMOVE_ENTITY_FLOOR);
+  Race_PmoveAssertFloat("ordinary DP2 ground", "velocity.z",
+                        dp2_ground.s.velocity.z, 0.f);
+
+  Race_PmoveUseDp2TestPhysics();
+  Race_PmoveQ2GroundSetContext(&race_pmove_q2_ground_game_context,
+                                RACE_PMOVE_Q2_GROUND_HIT, normal);
+  Race_PmoveQ2GroundSetContext(&race_pmove_q2_ground_cgame_context,
+                                RACE_PMOVE_Q2_GROUND_HIT, normal);
+  pm_move_t held = Race_PmoveQ2GroundSetup(
+    origin, rising, PMF_ON_GROUND | PMF_JUMP_HELD, 16, 10,
+    Race_PmoveQ2GroundGameTrace);
+  pm_move_t held_cgame = Race_PmoveQ2GroundSetup(
+    origin, rising, PMF_ON_GROUND | PMF_JUMP_HELD, 16, 10,
+    Race_PmoveQ2GroundCgameTrace);
+  Pm_Q2CheckGroundForTest(&held, rising);
+  Pm_Q2CheckGroundForTest_CgameReference(&held_cgame, rising);
+  Race_PmoveQ2GroundAssertMoveParity(
+    "DP2 held rising contact", &held, &held_cgame);
+  ck_assert_uint_eq(race_pmove_q2_ground_game_context.num_traces, 0u);
+  ck_assert_uint_eq(held.s.flags, PMF_JUMP_HELD);
+  ck_assert_ptr_null(held.ground.ent);
+
+  Race_PmoveQ2GroundSetContext(&race_pmove_q2_ground_game_context,
+                                RACE_PMOVE_Q2_GROUND_HIT, normal);
+  Race_PmoveQ2GroundSetContext(&race_pmove_q2_ground_cgame_context,
+                                RACE_PMOVE_Q2_GROUND_HIT, normal);
+  pm_move_t released = Race_PmoveQ2GroundSetup(
+    origin, rising, PMF_ON_GROUND, 16, 0, Race_PmoveQ2GroundGameTrace);
+  pm_move_t released_cgame = Race_PmoveQ2GroundSetup(
+    origin, rising, PMF_ON_GROUND, 16, 0, Race_PmoveQ2GroundCgameTrace);
+  Pm_Q2CheckGroundForTest(&released, rising);
+  Pm_Q2CheckGroundForTest_CgameReference(&released_cgame, rising);
+  Race_PmoveQ2GroundAssertMoveParity(
+    "DP2 released rising contact", &released, &released_cgame);
+  ck_assert_uint_eq(race_pmove_q2_ground_game_context.num_traces, 1u);
+  ck_assert(released.s.flags & PMF_ON_GROUND);
+  ck_assert_int_eq(Race_PmoveEntityId(released.ground.ent),
+                   RACE_PMOVE_ENTITY_RAMP);
+
+  Race_PmoveUseQ2TestPhysics();
+  Race_PmoveQ2GroundSetContext(&race_pmove_q2_ground_game_context,
+                                RACE_PMOVE_Q2_GROUND_HIT, normal);
+  pm_move_t q2_released = Race_PmoveQ2GroundSetup(
+    origin, rising, PMF_ON_GROUND, 16, 0, Race_PmoveQ2GroundGameTrace);
+  Pm_Q2CheckGroundForTest(&q2_released, rising);
+  ck_assert_uint_eq(race_pmove_q2_ground_game_context.num_traces, 0u);
+  ck_assert(!(q2_released.s.flags & PMF_ON_GROUND));
+  ck_assert_ptr_null(q2_released.ground.ent);
+
+  static const struct {
+    float incoming;
+    float expected;
+    bool jumped;
+  } jump_cases[] = {
+    { -25.f, 270.f, true },
+    { 180.f, 450.f, true },
+    { 200.f, 450.f, true },
+    { 449.f, 450.f, true },
+    { 450.f, 450.f, false },
+    { 451.f, 451.f, false }
+  };
+
+  Race_PmoveUseDp2TestPhysics();
+  for (size_t i = 0; i < sizeof(jump_cases) / sizeof(*jump_cases); i++) {
+    pm_move_t game = Race_PmoveQ2AirSetup(origin, Vec3(0.f, 0.f,
+                                                       jump_cases[i].incoming));
+    game.s.params = Race_PmoveQ2NamedParams(RACE_PHYSICS_PRESET_DP2_V1);
+    game.cmd = (pm_cmd_t) { .msec = 8, .up = 10 };
+    Race_PmoveSetGround(&game, RACE_PMOVE_ENTITY_RAMP, normal);
+    pm_move_t cgame = game;
+
+    const bool game_jumped = Pm_Q2CheckJumpForTest(&game, Vec3_Zero());
+    const bool cgame_jumped = Pm_Q2CheckJumpForTest_CgameReference(
+      &cgame, Vec3_Zero());
+
+    ck_assert_int_eq(game_jumped, jump_cases[i].jumped);
+    ck_assert_int_eq(cgame_jumped, jump_cases[i].jumped);
+    ck_assert_msg(memcmp(&game.s, &cgame.s, sizeof(game.s)) == 0,
+                  "DP2 jump case %zu GAME/CGAME state differs", i + 1u);
+    Race_PmoveAssertFloat("DP2 jump cap", "velocity.z",
+                          game.s.velocity.z, jump_cases[i].expected);
+    ck_assert(game.s.flags & PMF_JUMP_HELD);
+    ck_assert_int_eq(!!(game.s.flags & PMF_JUMPED), jump_cases[i].jumped);
+    ck_assert(!(game.s.flags & PMF_ON_GROUND));
+    ck_assert_ptr_null(game.ground.ent);
+  }
+
+  Race_PmoveUseQ2TestPhysics();
+  pm_move_t q2_jump = Race_PmoveQ2AirSetup(
+    origin, Vec3(0.f, 0.f, 200.f));
+  q2_jump.cmd = (pm_cmd_t) { .msec = 8, .up = 10 };
+  Race_PmoveSetGround(&q2_jump, RACE_PMOVE_ENTITY_RAMP, normal);
+  ck_assert(Pm_Q2CheckJumpForTest(&q2_jump, Vec3_Zero()));
+  Race_PmoveAssertFloat("Q2 jump non-leakage", "velocity.z",
+                        q2_jump.s.velocity.z, 470.f);
+} END_TEST
+
 typedef enum {
   RACE_PMOVE_Q2_RAMP_INFINITE_UP,
   RACE_PMOVE_Q2_RAMP_COURSE,
@@ -4700,6 +4936,116 @@ START_TEST(_Race_PmoveQ2RampNoAutohopGameCgame) {
   ck_assert_msg(!!(states[3].s.flags & PMF_ON_GROUND) ==
                   !!states[3].ground.ent,
                 "continued hold produced inconsistent ground state");
+} END_TEST
+
+START_TEST(_Race_PmoveDp2RampSlideNoAutohopGameCgameAi) {
+  Race_PmoveUseDp2TestPhysics();
+  Pm_SetQ2AirWishspeedCapForTest(0.f);
+  Pm_SetQ2AirWishspeedCapForTest_CgameReference(0.f);
+  race_pmove_q2_ramp_world = RACE_PMOVE_Q2_RAMP_INFINITE_UP;
+
+  const vec3_t normal = Race_PmoveQ2RampUpNormal();
+  const float dist = Race_PmoveQ2RampUpDist();
+  const float support = Race_PmovePlaneSupportMin(
+    Pm_PlayerBounds(false), normal);
+  const vec3_t origin = Vec3(
+    -144.f, -64.f, (dist - normal.x * -144.f - support) / normal.z);
+  const vec3_t velocity = Vec3(320.f, 0.f, 220.f);
+  pm_move_t game = Race_PmoveQ2RampSetup(
+    origin, velocity, PMF_ON_GROUND | PMF_JUMP_HELD,
+    Race_PmoveQ2RampGameTrace);
+  pm_move_t cgame = Race_PmoveQ2RampSetup(
+    origin, velocity, PMF_ON_GROUND | PMF_JUMP_HELD,
+    Race_PmoveQ2RampCgameTrace);
+  const pm_params_t params = game.s.params;
+  pm_move_t states[3];
+
+  static const pm_cmd_t commands[] = {
+    { .msec = 16, .forward = 300, .up = 0 },
+    { .msec = 8, .forward = 300, .up = 10 },
+    { .msec = 16, .forward = 300, .up = 10 }
+  };
+
+  for (size_t i = 0; i < sizeof(commands) / sizeof(*commands); i++) {
+    Race_PmoveQ2RampResetContexts();
+    game.cmd = cgame.cmd = commands[i];
+    Pm_Move(&game);
+    Pm_Move_CgameReference(&cgame);
+    states[i] = game;
+
+    char name[64];
+    snprintf(name, sizeof(name), "DP2 ramp jump command %zu", i + 1u);
+    Race_PmoveQ2RampAssertParity(name, &game, &cgame);
+    ck_assert_msg(memcmp(&game.s.params, &params, sizeof(params)) == 0 &&
+                  memcmp(&cgame.s.params, &params, sizeof(params)) == 0,
+                  "%s changed replicated parameters", name);
+  }
+
+  ck_assert(!(states[0].s.flags & (PMF_JUMP_HELD | PMF_JUMPED)));
+  ck_assert(states[0].s.flags & PMF_ON_GROUND);
+  ck_assert_ptr_nonnull(states[0].ground.ent);
+  ck_assert_msg(states[0].s.velocity.x > velocity.x,
+                "DP2 ramp slide did not retain rising ramp momentum");
+
+  ck_assert(states[1].s.flags & PMF_JUMPED);
+  ck_assert(states[1].s.flags & PMF_JUMP_HELD);
+  ck_assert(!(states[1].s.flags & PMF_ON_GROUND));
+  ck_assert_ptr_null(states[1].ground.ent);
+  ck_assert(states[1].s.velocity.z <= 450.f);
+
+  ck_assert(states[2].s.flags & PMF_JUMP_HELD);
+  ck_assert(!(states[2].s.flags & PMF_JUMPED));
+
+  Race_PmoveQ2RampResetContexts();
+  pm_move_t ai = Race_PmoveQ2RampSetup(
+    origin, velocity, PMF_ON_GROUND | PMF_JUMP_HELD,
+    Race_PmoveQ2RampGameTrace);
+  ai.cmd = commands[0];
+  Pm_Move(&ai);
+  ck_assert_msg(memcmp(&ai.s, &states[0].s, sizeof(ai.s)) == 0,
+                "direct AI DP2 ramp state differs from GAME mover");
+  ck_assert_msg(memcmp(&ai.s.params, &params, sizeof(params)) == 0,
+                "direct AI DP2 ramp changed replicated parameters");
+
+  const pm_cmd_t reversal_cmd = {
+    .msec = 16,
+    .forward = -300,
+    .up = 0
+  };
+
+  Race_PmoveQ2RampResetContexts();
+  pm_move_t ordinary = Race_PmoveQ2RampSetup(
+    origin, Vec3(velocity.x, velocity.y, 160.f),
+    PMF_ON_GROUND | PMF_JUMP_HELD, Race_PmoveQ2RampGameTrace);
+  ordinary.cmd = reversal_cmd;
+  Pm_Move(&ordinary);
+
+  Race_PmoveQ2RampResetContexts();
+  pm_move_t reversal = Race_PmoveQ2RampSetup(
+    origin, velocity, PMF_ON_GROUND | PMF_JUMP_HELD,
+    Race_PmoveQ2RampGameTrace);
+  pm_move_t reversal_cgame = Race_PmoveQ2RampSetup(
+    origin, velocity, PMF_ON_GROUND | PMF_JUMP_HELD,
+    Race_PmoveQ2RampCgameTrace);
+  reversal.cmd = reversal_cgame.cmd = reversal_cmd;
+  Pm_Move(&reversal);
+  Pm_Move_CgameReference(&reversal_cgame);
+
+  Race_PmoveQ2RampAssertParity("DP2 ramp reversal", &reversal,
+                               &reversal_cgame);
+  Race_PmoveAssertVec3("DP2 ramp reversal fallback", "origin",
+                       reversal.s.origin, ordinary.s.origin);
+  Race_PmoveAssertVec3("DP2 ramp reversal fallback", "velocity",
+                       reversal.s.velocity, ordinary.s.velocity);
+  ck_assert_msg(reversal.s.flags == ordinary.s.flags,
+                "DP2 ramp reversal flags were 0x%04x, expected 0x%04x",
+                reversal.s.flags, ordinary.s.flags);
+  ck_assert_msg(reversal.s.time == ordinary.s.time,
+                "DP2 ramp reversal time was %u, expected %u",
+                reversal.s.time, ordinary.s.time);
+  ck_assert_msg(memcmp(&reversal.s, &ordinary.s,
+                       sizeof(reversal.s)) == 0,
+                "direction-rejected DP2 ramp contact differs from Q2 ground");
 } END_TEST
 
 START_TEST(_Race_PmoveQ2AiDirectRamp) {
@@ -5575,12 +5921,7 @@ static int32_t Race_PmoveCrossBoxContents(const box3_t box) {
 
 static void Race_PmoveCrossSelectPreset(
     const race_physics_preset_id_t preset) {
-  if (preset == RACE_PHYSICS_PRESET_Q2) {
-    Race_PmoveUseQ2SnapTestPhysics();
-  } else {
-    ck_assert_int_eq(preset, RACE_PHYSICS_PRESET_QUETOO_FIX_V1);
-    Race_PmoveUseQ2FixSnapTestPhysics();
-  }
+  Race_PmoveUseQ2NamedTestPhysics(preset, true);
   Pm_SetQ2AirWishspeedCapForTest(0.f);
 }
 
@@ -5942,7 +6283,8 @@ START_TEST(_Race_PmoveQ2FinalCombinedGameCgameAi) {
 START_TEST(_Race_PmoveQ2CrossDomainStreams) {
   static const race_physics_preset_id_t presets[] = {
     RACE_PHYSICS_PRESET_Q2,
-    RACE_PHYSICS_PRESET_QUETOO_FIX_V1
+    RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
+    RACE_PHYSICS_PRESET_DP2_V1
   };
   static const char *stream_names[] = {
     "A jump-air-land-snap",
@@ -6005,14 +6347,19 @@ START_TEST(_Race_PmoveQ2CrossDomainStreams) {
                             (1u << RACE_PMOVE_ENTITY_WALL_Y)));
         }
         ck_assert(ramp);
-        ck_assert(air);
-        ck_assert_msg(step,
-                      "preset %d stream B never stepped; final=(%a %a %a)",
-                      preset,
-                      (double) game[RACE_PMOVE_CROSS_COMMANDS - 1u].state.origin.x,
-                      (double) game[RACE_PMOVE_CROSS_COMMANDS - 1u].state.origin.y,
-                      (double) game[RACE_PMOVE_CROSS_COMMANDS - 1u].state.origin.z);
-        ck_assert(collision);
+        if (preset == RACE_PHYSICS_PRESET_DP2_V1) {
+          // This course stays below DP2's ramp-contact slide threshold.
+          ck_assert(!air);
+        } else {
+          ck_assert(air);
+          ck_assert_msg(step,
+                        "preset %d stream B never stepped; final=(%a %a %a)",
+                        preset,
+                        (double) game[RACE_PMOVE_CROSS_COMMANDS - 1u].state.origin.x,
+                        (double) game[RACE_PMOVE_CROSS_COMMANDS - 1u].state.origin.y,
+                        (double) game[RACE_PMOVE_CROSS_COMMANDS - 1u].state.origin.z);
+          ck_assert(collision);
+        }
         ck_assert(game[RACE_PMOVE_CROSS_COMMANDS - 1u].state.flags &
                   PMF_ON_GROUND);
       } else if (stream == RACE_PMOVE_CROSS_NEGATIVE_COLLISION) {
@@ -6193,6 +6540,14 @@ START_TEST(_Race_PmovePlayerBoundsContract) {
                          Box3(Vec3(-16.f, -16.f, -24.f),
                               Vec3(16.f, 16.f, 4.f)));
 
+  Race_PmoveUseDp2TestPhysics();
+  Race_PmoveAssertBounds("DP2 standing", Pm_PlayerBounds(false),
+                         Box3(Vec3(-16.f, -16.f, -24.f),
+                              Vec3(16.f, 16.f, 32.f)));
+  Race_PmoveAssertBounds("DP2 crouched", Pm_PlayerBounds(true),
+                         Box3(Vec3(-16.f, -16.f, -24.f),
+                              Vec3(16.f, 16.f, 4.f)));
+
   Race_PmoveUseQ2FixTestPhysics();
   Race_PmoveAssertBounds("Quetoo Fix standing", Pm_PlayerBounds(false),
                          Box3(Vec3(-16.f, -16.f, -24.f),
@@ -6200,6 +6555,29 @@ START_TEST(_Race_PmovePlayerBoundsContract) {
   Race_PmoveAssertBounds("Quetoo Fix crouched", Pm_PlayerBounds(true),
                          Box3(Vec3(-16.f, -16.f, -24.f),
                               Vec3(16.f, 16.f, 6.f)));
+} END_TEST
+
+START_TEST(_Race_PmovePolicyCatalog) {
+  static const race_pm_policy_id_t expected[] = {
+    RACE_PM_POLICY_QUETOO_COMMON_V1,
+    RACE_PM_POLICY_Q2_V1,
+    RACE_PM_POLICY_QUETOO_FIX_V1,
+    RACE_PM_POLICY_DP2_V1
+  };
+
+  size_t count;
+  const race_physics_preset_descriptor_t *presets =
+    Race_Physics_Presets(&count);
+  ck_assert_uint_eq(count, lengthof(expected));
+
+  for (size_t i = 0; i < count; i++) {
+    ck_assert_int_eq(presets[i].pm_policy, expected[i]);
+    ck_assert_ptr_nonnull(Race_PmovePolicy(presets[i].pm_policy));
+    ck_assert(Race_PmovePolicyComplete(presets + i));
+  }
+
+  ck_assert_ptr_null(Race_PmovePolicy(RACE_PM_POLICY_INVALID));
+  ck_assert(!Race_PmovePolicyComplete(NULL));
 } END_TEST
 
 START_TEST(_Race_PmoveQ2DuckStateMachine) {
@@ -7127,6 +7505,7 @@ static void Race_PmoveQ2LadderNormalizeCallbacks(pm_move_t *move) {
 START_TEST(_Race_PmoveQ2LadderIndependentGameCgame) {
   static const race_physics_preset_id_t presets[] = {
     RACE_PHYSICS_PRESET_Q2,
+    RACE_PHYSICS_PRESET_DP2_V1,
     RACE_PHYSICS_PRESET_QUETOO_FIX_V1
   };
   static const uint16_t durations[] = { 8, 16, 25, 50 };
@@ -7189,6 +7568,101 @@ START_TEST(_Race_PmoveQ2LadderIndependentGameCgame) {
                     presets[preset], orientation);
     }
   }
+} END_TEST
+
+START_TEST(_Race_PmoveDp2LadderLipJumpGameCgameAi) {
+  static const int16_t climb_inputs[] = { 1, 9, 10, 300 };
+
+  Race_PmoveUseDp2TestPhysics();
+  Pm_SetQ2SnapEnabledForTest_CgameReference(false);
+
+  for (size_t input = 0; input < lengthof(climb_inputs); input++) {
+    const pm_move_t attached = Race_PmoveQ2LadderProbeCase(
+      RACE_PHYSICS_PRESET_DP2_V1, RACE_PMOVE_WORLD_LADDER,
+      Vec3(15.125f, 0.f, 40.f), Vec3_Zero(),
+      0, 0, PM_NORMAL, climb_inputs[input]);
+    ck_assert_uint_eq(attached.s.flags, PMF_ON_LADDER);
+    ck_assert(!(attached.s.flags & (PMF_JUMP_HELD | PMF_JUMPED)));
+  }
+
+  pm_move_t game = Race_PmoveSetup(RACE_PMOVE_LADDER);
+  game.s.params = Race_PmoveQ2NamedParams(RACE_PHYSICS_PRESET_DP2_V1);
+  game.s.origin = Vec3(15.125f, 0.f, 40.f);
+  game.s.velocity = Vec3_Zero();
+  game.cmd = (pm_cmd_t) { .msec = 16, .up = 10 };
+  game.Trace = Race_PmoveLadderTrace;
+  pm_move_t cgame = game;
+  cgame.Trace = Race_PmoveLadderTraceCgame;
+  race_pmove_world = RACE_PMOVE_WORLD_LADDER;
+
+  Pm_Move(&game);
+  Pm_Move_CgameReference(&cgame);
+  pm_move_t game_copy = game;
+  pm_move_t cgame_copy = cgame;
+  Race_PmoveQ2LadderNormalizeCallbacks(&game_copy);
+  Race_PmoveQ2LadderNormalizeCallbacks(&cgame_copy);
+  ck_assert_msg(memcmp(&game_copy, &cgame_copy, sizeof(game_copy)) == 0,
+                "DP2 mid-ladder GAME/CGAME differs");
+  ck_assert_uint_eq(game.s.flags, PMF_ON_LADDER);
+  ck_assert(!(game.s.flags & (PMF_JUMP_HELD | PMF_JUMPED)));
+  ck_assert(game.s.velocity.z > 0.f);
+
+  game.s.origin = cgame.s.origin = Vec3(15.125f, 0.f, 24.f);
+  game.s.velocity = cgame.s.velocity = Vec3(0.f, 0.f, 200.f);
+  game.cmd = cgame.cmd = (pm_cmd_t) { .msec = 16, .up = 10 };
+  race_pmove_world = RACE_PMOVE_WORLD_LADDER_FLOOR;
+  Pm_Move(&game);
+  Pm_Move_CgameReference(&cgame);
+
+  game_copy = game;
+  cgame_copy = cgame;
+  Race_PmoveQ2LadderNormalizeCallbacks(&game_copy);
+  Race_PmoveQ2LadderNormalizeCallbacks(&cgame_copy);
+  ck_assert_msg(memcmp(&game_copy, &cgame_copy, sizeof(game_copy)) == 0,
+                "DP2 ladder-lip jump GAME/CGAME differs");
+  ck_assert(game.s.flags & PMF_ON_LADDER);
+  ck_assert(game.s.flags & PMF_JUMPED);
+  ck_assert(game.s.flags & PMF_JUMP_HELD);
+  ck_assert(!(game.s.flags & PMF_ON_GROUND));
+  ck_assert_ptr_null(game.ground.ent);
+  ck_assert(game.s.velocity.z > 200.f && game.s.velocity.z <= 450.f);
+  ck_assert(game.s.origin.z > 24.f);
+
+  pm_move_t ai = Race_PmoveSetup(RACE_PMOVE_LADDER);
+  ai.s.params = Race_PmoveQ2NamedParams(RACE_PHYSICS_PRESET_DP2_V1);
+  ai.s.origin = Vec3(15.125f, 0.f, 24.f);
+  ai.s.velocity = Vec3(0.f, 0.f, 200.f);
+  ai.cmd = (pm_cmd_t) { .msec = 16, .up = 10 };
+  race_pmove_world = RACE_PMOVE_WORLD_LADDER_FLOOR;
+  Pm_Move(&ai);
+  ck_assert_msg(memcmp(&ai.s, &game.s, sizeof(ai.s)) == 0,
+                "direct AI DP2 ladder-lip state differs from GAME");
+  ck_assert(ai.s.flags & PMF_JUMPED);
+
+  game.s.origin = cgame.s.origin = Vec3(15.125f, 0.f, 24.f);
+  game.s.velocity = cgame.s.velocity = Vec3(0.f, 0.f, 200.f);
+  game.cmd = cgame.cmd = (pm_cmd_t) { .msec = 16, .up = 10 };
+  Pm_Move(&game);
+  Pm_Move_CgameReference(&cgame);
+  ck_assert(!(game.s.flags & PMF_JUMPED));
+  ck_assert(game.s.flags & PMF_JUMP_HELD);
+
+  game.s.origin = cgame.s.origin = Vec3(15.125f, 0.f, 24.f);
+  game.s.velocity = cgame.s.velocity = Vec3_Zero();
+  game.cmd = cgame.cmd = (pm_cmd_t) { .msec = 16, .up = 0 };
+  Pm_Move(&game);
+  Pm_Move_CgameReference(&cgame);
+  ck_assert(!(game.s.flags & (PMF_JUMP_HELD | PMF_JUMPED)));
+
+  game.s.origin = cgame.s.origin = Vec3(15.125f, 0.f, 24.f);
+  game.s.velocity = cgame.s.velocity = Vec3(0.f, 0.f, 200.f);
+  game.cmd = cgame.cmd = (pm_cmd_t) { .msec = 16, .up = 10 };
+  Pm_Move(&game);
+  Pm_Move_CgameReference(&cgame);
+  ck_assert(game.s.flags & PMF_JUMPED);
+  ck_assert(game.s.flags & PMF_JUMP_HELD);
+  ck_assert_msg(memcmp(&game.s, &cgame.s, sizeof(game.s)) == 0,
+                "re-armed DP2 ladder-lip GAME/CGAME state differs");
 } END_TEST
 
 START_TEST(_Race_PmoveQ2LadderAiAndWaterBoundary) {
@@ -7897,11 +8371,14 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_PmoveQ2StepLegacyCases);
   tcase_add_test(tcase, _Race_PmoveQ2StepLongStreamGameCgame);
   tcase_add_test(tcase, _Race_PmoveQ2AiDirectStep);
+  tcase_add_test(tcase, _Race_PmoveDp2StepPolicyGameCgame);
   tcase_add_test(tcase, _Race_PmoveQ2GroundLegacyCases);
   tcase_add_test(tcase, _Race_PmoveQ2TrickProbeAndJump);
   tcase_add_test(tcase, _Race_PmoveQ2FixGroundThresholds);
+  tcase_add_test(tcase, _Race_PmoveDp2GroundAndJumpPolicy);
   tcase_add_test(tcase, _Race_PmoveQ2RampEntryClimbCrestDown);
   tcase_add_test(tcase, _Race_PmoveQ2RampNoAutohopGameCgame);
+  tcase_add_test(tcase, _Race_PmoveDp2RampSlideNoAutohopGameCgameAi);
   tcase_add_test(tcase, _Race_PmoveQ2AiDirectRamp);
   tcase_add_test(tcase, _Race_PmoveQ2DownhillAndSteepRamp);
   tcase_add_test(tcase, _Race_PmoveQ2CommandTimeQuantization);
@@ -7916,6 +8393,7 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_PmoveQ2CrossDomainStreams);
   tcase_add_test(tcase, _Race_PmoveQ2FinalCombinedGameCgameAi);
   tcase_add_test(tcase, _Race_PmovePlayerBoundsContract);
+  tcase_add_test(tcase, _Race_PmovePolicyCatalog);
   tcase_add_test(tcase, _Race_PmoveQ2DuckStateMachine);
   tcase_add_test(tcase, _Race_PmoveQ2StandTraceContract);
   tcase_add_test(tcase, _Race_PmoveQ2HullGeometryDiscriminators);
@@ -7928,6 +8406,7 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_PmoveQ2LadderStepSlide);
   tcase_add_test(tcase, _Race_PmoveQ2LadderNoAutohopExitState);
   tcase_add_test(tcase, _Race_PmoveQ2LadderIndependentGameCgame);
+  tcase_add_test(tcase, _Race_PmoveDp2LadderLipJumpGameCgameAi);
   tcase_add_test(tcase, _Race_PmoveQ2LadderAiAndWaterBoundary);
   tcase_add_test(tcase, _Race_PmoveQ2WaterClassification);
   tcase_add_test(tcase, _Race_PmoveQ2WaterRawCurrents);

@@ -19,6 +19,7 @@
 box3_t Pm_PlayerBounds(bool ducked);
 
 g_import_t gi;
+g_level_t g_level;
 
 static size_t race_physics_service_previous_prepare_calls;
 static char race_physics_service_config_string[MAX_STRING_CHARS];
@@ -91,7 +92,7 @@ static cvar_t *Race_PhysicsService_TestAddCvar(const char *name,
 
   ck_assert_str_eq(name, "g_q2_snap_mode");
   ck_assert_uint_eq(flags, CVAR_LATCH);
-  ck_assert_str_eq(value, "1");
+  ck_assert_str_eq(value, "2");
   race_physics_service_snap_mode.name = name;
   race_physics_service_snap_mode.default_string = value;
   race_physics_service_snap_mode.flags = flags;
@@ -255,12 +256,14 @@ static void Race_PhysicsService_TestImports(void) {
   race_physics_service_config_string[0] = '\0';
   race_physics_service_output[0] = '\0';
   race_physics_service_ai_first_command_checks = 0u;
+  memset(&g_level, 0, sizeof(g_level));
+  g_level.gravity = 800;
   memset(&race_physics_service_selector, 0,
          sizeof(race_physics_service_selector));
   memset(&race_physics_service_snap_mode, 0,
          sizeof(race_physics_service_snap_mode));
   Race_PhysicsService_TestSetSelector(RACE_PHYSICS_SELECTOR_Q2_KEY);
-  Race_PhysicsService_TestSetSnapMode(RACE_PHYSICS_Q2_SNAP_NEAREST);
+  Race_PhysicsService_TestSetSnapMode(RACE_PHYSICS_Q2_SNAP_TRUNCATE);
 }
 
 START_TEST(_Race_PhysicsServiceHydrationLifecycle) {
@@ -268,27 +271,30 @@ START_TEST(_Race_PhysicsServiceHydrationLifecycle) {
   Race_PhysicsService_Init();
   ck_assert(G_PrepareMove != Race_PhysicsService_TestPreviousPrepare);
 
-  pm_params_t q2, q2fix;
+  pm_params_t q2, q2fix, dp2;
   ck_assert(Race_Physics_FixedParamsForPreset(
     RACE_PHYSICS_PRESET_Q2, &q2));
   ck_assert(Race_Physics_FixedParamsForPreset(
     RACE_PHYSICS_PRESET_QUETOO_FIX_V1, &q2fix));
+  ck_assert(Race_Physics_FixedParamsForPreset(
+    RACE_PHYSICS_PRESET_DP2_V1, &dp2));
+  ck_assert(Race_Physics_ParamsEqual(&dp2, &q2));
 
   Race_PhysicsService_ConfigureLevel("q2-map");
   ck_assert_str_eq(race_physics_service_config_string,
-                   "v2\\q2\\q2-v1\\nearest");
+                   "v2\\q2\\q2-v1\\truncate");
   ck_assert_int_eq(Race_Physics_Current()->preset, RACE_PHYSICS_PRESET_Q2);
 
   Race_PhysicsService_TestSetSelector(RACE_PHYSICS_SELECTOR_QUAKE2_KEY);
   Race_PhysicsService_ConfigureLevel("quake2-alias-map");
   ck_assert_str_eq(race_physics_service_config_string,
-                   "v2\\q2\\q2-v1\\nearest");
+                   "v2\\q2\\q2-v1\\truncate");
   ck_assert_int_eq(Race_Physics_Current()->preset, RACE_PHYSICS_PRESET_Q2);
 
   Race_PhysicsService_TestSetSelector(RACE_PHYSICS_PRESET_Q2_V1_KEY);
   Race_PhysicsService_ConfigureLevel("q2-canonical-map");
   ck_assert_str_eq(race_physics_service_config_string,
-                   "v2\\q2\\q2-v1\\nearest");
+                   "v2\\q2\\q2-v1\\truncate");
   Race_PhysicsService_TestSetSelector(RACE_PHYSICS_SELECTOR_Q2_KEY);
 
   g_client_t human;
@@ -328,11 +334,49 @@ START_TEST(_Race_PhysicsServiceHydrationLifecycle) {
   Race_PhysicsService_ClientThink(&bot, &ai_move.cmd);
   ck_assert_uint_eq(race_physics_service_ai_first_command_checks, 1u);
 
+  // DP2 has its own semantic identity while intentionally hydrating the exact
+  // immutable q2-v1 vector for both authoritative humans and direct AI moves.
+  Race_PhysicsService_TestSetSelector(RACE_PHYSICS_SELECTOR_DP2_KEY);
+  Race_PhysicsService_ConfigureLevel("dp2-alias-map");
+  ck_assert_str_eq(race_physics_service_config_string,
+                   "v2\\q2\\dp2-v1\\truncate");
+  ck_assert_int_eq(Race_Physics_Current()->preset,
+                   RACE_PHYSICS_PRESET_DP2_V1);
+
+  human.ps.pm_state.params = q2fix;
+  Race_PhysicsService_SeedClient(&human);
+  ck_assert(Race_Physics_ParamsEqual(&human.ps.pm_state.params, &dp2));
+  human_move = Race_PhysicsService_TestMove(&human);
+  G_PrepareMove(&human, &human_move);
+  ck_assert(Race_Physics_ParamsEqual(&human_move.s.params, &dp2));
+  ck_assert(Race_Physics_ParamsEqual(&human.ps.pm_state.params, &dp2));
+
+  memset(&bot.ps.pm_state.params, 0, sizeof(bot.ps.pm_state.params));
+  Race_PhysicsService_SeedClient(&bot);
+  ck_assert(Race_Physics_ParamsEqual(&bot.ps.pm_state.params, &dp2));
+  ai_move = Race_PhysicsService_TestMove(&bot);
+  Pm_Move(&ai_move);
+  bot.ps.pm_state = ai_move.s;
+  Race_PhysicsService_ClientThink(&bot, &ai_move.cmd);
+  ck_assert_uint_eq(race_physics_service_ai_first_command_checks, 2u);
+
+  Race_PhysicsService_TestSetSelector(RACE_PHYSICS_PRESET_DP2_V1_KEY);
+  Race_PhysicsService_ConfigureLevel("dp2-canonical-map");
+  ck_assert_str_eq(race_physics_service_config_string,
+                   "v2\\q2\\dp2-v1\\truncate");
+  ck_assert_int_eq(Race_Physics_Current()->preset,
+                   RACE_PHYSICS_PRESET_DP2_V1);
+
+  Race_PhysicsService_TestSetSelector(RACE_PHYSICS_SELECTOR_Q2_KEY);
+  Race_PhysicsService_ConfigureLevel("q2-restored-map");
+  ck_assert(Race_Physics_ConfigEquals(Race_Physics_Current(),
+                                      Race_Physics_Default()));
+
   // A latched request is merely pending. The active identity and first-move
   // vector cannot change until the engine applies it at a map/session load.
   Race_PhysicsService_TestLatchSelector(
     RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY);
-  Race_PhysicsService_TestLatchSnapMode(RACE_PHYSICS_Q2_SNAP_TRUNCATE);
+  Race_PhysicsService_TestLatchSnapMode(RACE_PHYSICS_Q2_SNAP_NEAREST);
   ck_assert(Race_Physics_ConfigEquals(Race_Physics_Current(),
                                      Race_Physics_Default()));
   memset(&human.ps.pm_state.params, 0, sizeof(human.ps.pm_state.params));
@@ -356,14 +400,14 @@ START_TEST(_Race_PhysicsServiceHydrationLifecycle) {
   Pm_Move(&ai_move);
   bot.ps.pm_state = ai_move.s;
   Race_PhysicsService_ClientThink(&bot, &ai_move.cmd);
-  ck_assert_uint_eq(race_physics_service_ai_first_command_checks, 2u);
+  ck_assert_uint_eq(race_physics_service_ai_first_command_checks, 3u);
 
   // A new map selection replaces, rather than merges with, the previous vector.
   Race_PhysicsService_TestSetSelector(
     RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY);
   Race_PhysicsService_ConfigureLevel("fix-map");
   ck_assert_str_eq(race_physics_service_config_string,
-                   "v2\\q2\\quetoo-fix-v1\\nearest");
+                   "v2\\q2\\quetoo-fix-v1\\truncate");
   memset(&bot.ps.pm_state.params, 0, sizeof(bot.ps.pm_state.params));
   Race_PhysicsService_SeedClient(&bot);
   ck_assert(Race_Physics_ParamsEqual(&bot.ps.pm_state.params, &q2fix));
@@ -371,14 +415,14 @@ START_TEST(_Race_PhysicsServiceHydrationLifecycle) {
 
   // Snap policy is a separate latched dimension of the same authoritative
   // identity and therefore changes the wire and ruleset at a safe transition.
-  Race_PhysicsService_TestSetSnapMode(RACE_PHYSICS_Q2_SNAP_TRUNCATE);
-  Race_PhysicsService_ConfigureLevel("fix-truncate-map");
+  Race_PhysicsService_TestSetSnapMode(RACE_PHYSICS_Q2_SNAP_NEAREST);
+  Race_PhysicsService_ConfigureLevel("fix-nearest-map");
   ck_assert_str_eq(race_physics_service_config_string,
-                   "v2\\q2\\quetoo-fix-v1\\truncate");
+                   "v2\\q2\\quetoo-fix-v1\\nearest");
   ck_assert_int_eq(Race_Physics_Current()->q2_snap_mode,
-                   RACE_PHYSICS_Q2_SNAP_TRUNCATE);
+                   RACE_PHYSICS_Q2_SNAP_NEAREST);
   ck_assert_str_eq(Race_Physics_ConfigRuleset(Race_Physics_Current()),
-                   "quetoo-fix-v1-snap-truncate");
+                   RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY);
 
   Race_PhysicsService_TestSetSnapMode(RACE_PHYSICS_Q2_SNAP_OFF);
   Race_PhysicsService_ConfigureLevel("fix-unsnapped-map");
@@ -397,6 +441,8 @@ START_TEST(_Race_PhysicsServiceHydrationLifecycle) {
   ck_assert(G_PrepareMove == installed_prepare_move);
   ck_assert(Race_PhysicsService_ConfigureTestLevel(
     "fix-map", RACE_PHYSICS_PRESET_QUETOO_FIX_V1));
+  ck_assert_int_eq(Race_Physics_Current()->q2_snap_mode,
+                   RACE_PHYSICS_Q2_SNAP_TRUNCATE);
   memset(&human.ps.pm_state.params, 0, sizeof(human.ps.pm_state.params));
   Race_PhysicsService_SeedClient(&human);
   ck_assert(Race_Physics_ParamsEqual(&human.ps.pm_state.params, &q2fix));
@@ -430,10 +476,57 @@ START_TEST(_Race_PhysicsServiceHydrationLifecycle) {
   Race_PhysicsService_Shutdown();
 } END_TEST
 
+START_TEST(_Race_PhysicsServiceGravityOverrideLifecycle) {
+  Race_PhysicsService_TestImports();
+  Race_PhysicsService_Init();
+
+  pm_params_t q2;
+  ck_assert(Race_Physics_FixedParamsForPreset(
+    RACE_PHYSICS_PRESET_Q2, &q2));
+  Race_PhysicsService_ConfigureLevel("gravity-default");
+  ck_assert(Race_PhysicsService_Rankable());
+
+  g_client_t human;
+  memset(&human, 0, sizeof(human));
+  human.ps.client = 1u;
+  Race_PhysicsService_SeedClient(&human);
+  ck_assert(Race_Physics_ParamsEqual(&human.ps.pm_state.params, &q2));
+
+  pm_params_t custom = q2;
+  custom.gravity = 700;
+  g_level.gravity = custom.gravity;
+  Race_PhysicsService_RefreshLevelParams();
+  ck_assert(!Race_PhysicsService_Rankable());
+  Race_PhysicsService_SeedClient(&human);
+  ck_assert(Race_Physics_ParamsEqual(&human.ps.pm_state.params, &custom));
+
+  pm_move_t move = Race_PhysicsService_TestMove(&human);
+  G_PrepareMove(&human, &move);
+  ck_assert(Race_Physics_ParamsEqual(&move.s.params, &custom));
+  ck_assert(Race_Physics_ParamsEqual(&human.ps.pm_state.params, &custom));
+
+  custom.gravity = 777;
+  g_level.gravity = custom.gravity;
+  Race_PhysicsService_ConfigureLevel("gravity-restart");
+  ck_assert(!Race_PhysicsService_Rankable());
+  memset(&human.ps.pm_state.params, 0, sizeof(human.ps.pm_state.params));
+  Race_PhysicsService_SeedClient(&human);
+  ck_assert(Race_Physics_ParamsEqual(&human.ps.pm_state.params, &custom));
+
+  g_level.gravity = q2.gravity;
+  Race_PhysicsService_RefreshLevelParams();
+  ck_assert(Race_PhysicsService_Rankable());
+  Race_PhysicsService_SeedClient(&human);
+  ck_assert(Race_Physics_ParamsEqual(&human.ps.pm_state.params, &q2));
+
+  Race_PhysicsService_Shutdown();
+} END_TEST
+
 START_TEST(_Race_PhysicsServiceAiLandingContract) {
   static const race_physics_preset_id_t presets[] = {
     RACE_PHYSICS_PRESET_Q2,
-    RACE_PHYSICS_PRESET_QUETOO_FIX_V1
+    RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
+    RACE_PHYSICS_PRESET_DP2_V1
   };
   static const uint16_t command_msec[] = { 8u, 16u, 25u, 50u };
 
@@ -511,7 +604,8 @@ static void Race_PhysicsService_AssertQ2StandingHull(void) {
 START_TEST(_Race_PhysicsServiceFirstLinkHullLifecycle) {
   static const race_physics_preset_id_t presets[] = {
     RACE_PHYSICS_PRESET_Q2,
-    RACE_PHYSICS_PRESET_QUETOO_FIX_V1
+    RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
+    RACE_PHYSICS_PRESET_DP2_V1
   };
 
   Race_PhysicsService_TestImports();
@@ -565,6 +659,7 @@ START_TEST(_Race_PhysicsServiceFirstLinkHullLifecycle) {
 
 void Race_PhysicsService_AddTests(TCase *tcase) {
   tcase_add_test(tcase, _Race_PhysicsServiceHydrationLifecycle);
+  tcase_add_test(tcase, _Race_PhysicsServiceGravityOverrideLifecycle);
   tcase_add_test(tcase, _Race_PhysicsServiceAiLandingContract);
   tcase_add_test(tcase, _Race_PhysicsServiceFirstLinkHullLifecycle);
 }

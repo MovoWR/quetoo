@@ -21,6 +21,7 @@
 
 #include "g_local.h"
 #include "race_module_compat.h"
+#include "race_hook.h"
 
 /**
  * @brief The hook owns its own configuration, media and enabled state so that a
@@ -51,6 +52,8 @@ cvar_t *g_hook_sky;
 cvar_t *g_hook_speed;
 cvar_t *g_hook_style;
 
+static float g_hook_pull_speed_value = RACE_HOOK_PULL_SPEED_DEFAULT;
+
 static struct {
   uint16_t model;
   uint16_t fire;
@@ -70,6 +73,26 @@ static bool g_hook_enabled;
  * @brief Optional Race policy for per-client hook eligibility.
  */
 static g_hook_client_allowed_t g_hook_client_allowed;
+
+/**
+ * @brief Validates and caches the authoritative hook pull speed.
+ */
+static void G_HookPullSpeed_Update(void) {
+  float speed;
+  if (!Race_HookPullSpeed_Parse(g_hook_pull_speed->string, &speed)) {
+    G_Warn("Invalid g_hook_pull_speed `%s`; reset to %.0f\n",
+           g_hook_pull_speed->string, RACE_HOOK_PULL_SPEED_DEFAULT);
+    cvar_t *updated = gi.SetCvarValue(g_hook_pull_speed->name,
+                                     RACE_HOOK_PULL_SPEED_DEFAULT);
+    if (updated) {
+      g_hook_pull_speed = updated;
+    }
+    speed = RACE_HOOK_PULL_SPEED_DEFAULT;
+  }
+
+  g_hook_pull_speed_value = speed;
+  g_hook_pull_speed->modified = false;
+}
 
 void G_Hook_SetClientAllowed(g_hook_client_allowed_t allowed) {
   g_hook_client_allowed = allowed;
@@ -105,7 +128,7 @@ static void G_PrepareMove_Hook(g_client_t *cl, pm_move_t *pm) {
       break;
   }
 
-  pm->hook_pull_speed = g_hook_pull_speed->value;
+  pm->hook_pull_speed = g_hook_pull_speed_value;
 }
 
 /**
@@ -133,7 +156,10 @@ static void G_ConfigureLevel_Hook(void) {
 
   G_Hook_CheckState();
 
-  gi.SetConfigString(CS_HOOK_PULL_SPEED, g_hook_pull_speed->string);
+  G_HookPullSpeed_Update();
+
+  gi.SetConfigString(CS_HOOK_PULL_SPEED,
+                     va("%.9g", g_hook_pull_speed_value));
 
   previous.ConfigureLevel();
 }
@@ -161,11 +187,13 @@ static bool G_CheckCvars_Hook(void) {
   }
 
   if (g_hook_pull_speed->modified) {
-    g_hook_pull_speed->modified = false;
+    G_HookPullSpeed_Update();
 
-    gi.BroadcastPrint(PRINT_HIGH, "Hook pull speed has been changed to %g\n", g_hook_pull_speed->value);
+    gi.BroadcastPrint(PRINT_HIGH, "Hook pull speed has been changed to %g\n",
+                      g_hook_pull_speed_value);
 
-    gi.SetConfigString(CS_HOOK_PULL_SPEED, g_hook_pull_speed->string);
+    gi.SetConfigString(CS_HOOK_PULL_SPEED,
+                       va("%.9g", g_hook_pull_speed_value));
   }
 
   if (g_hook_style->modified) {
@@ -225,6 +253,8 @@ void G_Hook_Init(void) {
   g_hook_refire = gi.AddCvar("g_hook_refire", "0.25", 0, "The refire delay on the grapple hook in seconds.");
   g_hook_sky = gi.AddCvar("g_hook_sky", "0", CVAR_SERVER_INFO, "If enabled, the grapple hook attaches to sky surfaces rather than detaching.");
   g_hook_speed = gi.AddCvar("g_hook_speed", "1200", 0, "The speed that the hook will fly at.");
+
+  G_HookPullSpeed_Update();
 
   g_hook_pull_speed->modified =
       g_hook_speed->modified =

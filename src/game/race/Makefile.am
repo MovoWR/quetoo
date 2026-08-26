@@ -67,6 +67,7 @@ game_la_SOURCES = \
 	race.c \
 	race_cmds.c \
 	race_finish_report.c \
+	race_hook.c \
 	race_leaderboard.c \
 	race_leaderboard_wire.c \
 	race_logic.c \
@@ -81,6 +82,11 @@ game_la_SOURCES = \
 	race_persistence.c \
 	race_physics.c \
 	race_physics_service.c \
+	race_pmove_policy.c \
+	race_weapon_movement.c \
+	race_weapon_tuning.c \
+	race_weapon_tuning_service.c \
+	race_weapon_tuning_wire.c \
 	race_publication.c \
 	race_projectile_observer.c \
 	race_profile.c \

@@ -17,16 +17,53 @@
 box3_t Pm_PlayerBounds(bool ducked);
 
 /*
- * Keep the production consumer in this test translation unit so its static
- * G_ClientMove entry point is exercised without adding a test seam to common.
+ * Keep the production consumers in this test translation unit so their static
+ * entry points are exercised without adding test seams to production code.
  */
 #include "game/race/g_client.c"
+#include "game/race/g_ai_main.c"
+#include "game/race/race_trigger.c"
+#include "game/race/race_logic.c"
 
 g_import_t gi;
 g_export_t ge;
 g_level_t g_level;
 cvar_t *g_fall_damage;
 cvar_t *sv_max_entities;
+cvar_t *sv_max_clients;
+g_item_t *g_items;
+
+bool G_Ai_CanPickup(const g_client_t *cl, const g_entity_t *other) {
+  (void) cl;
+  (void) other;
+  return false;
+}
+
+void G_Ai_SetEntityGoal(const g_client_t *cl, ai_goal_t *goal,
+                        const float priority, const g_entity_t *entity) {
+  (void) cl;
+  (void) priority;
+  memset(goal, 0, sizeof(*goal));
+  goal->type = AI_GOAL_ENTITY;
+  goal->entity.ent = entity;
+}
+
+bool G_Ai_GoalHasEntity(const ai_goal_t *goal, const g_entity_t *ent) {
+  return goal && goal->type == AI_GOAL_ENTITY && goal->entity.ent == ent;
+}
+
+void G_Ai_CopyGoal(const ai_goal_t *from, ai_goal_t *to) {
+  *to = *from;
+}
+
+bool G_OnSameTeam(const g_client_t *a, const g_client_t *b) {
+  (void) a;
+  (void) b;
+  return false;
+}
+
+static bool race_game_ai_mutate_latches;
+static size_t race_game_ai_movement_traces;
 
 bool G_Module_ShouldClipMovementEntity(g_entity_t *mover,
                                        const g_entity_t *candidate,
@@ -43,12 +80,69 @@ bool G_Module_ShouldClipMovementEntity(g_entity_t *mover,
 cm_trace_t G_Module_TraceMovement(g_entity_t *mover, const vec3_t start,
                                  const vec3_t end, const box3_t bounds,
                                  const int32_t contents) {
+  if (race_game_ai_mutate_latches && mover && mover->client) {
+    mover->client->race_oneway_latches ^= UINT64_C(0x8000000000000001);
+    race_game_ai_movement_traces++;
+  }
   return gi.Trace(start, end, bounds, mover, contents);
 }
 
 char *vtos(const vec3_t value) {
   (void) value;
   return "";
+}
+
+void G_Ai_ClearGoal(ai_goal_t *goal) {
+  memset(goal, 0, sizeof(*goal));
+}
+
+void G_Ai_SetPathGoal(const g_client_t *cl, ai_goal_t *goal,
+                      const float priority, Vector *path,
+                      const g_entity_t *path_target) {
+  (void) cl;
+  (void) goal;
+  (void) priority;
+  (void) path;
+  (void) path_target;
+}
+
+char *va(const char *format, ...) {
+  static char string[1024];
+  va_list args;
+  va_start(args, format);
+  vsnprintf(string, sizeof(string), format, args);
+  va_end(args);
+  return string;
+}
+
+void G_SetMoveDir(g_entity_t *ent) {
+  (void) ent;
+}
+
+static size_t race_game_free_calls;
+
+void G_FreeEntity(g_entity_t *ent) {
+  race_game_free_calls++;
+  ent->in_use = false;
+}
+
+void G_UseTargets(g_entity_t *ent, g_entity_t *activator) {
+  (void) ent;
+  (void) activator;
+}
+
+bool Race_Start(g_client_t *cl) {
+  (void) cl;
+  return false;
+}
+
+void Race_Reset(g_client_t *cl) {
+  (void) cl;
+}
+
+bool Race_Finish(g_client_t *cl) {
+  (void) cl;
+  return false;
 }
 
 static g_entity_t race_game_landing_floor;
@@ -66,6 +160,125 @@ static g_entity_t race_game_ai_mover;
 static size_t race_game_ai_trace_calls;
 static box3_t race_game_ai_trace_bounds[2];
 static bool race_game_ai_force_narrow;
+static cm_entity_t race_game_start_mode;
+static uint32_t race_game_trigger_touch_times[MAX_CLIENTS];
+
+static const cm_entity_t *Race_GameEntityValue(const cm_entity_t *entity,
+                                               const char *key) {
+  (void) entity;
+  ck_assert_str_eq(key, "start_mode");
+  return &race_game_start_mode;
+}
+
+static void *Race_GameMalloc(const size_t size, const mem_tag_t tag) {
+  ck_assert_uint_eq(tag, MEM_TAG_GAME_LEVEL);
+  ck_assert_uint_le(size, sizeof(race_game_trigger_touch_times));
+  memset(race_game_trigger_touch_times, 0, sizeof(race_game_trigger_touch_times));
+  return race_game_trigger_touch_times;
+}
+
+static void Race_GameSetModel(g_entity_t *ent, const char *model) {
+  ck_assert_ptr_nonnull(ent);
+  ck_assert_ptr_eq(model, ent->model);
+}
+
+typedef struct {
+  uint8_t bytes[64];
+  size_t length;
+  size_t offset;
+  size_t close_calls;
+  bool exists;
+} race_game_nav_file_t;
+
+static race_game_nav_file_t race_game_nav;
+static file_t race_game_nav_handle;
+
+static void Race_GameNavPrint(const char *format, ...) {
+  (void) format;
+}
+
+static void Race_GameNavWarn(const char *function, const char *format, ...) {
+  (void) function;
+  (void) format;
+}
+
+static bool Race_GameNavFileExists(const char *path) {
+  (void) path;
+  return race_game_nav.exists;
+}
+
+static file_t *Race_GameNavOpenFile(const char *path) {
+  (void) path;
+  if (!race_game_nav.exists) {
+    return NULL;
+  }
+
+  race_game_nav.offset = 0u;
+  race_game_nav_handle.opaque = &race_game_nav;
+  return &race_game_nav_handle;
+}
+
+static int64_t Race_GameNavReadFile(file_t *file, void *buffer,
+                                    const size_t size, const size_t count) {
+  race_game_nav_file_t *nav = file ? file->opaque : NULL;
+  if (!nav || !size) {
+    return nav ? (int64_t) count : -1;
+  }
+
+  const size_t available = (nav->length - nav->offset) / size;
+  const size_t objects = min(count, available);
+  memcpy(buffer, nav->bytes + nav->offset, objects * size);
+  nav->offset += objects * size;
+  return (int64_t) objects;
+}
+
+static bool Race_GameNavCloseFile(file_t *file) {
+  race_game_nav_file_t *nav = file ? file->opaque : NULL;
+  if (!nav) {
+    return false;
+  }
+
+  nav->close_calls++;
+  file->opaque = NULL;
+  return true;
+}
+
+static void Race_GameNavAppend(const void *data, const size_t size) {
+  ck_assert_msg(race_game_nav.length <= sizeof(race_game_nav.bytes) - size,
+                "Navigation fixture overflow");
+  memcpy(race_game_nav.bytes + race_game_nav.length, data, size);
+  race_game_nav.length += size;
+}
+
+static void Race_GameNavAppendLong(const int32_t value) {
+  const int32_t encoded = LittleLong(value);
+  Race_GameNavAppend(&encoded, sizeof(encoded));
+}
+
+static void Race_GameNavAppendShort(const int16_t value) {
+  const int16_t encoded = LittleShort(value);
+  Race_GameNavAppend(&encoded, sizeof(encoded));
+}
+
+static void Race_GameNavAppendFloat(const float value) {
+  const float encoded = LittleFloat(value);
+  Race_GameNavAppend(&encoded, sizeof(encoded));
+}
+
+static void Race_GameNavAppendNode(const vec3_t position,
+                                   const uint32_t links) {
+  const vec3_t encoded_position = LittleVec3(position);
+  Race_GameNavAppend(&encoded_position, sizeof(encoded_position));
+  Race_GameNavAppendLong((int32_t) links);
+}
+
+static void Race_GameNavBegin(const uint32_t nodes) {
+  memset(&race_game_nav, 0, sizeof(race_game_nav));
+  race_game_nav.exists = true;
+  Race_GameNavAppendLong('Q' | '2' << 8 | 'N' << 16 | 'S' << 24);
+  Race_GameNavAppendLong(2);
+  Race_GameNavAppendLong((int32_t) nodes);
+}
 
 bool G_IsMeat(const g_entity_t *ent) {
   return ent && ent->client;
@@ -255,13 +468,20 @@ static void Race_GameLandingUseNamed(
 }
 
 static void Race_GameLandingReset(void) {
+  G_Ai_ShutdownNodes();
   memset(&gi, 0, sizeof(gi));
+  gi.Print = Race_GameNavPrint;
   gi.PointContents = Race_GameLandingPointContents;
   gi.BoxContents = Race_GameLandingBoxContents;
   gi.Trace = Race_GameLandingTrace;
   gi.LinkEntity = Race_GameLandingLinkEntity;
   gi.DebugMask = Race_GameLandingDebugMask;
   gi.Debug = Race_GameLandingDebug;
+  gi.Warn = Race_GameNavWarn;
+  gi.OpenFile = Race_GameNavOpenFile;
+  gi.ReadFile = Race_GameNavReadFile;
+  gi.CloseFile = Race_GameNavCloseFile;
+  gi.FileExists = Race_GameNavFileExists;
 
   memset(&g_level, 0, sizeof(g_level));
   memset(&race_game_landing_floor, 0, sizeof(race_game_landing_floor));
@@ -319,7 +539,8 @@ static void Race_GameLandingMove(const float velocity,
 START_TEST(_Race_GameLandingNamedSuppression) {
   static const race_physics_preset_id_t presets[] = {
     RACE_PHYSICS_PRESET_Q2,
-    RACE_PHYSICS_PRESET_QUETOO_FIX_V1
+    RACE_PHYSICS_PRESET_QUETOO_FIX_V1,
+    RACE_PHYSICS_PRESET_DP2_V1
   };
   static const float velocities[] = { -300.f, -800.f, -1000.f };
 
@@ -413,7 +634,8 @@ START_TEST(_Race_GameStandingBoundsConsumers) {
   } cases[] = {
     { RACE_PHYSICS_PRESET_INVALID, 36.f },
     { RACE_PHYSICS_PRESET_Q2, 32.f },
-    { RACE_PHYSICS_PRESET_QUETOO_FIX_V1, 32.f }
+    { RACE_PHYSICS_PRESET_QUETOO_FIX_V1, 32.f },
+    { RACE_PHYSICS_PRESET_DP2_V1, 32.f }
   };
   const vec3_t spot = Vec3(100.f, 200.f, 300.f);
 
@@ -455,7 +677,8 @@ START_TEST(_Race_GameAiPathBoundsConsumers) {
   } cases[] = {
     { RACE_PHYSICS_PRESET_INVALID, 36.f },
     { RACE_PHYSICS_PRESET_Q2, 32.f },
-    { RACE_PHYSICS_PRESET_QUETOO_FIX_V1, 32.f }
+    { RACE_PHYSICS_PRESET_QUETOO_FIX_V1, 32.f },
+    { RACE_PHYSICS_PRESET_DP2_V1, 32.f }
   };
 
   for (size_t i = 0; i < lengthof(cases); i++) {
@@ -496,6 +719,167 @@ START_TEST(_Race_GameAiPathBoundsConsumers) {
   }
 } END_TEST
 
+START_TEST(_Race_GameAiNavLoaderRejectsMalformedFiles) {
+  Race_GameLandingReset();
+  q_strlcpy(g_level.name, "nav_fixture", sizeof(g_level.name));
+
+  Race_GameNavBegin(1u);
+  Race_GameNavAppendNode(Vec3(16.f, -32.f, 48.f), 0u);
+  const size_t valid_length = race_game_nav.length;
+
+  for (size_t length = 0u; length < valid_length; length++) {
+    race_game_nav.length = length;
+    G_Ai_InitNodes();
+    ck_assert_uint_eq(G_Ai_Node_Count(), 0u);
+  }
+
+  race_game_nav.length = valid_length;
+  G_Ai_InitNodes();
+  ck_assert_uint_eq(G_Ai_Node_Count(), 1u);
+  const vec3_t position = G_Ai_Node_GetPosition(0u);
+  ck_assert_float_eq(position.x, 16.f);
+  ck_assert_float_eq(position.y, -32.f);
+  ck_assert_float_eq(position.z, 48.f);
+
+  Race_GameNavBegin(65536u);
+  G_Ai_InitNodes();
+  ck_assert_uint_eq(G_Ai_Node_Count(), 0u);
+
+  Race_GameNavBegin(1u);
+  Race_GameNavAppendNode(Vec3(NAN, 0.f, 0.f), 0u);
+  G_Ai_InitNodes();
+  ck_assert_uint_eq(G_Ai_Node_Count(), 0u);
+
+  Race_GameNavBegin(2u);
+  Race_GameNavAppendNode(Vec3_Zero(), 1u);
+  Race_GameNavAppendShort(2);
+  Race_GameNavAppendShort(0);
+  Race_GameNavAppendFloat(1.f);
+  Race_GameNavAppendNode(Vec3(64.f, 0.f, 0.f), 0u);
+  G_Ai_InitNodes();
+  ck_assert_uint_eq(G_Ai_Node_Count(), 0u);
+
+  Race_GameNavBegin(2u);
+  Race_GameNavAppendNode(Vec3_Zero(), 1u);
+  Race_GameNavAppendShort(1);
+  Race_GameNavAppendShort(1);
+  Race_GameNavAppendFloat(1.f);
+  Race_GameNavAppendNode(Vec3(64.f, 0.f, 0.f), 0u);
+  G_Ai_InitNodes();
+  ck_assert_uint_eq(G_Ai_Node_Count(), 0u);
+
+  Race_GameNavBegin(2u);
+  Race_GameNavAppendNode(Vec3_Zero(), 1u);
+  Race_GameNavAppendShort(1);
+  Race_GameNavAppendShort(0);
+  Race_GameNavAppendFloat(NAN);
+  Race_GameNavAppendNode(Vec3(64.f, 0.f, 0.f), 0u);
+  G_Ai_InitNodes();
+  ck_assert_uint_eq(G_Ai_Node_Count(), 0u);
+
+  ck_assert_uint_gt(race_game_nav.close_calls, 0u);
+} END_TEST
+
+START_TEST(_Race_GameTriggerFinalizationUsesLiveEntities) {
+  Race_GameLandingReset();
+
+  static cvar_t maxClients = {
+    .name = "sv_max_clients",
+    .integer = 2
+  };
+  sv_max_clients = &maxClients;
+  gi.EntityValue = Race_GameEntityValue;
+  gi.Malloc = Race_GameMalloc;
+  gi.SetModel = Race_GameSetModel;
+
+  Race_Course_Reset(&g_level.race_course);
+  race_game_free_calls = 0u;
+  memset(&race_game_start_mode, 0, sizeof(race_game_start_mode));
+  race_game_start_mode.parsed = ENTITY_STRING;
+  race_game_start_mode.nullable_string = "typo";
+
+  g_entity_t invalid_start = {
+    .in_use = true,
+    .classname = "trigger_race_start",
+    .model = "*1"
+  };
+  Race_TriggerStart(&invalid_start);
+  ck_assert(!invalid_start.in_use);
+  ck_assert_uint_eq(race_game_free_calls, 1u);
+  ck_assert_uint_eq(g_level.race_course.start_count, 0u);
+  ck_assert_uint_eq(race_game_landing_link_calls, 0u);
+  ck_assert(!Race_Course_Validate(&g_level.race_course));
+
+  Race_Course_Reset(&g_level.race_course);
+  race_game_start_mode.nullable_string = "exit";
+  g_entity_t start = {
+    .in_use = true,
+    .classname = "trigger_race_start",
+    .model = "*2"
+  };
+  Race_TriggerStart(&start);
+  ck_assert(start.in_use);
+  ck_assert_int_eq(start.race_start_mode, RACE_START_EXIT);
+  ck_assert_ptr_nonnull(start.Touch);
+  ck_assert_uint_eq(g_level.race_course.start_count, 1u);
+  ck_assert_uint_eq(race_game_landing_link_calls, 1u);
+  ck_assert(!Race_Course_Validate(&g_level.race_course));
+
+  g_entity_t finish = {
+    .in_use = true,
+    .classname = "trigger_race_finish",
+    .model = "*3"
+  };
+  Race_TriggerFinish(&finish);
+  ck_assert(finish.in_use);
+  ck_assert_ptr_nonnull(finish.Touch);
+  ck_assert_uint_eq(g_level.race_course.finish_count, 1u);
+  ck_assert_uint_eq(race_game_landing_link_calls, 2u);
+  ck_assert(Race_Course_Validate(&g_level.race_course));
+} END_TEST
+
+START_TEST(_Race_GameAiLookaheadPreservesAuthoritativeLatches) {
+  Race_GameLandingReset();
+  Race_GameLandingUseCommon();
+
+  ai_t ai;
+  g_client_t cl;
+  g_entity_t ent;
+  memset(&ai, 0, sizeof(ai));
+  memset(&cl, 0, sizeof(cl));
+  memset(&ent, 0, sizeof(ent));
+
+  cl.ai = &ai;
+  cl.entity = &ent;
+  cl.race_oneway_latches = UINT64_C(0x0000000100000002);
+  ai.move_target.type = AI_GOAL_POSITION;
+  ai.move_target.position.pos = Vec3(128.f, 0.f, 24.f);
+  ai.move_target.last_distance = FLT_MAX;
+
+  ent.client = &cl;
+  ent.solid = SOLID_BOX;
+  ent.clip_mask = CONTENTS_MASK_CLIP_PLAYER;
+  ent.s.origin = Vec3(0.f, 0.f, 24.f);
+  ent.ground.ent = &race_game_landing_floor;
+
+  g_level.frame_num = 42u;
+  race_game_ai_mutate_latches = true;
+  race_game_ai_movement_traces = 0u;
+
+  pm_cmd_t cmd = { .msec = 16u };
+  ck_assert_uint_eq(G_Ai_Move(&cl, &cmd), 0u);
+  ck_assert_uint_gt(race_game_ai_movement_traces, 0u);
+  ck_assert_uint_eq(cl.race_oneway_latches, UINT64_C(0x0000000100000002));
+  ck_assert_uint_eq(ai.lookahead_frame, g_level.frame_num);
+
+  const size_t first_pass_traces = race_game_ai_movement_traces;
+  ck_assert_uint_eq(G_Ai_Move(&cl, &cmd), 0u);
+  ck_assert_uint_gt(race_game_ai_movement_traces, first_pass_traces);
+  ck_assert_uint_eq(cl.race_oneway_latches, UINT64_C(0x0000000100000002));
+
+  race_game_ai_mutate_latches = false;
+} END_TEST
+
 int main(void) {
   Suite *suite = suite_create("check_race_game_landing");
   TCase *consumer = tcase_create("consumer");
@@ -503,6 +887,9 @@ int main(void) {
   tcase_add_test(consumer, _Race_GameLandingDefaultConsumers);
   tcase_add_test(consumer, _Race_GameStandingBoundsConsumers);
   tcase_add_test(consumer, _Race_GameAiPathBoundsConsumers);
+  tcase_add_test(consumer, _Race_GameAiNavLoaderRejectsMalformedFiles);
+  tcase_add_test(consumer, _Race_GameTriggerFinalizationUsesLiveEntities);
+  tcase_add_test(consumer, _Race_GameAiLookaheadPreservesAuthoritativeLatches);
   suite_add_tcase(suite, consumer);
 
   SRunner *runner = srunner_create(suite);

@@ -169,6 +169,7 @@ cgame_la_SOURCES = \
 	cg_media.c \
 	cg_module.c \
 	cg_race_barriers.c \
+	cg_race_double_jump.c \
 	cg_muzzle_flash.c \
 	cg_predict.c \
 	cg_jump_viewer.c \
@@ -182,6 +183,7 @@ cgame_la_SOURCES = \
 	cg_race_replay.c \
 	cg_race_training.c \
 	cg_race_vote.c \
+	cg_race_weapon_tuning.c \
 	cg_score.c \
 	cg_score_model.c \
 	cg_strafe_helper.c \
@@ -194,10 +196,13 @@ cgame_la_SOURCES = \
 	cg_weapon.c \
 	race_clip.c \
 	race_finish_report.c \
+	race_hook.c \
 	race_physics.c \
+	race_pmove_policy.c \
 	race_leaderboard_wire.c \
 	race_map_browser_wire.c \
 	race_replay_transport.c \
+	race_weapon_tuning_wire.c \
 	ui/BindTextView.c \
 	ui/CvarCheckbox.c \
 	ui/CvarSelect.c \

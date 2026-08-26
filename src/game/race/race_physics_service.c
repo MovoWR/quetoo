@@ -79,6 +79,24 @@ static void Race_PhysicsService_ResolveFixedParams(void) {
   }
 }
 
+void Race_PhysicsService_RefreshLevelParams(void) {
+  if (race_physics_fixed_params_valid) {
+    race_physics_fixed_params.gravity = g_level.gravity;
+  }
+}
+
+bool Race_PhysicsService_Rankable(void) {
+  const race_physics_config_t *config = Race_Physics_Current();
+  if (!Race_Physics_ConfigRankable(config)) {
+    return false;
+  }
+
+  pm_params_t preset;
+  return !race_physics_fixed_params_valid ||
+         (Race_Physics_FixedParamsForPreset(config->preset, &preset) &&
+          Race_Physics_ParamsEqual(&race_physics_fixed_params, &preset));
+}
+
 static void Race_PhysicsService_Select(
     const race_physics_config_t *config) {
   Race_Physics_Reset();
@@ -112,7 +130,8 @@ static race_physics_config_t Race_PhysicsService_Configured(void) {
   race_physics_config_t config = { 0 };
   const char *key = race_physics_selector ? race_physics_selector->string : NULL;
   if (!Race_Physics_ConfigForSelector(key, &config)) {
-    G_Error("Invalid %s value '%s'; expected q2, quake2, q2-v1, quetoo-fix-v1, or quetoo-common-v1\n",
+    G_Error("Invalid %s value '%s'; use race_physics families for available "
+            "preset keys\n",
             RACE_PHYSICS_SELECTOR_CVAR, key ? key : "<missing>");
   }
 
@@ -147,7 +166,7 @@ static void Race_PhysicsService_PrintStatus(void) {
   gi.Print("Race physics: version=%u family=%s preset=%s name=%s short=%s q2-snap=%s ruleset=%s rankable=%d source=%s map=%s wire=%s pending-preset=%s pending-q2-snap=%s\n",
            config->version, family->key, preset->key, preset->name,
            preset->short_name, snap_mode, ruleset,
-           Race_Physics_ConfigRankable(config), race_physics_source,
+           Race_PhysicsService_Rankable(), race_physics_source,
            *race_physics_map ? race_physics_map : "unavailable", wire,
            race_physics_selector && race_physics_selector->latched_string
              ? race_physics_selector->latched_string
@@ -215,8 +234,8 @@ void Race_PhysicsService_Init(void) {
     G_Error("Could not register the Race physics selector\n");
   }
   race_q2_snap_mode = gi.AddCvar(
-    RACE_Q2_SNAP_MODE_CVAR, "1", CVAR_LATCH,
-    "Q2 state snapping: 0 off, 1 nearest 1/8 unit, 2 toward-zero 1/8 unit. Changes apply at the next map/session load.");
+    RACE_Q2_SNAP_MODE_CVAR, "2", CVAR_LATCH,
+    "Q2 state snapping: 0 off, 1 nearest 1/8 unit, 2 toward-zero 1/8 unit (default). Changes apply at the next map/session load.");
   if (!race_q2_snap_mode) {
     G_Error("Could not register the Race Q2 snap-mode selector\n");
   }
@@ -246,8 +265,12 @@ void Race_PhysicsService_Shutdown(void) {
 
 static void Race_PhysicsService_Configure(const char *map,
                                           const race_physics_config_t *config,
-                                          const char *source) {
+                                          const char *source,
+                                          const bool apply_level_params) {
   Race_PhysicsService_Select(config);
+  if (apply_level_params) {
+    Race_PhysicsService_RefreshLevelParams();
+  }
   race_physics_source = source;
 
   q_strlcpy(race_physics_map, map ? map : "unavailable",
@@ -266,7 +289,7 @@ static void Race_PhysicsService_Configure(const char *map,
 
 void Race_PhysicsService_ConfigureLevel(const char *map) {
   const race_physics_config_t config = Race_PhysicsService_Configured();
-  Race_PhysicsService_Configure(map, &config, RACE_PHYSICS_SELECTOR_CVAR);
+  Race_PhysicsService_Configure(map, &config, RACE_PHYSICS_SELECTOR_CVAR, true);
 }
 
 void Race_PhysicsService_SeedClient(g_client_t *cl) {
@@ -318,10 +341,12 @@ static bool Race_PhysicsService_ConfigureTestLevelWithSnapMode(
 
 bool Race_PhysicsService_ConfigureTestLevel(
     const char *map, const race_physics_preset_id_t preset) {
+  const race_physics_preset_descriptor_t *descriptor =
+    Race_Physics_Preset(preset);
   return Race_PhysicsService_ConfigureTestLevelWithSnapMode(
-    map, preset, preset == RACE_PHYSICS_PRESET_QUETOO_COMMON_V1
-      ? RACE_PHYSICS_Q2_SNAP_OFF
-      : RACE_PHYSICS_Q2_SNAP_NEAREST);
+    map, preset, descriptor && descriptor->family == RACE_PHYSICS_FAMILY_Q2
+      ? RACE_PHYSICS_Q2_SNAP_TRUNCATE
+      : RACE_PHYSICS_Q2_SNAP_OFF);
 }
 
 static bool Race_PhysicsService_ConfigureTestLevelWithSnapMode(
@@ -341,7 +366,7 @@ static bool Race_PhysicsService_ConfigureTestLevelWithSnapMode(
   if (!Race_Physics_ConfigValid(&config)) {
     return false;
   }
-  Race_PhysicsService_Configure(map, &config, "test-only-wrapper");
+  Race_PhysicsService_Configure(map, &config, "test-only-wrapper", false);
   return true;
 }
 #endif

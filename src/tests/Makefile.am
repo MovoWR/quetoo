@@ -63,6 +63,8 @@ TESTS = \
 	check_race \
 	check_race_native \
 	check_race_game_landing \
+	check_race_weapon_movement \
+	check_race_weapon_tuning \
 	check_race_jump_viewer \
 	check_race_pmove \
 	check_r_media \
@@ -231,9 +233,11 @@ check_race_native_SOURCES = \
 	check_race_native.c \
 	check_race_cgame_module.c \
 	$(top_srcdir)/src/cgame/race/cg_module.c \
+	$(top_srcdir)/src/cgame/race/cg_race_double_jump.c \
 	$(top_srcdir)/src/cgame/race/cg_score_model.c \
 	$(top_srcdir)/src/cgame/race/cg_team_mode.c \
 	$(top_srcdir)/src/game/race/race_clip.c \
+	$(top_srcdir)/src/game/race/race_hook.c \
 	$(top_srcdir)/src/game/race/race_kick_broker.c \
 	$(top_srcdir)/src/game/race/race_projectile_observer.c
 check_race_native_CFLAGS = \
@@ -272,10 +276,13 @@ race_portability_fixture_LDADD = \
 
 check_race_game_landing_SOURCES = \
 	check_race_game_landing.c \
+	$(top_srcdir)/src/game/common/g_ai_grid.c \
 	$(top_srcdir)/src/game/race/g_ai_node.c \
 	$(top_srcdir)/src/game/race/bg_pmove.c \
 	$(top_srcdir)/src/game/race/race_physics.c \
-	$(top_srcdir)/src/shared/qstring.c
+	$(top_srcdir)/src/game/race/race_pmove_policy.c \
+	$(top_srcdir)/src/shared/qstring.c \
+	$(top_srcdir)/src/shared/swap.c
 check_race_game_landing_CFLAGS = \
 	-DRACE_PHYSICS_TEST \
 	-fms-extensions \
@@ -287,7 +294,49 @@ check_race_game_landing_CFLAGS = \
 check_race_game_landing_LDFLAGS = \
 	$(RACE_TEST_GC_FLAGS)
 check_race_game_landing_LDADD = \
+	@CHECK_LIBS@ \
+	@OBJECTIVELY_LIBS@
+
+check_race_weapon_movement_SOURCES = \
+	check_race_weapon_movement.c \
+	$(top_srcdir)/src/game/race/race_physics.c \
+	$(top_srcdir)/src/game/race/race_weapon_movement.c \
+	$(top_srcdir)/src/shared/qstring.c
+check_race_weapon_movement_CFLAGS = \
+	-fms-extensions \
+	-ffunction-sections \
+	-fdata-sections \
+	-I$(top_srcdir)/src/game/race \
+	-I$(top_srcdir)/src/game/common \
+	$(RACE_TEST_CFLAGS)
+check_race_weapon_movement_LDFLAGS = \
+	$(RACE_TEST_GC_FLAGS)
+check_race_weapon_movement_LDADD = \
 	@CHECK_LIBS@
+
+check_race_weapon_tuning_SOURCES = \
+	check_race_weapon_tuning.c \
+	check_race_weapon_tuning_service.c \
+	$(top_srcdir)/src/cgame/race/cg_race_weapon_tuning.c \
+	$(top_srcdir)/src/game/race/race_weapon_tuning.c \
+	$(top_srcdir)/src/game/race/race_weapon_tuning_service.c \
+	$(top_srcdir)/src/game/race/race_weapon_tuning_wire.c \
+	$(top_srcdir)/src/shared/qstring.c
+check_race_weapon_tuning_CFLAGS = \
+	-fms-extensions \
+	-ffunction-sections \
+	-fdata-sections \
+	-I$(top_srcdir)/src/game/race \
+	-I$(top_srcdir)/src/game/common \
+	-I$(top_srcdir)/src/cgame/race \
+	-I$(top_srcdir)/src/cgame/common \
+	-I$(top_srcdir)/src/cgame \
+	-I$(top_srcdir)/src \
+	$(RACE_TEST_CFLAGS)
+check_race_weapon_tuning_LDFLAGS = \
+	$(RACE_TEST_GC_FLAGS)
+check_race_weapon_tuning_LDADD = \
+	@BASE_LIBS@
 
 check_race_jump_viewer_SOURCES = \
 	check_race_jump_viewer.c
@@ -310,6 +359,7 @@ check_race_pmove_SOURCES = \
 	$(top_srcdir)/src/game/race/bg_pmove.c \
 	$(top_srcdir)/src/game/race/race_physics.c \
 	$(top_srcdir)/src/game/race/race_physics_service.c \
+	$(top_srcdir)/src/game/race/race_pmove_policy.c \
 	$(top_srcdir)/src/shared/qstring.c
 check_race_pmove_CFLAGS = \
 	-DRACE_PHYSICS_TEST \

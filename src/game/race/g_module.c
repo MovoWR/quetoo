@@ -36,6 +36,7 @@
 #include "race_training_service.h"
 #include "race_vote_service.h"
 #include "race_vote_menu_service.h"
+#include "race_weapon_tuning_service.h"
 
 /**
  * @brief Module initialization and hook registration.
@@ -53,6 +54,7 @@ void G_Module_Init(void) {
   Race_ReplayPlaybackService_Init();
   Race_SettingsService_Init();
   Race_AdminService_Init();
+  Race_WeaponTuningService_Init();
   Race_VoteService_Init();
   Race_VoteMenuService_Init();
 }
@@ -65,6 +67,7 @@ void G_Module_Shutdown(void) {
   Race_Actions_Shutdown();
   Race_VoteMenuService_Shutdown();
   Race_VoteService_Shutdown();
+  Race_WeaponTuningService_Shutdown();
   Race_ReplayPlaybackService_Shutdown();
   Race_ReplayService_Shutdown();
   Race_MapStateService_Shutdown();
@@ -93,6 +96,9 @@ bool G_Module_IntermissionReady(void) {
 }
 
 bool G_Module_IntermissionClientCommand(g_client_t *cl, const char *cmd) {
+  if (Race_WeaponTuningService_ClientCommand(cl, cmd)) {
+    return true;
+  }
   return Race_VoteMenuService_ClientCommand(cl, cmd);
 }
 
@@ -117,6 +123,7 @@ bool G_Module_ClientCommand(g_client_t *cl, const char *cmd) {
 void G_Module_ClientBegin(g_client_t *cl) {
   Race_ResetClientKillRate(cl);
   Race_AssignClientMode(cl);
+  Race_WeaponTuningService_ClientBegin(cl);
 }
 
 void G_Module_ClientDisconnect(g_client_t *cl) {

@@ -77,9 +77,11 @@
     <ClCompile Include="..\src\tests\check_race_native.c" />
     <ClCompile Include="..\src\tests\check_race_cgame_module.c" />
     <ClCompile Include="..\src\cgame\race\cg_module.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_double_jump.c" />
     <ClCompile Include="..\src\cgame\race\cg_score_model.c" />
     <ClCompile Include="..\src\cgame\race\cg_team_mode.c" />
     <ClCompile Include="..\src\game\race\race_clip.c" />
+    <ClCompile Include="..\src\game\race\race_hook.c" />
     <ClCompile Include="..\src\game\race\race_kick_broker.c" />
     <ClCompile Include="..\src\game\race\race_projectile_observer.c" />
   </ItemGroup>

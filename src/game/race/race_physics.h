@@ -24,9 +24,11 @@
 #define RACE_PHYSICS_PRESET_QUETOO_COMMON_V1_KEY "quetoo-common-v1"
 #define RACE_PHYSICS_PRESET_Q2_V1_KEY "q2-v1"
 #define RACE_PHYSICS_PRESET_QUETOO_FIX_V1_KEY "quetoo-fix-v1"
+#define RACE_PHYSICS_PRESET_DP2_V1_KEY "dp2-v1"
 
 #define RACE_PHYSICS_SELECTOR_Q2_KEY "q2"
 #define RACE_PHYSICS_SELECTOR_QUAKE2_KEY "quake2"
+#define RACE_PHYSICS_SELECTOR_DP2_KEY "dp2"
 
 /*
  * These explicit values are stable internal identifiers. The wire format uses
@@ -42,8 +44,46 @@ typedef enum {
   RACE_PHYSICS_PRESET_INVALID = 0,
   RACE_PHYSICS_PRESET_QUETOO_COMMON_V1 = 1,
   RACE_PHYSICS_PRESET_Q2 = 2,
-  RACE_PHYSICS_PRESET_QUETOO_FIX_V1 = 3
+  RACE_PHYSICS_PRESET_QUETOO_FIX_V1 = 3,
+  RACE_PHYSICS_PRESET_DP2_V1 = 4
 } race_physics_preset_id_t;
+
+/**
+ * @brief Internal locomotion behavior selected by a semantic preset.
+ * @details These values are never serialized. Semantic preset keys remain the
+ * external compatibility contract.
+ */
+typedef enum {
+  RACE_PM_POLICY_INVALID = 0,
+  RACE_PM_POLICY_QUETOO_COMMON_V1,
+  RACE_PM_POLICY_Q2_V1,
+  RACE_PM_POLICY_QUETOO_FIX_V1,
+  RACE_PM_POLICY_DP2_V1
+} race_pm_policy_id_t;
+
+/**
+ * @brief GAME-only weapon-assisted movement behavior.
+ * @details Existing presets intentionally retain the current live-cvar model.
+ */
+typedef enum {
+  RACE_WEAPON_PROFILE_INVALID = 0,
+  RACE_WEAPON_PROFILE_LEGACY_LIVE_CVARS_V1
+} race_weapon_profile_id_t;
+
+/**
+ * @brief Player-fired projectile paths that can contribute to Race movement.
+ * @details These values are GAME-only implementation identity and are never
+ * serialized.
+ */
+typedef enum {
+  RACE_WEAPON_FIRE_INVALID = 0,
+  RACE_WEAPON_FIRE_HAND_GRENADE,
+  RACE_WEAPON_FIRE_GRENADE,
+  RACE_WEAPON_FIRE_QUAKE_GRENADE,
+  RACE_WEAPON_FIRE_ROCKET,
+  RACE_WEAPON_FIRE_QUAKE_ROCKET,
+  RACE_WEAPON_FIRE_HYPERBLASTER
+} race_weapon_fire_kind_t;
 
 /**
  * @brief Legacy-compatible Q2 position and velocity state snapping.
@@ -68,6 +108,12 @@ typedef struct {
   const char *name;
   const char *short_name;
   const char *ruleset;
+  const char *ruleset_snap_off;
+  const char *ruleset_snap_truncate;
+  const pm_params_t *fixed_params;
+  race_pm_policy_id_t pm_policy;
+  race_weapon_profile_id_t weapon_profile;
+  float hyperblaster_climb_range;
   bool available;
   bool rankable;
 } race_physics_preset_descriptor_t;
