@@ -33,6 +33,7 @@ void setup(void) {
   Mem_Init();
 
   Fs_Init(FS_NONE);
+  ck_assert(Fs_SetGame(DEFAULT_GAME, NULL));
 }
 
 /**
@@ -69,7 +70,14 @@ START_TEST(check_Ms_AddServer) {
   Ms_AddServer(&addr);
   ck_assert_int_eq((int) ms_servers->count, 2);
 
-  Ms_RemoveServer(&addr);
+  server = Ms_GetServer(&addr);
+  ck_assert_ptr_nonnull(server);
+  server->challenge = 42u;
+
+  char command[32];
+  q_snprintf(command, sizeof(command), "shutdown %u", server->challenge);
+
+  Ms_RemoveServer(&addr, command);
   ck_assert_int_eq((int) ms_servers->count, 1);
 
   ms_server_t *s = Ms_GetServer(&addr);

@@ -27,16 +27,32 @@ quetoo_t quetoo;
 cvar_t *developer;
 cvar_t *editor;
 
+static bool Test_WaitForIdle(const RenderDevice *self) {
+  (void) self;
+  return true;
+}
+
 /**
  * @brief Setup fixture.
  */
 void setup(void) {
   static cvar_t null_cvar;
+  static RenderDevice renderDevice;
+  static RenderDeviceInterface renderDeviceInterface;
 
   developer = &null_cvar;
   editor = &null_cvar;
 
   Mem_Init();
+
+  // R_EndLoading rebuilds the CPU-side occlusion instance list. The full
+  // renderer initializes this before loading media; this focused fixture does
+  // not create a GPU device, so provide only the required empty list.
+  r_occlusion.boxes = $(alloc(Vector), initWithSize, sizeof(box3_t));
+
+  renderDeviceInterface.waitForIdle = Test_WaitForIdle;
+  renderDevice.interface = &renderDeviceInterface;
+  r_context.device = &renderDevice;
 
   R_InitMedia();
 }
@@ -47,6 +63,9 @@ void setup(void) {
 void teardown(void) {
 
   R_ShutdownMedia();
+
+  r_occlusion.boxes = release(r_occlusion.boxes);
+  r_context.device = NULL;
 
   Mem_Shutdown();
 }

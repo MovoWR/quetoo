@@ -31,6 +31,7 @@ void setup(void) {
   Mem_Init();
 
   Fs_Init(FS_AUTO_LOAD_ARCHIVES);
+  ck_assert(Fs_SetGame(DEFAULT_GAME, NULL));
 }
 
 /**

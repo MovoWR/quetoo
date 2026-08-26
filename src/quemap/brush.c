@@ -363,7 +363,11 @@ void SplitBrush(const csg_brush_t *brush, int32_t plane, csg_brush_t **front, cs
   }
 
   if (WindingIsLarge(w)) {
-    Com_Warn("Splitting entity %d brush %d created a large winding\n", brush->original->entity, brush->original->brush);
+    if (brush->original) {
+      Com_Warn("Splitting entity %d brush %d created a large winding\n", brush->original->entity, brush->original->brush);
+    } else {
+      Com_Warn("Splitting a BSP node volume created a large winding\n");
+    }
   }
 
   cm_winding_t *mid_winding = w;
@@ -402,7 +406,8 @@ void SplitBrush(const csg_brush_t *brush, int32_t plane, csg_brush_t **front, cs
     SetBrushBounds(cb[i]);
     int32_t j;
     for (j = 0; j < 3; j++) {
-      if (cb[i]->bounds.mins.xyz[j] < MIN_WORLD_COORD || cb[i]->bounds.maxs.xyz[j] > MAX_WORLD_COORD) {
+      if (brush->original && (
+          cb[i]->bounds.mins.xyz[j] < MIN_WORLD_COORD || cb[i]->bounds.maxs.xyz[j] > MAX_WORLD_COORD)) {
         Com_Debug(DEBUG_ALL, "Invalid brush after clip\n");
         break;
       }

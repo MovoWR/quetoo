@@ -1,8 +1,8 @@
 /*
  * Copyright(c) 2006 Quetoo.
  *
- * Race-local hooks that stock v1.0.79 common CGAME does not expose. Matching
- * common implementations are selected only by cgame-race.vcxproj.
+ * Race-local hooks that current common CGAME does not expose. Matching Race
+ * override implementations are selected only by cgame-race.vcxproj.
  */
 
 #pragma once
@@ -10,6 +10,7 @@
 #include "game/common/bg_pmove.h"
 
 box3_t Pm_PlayerBounds(bool ducked);
+bool Cg_HookPullSpeedValid(void);
 bool Cg_Module_DisablePrediction(void);
 int32_t Cg_Module_PredictionClipMask(void);
 cm_trace_t Cg_Module_TracePrediction(vec3_t start, vec3_t end,
@@ -24,4 +25,5 @@ void Cg_Module_ClearState(void);
 void Cg_Module_LoadMedia(void);
 void Cg_Module_PopulateScene(void);
 bool Cg_Module_ShouldHideEntity(const cl_entity_t *entity);
+void Cg_Module_Update(void);
 void Cg_Module_UpdateUi(const player_state_t *ps);

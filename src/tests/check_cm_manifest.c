@@ -30,6 +30,7 @@ quetoo_t quetoo;
 void setup(void) {
 	Mem_Init();
 	Fs_Init(FS_NONE);
+	ck_assert(Fs_SetGame(DEFAULT_GAME, NULL));
 }
 
 /**

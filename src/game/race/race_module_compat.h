@@ -1,8 +1,8 @@
 /*
  * Copyright(c) 2006 Quetoo.
  *
- * Race-local hooks that stock v1.0.79 common GAME does not expose. Matching
- * common implementations are selected only by game-race.vcxproj.
+ * Race-local hooks that current common GAME does not expose. Matching Race
+ * override implementations are selected only by game-race.vcxproj.
  */
 
 #pragma once
