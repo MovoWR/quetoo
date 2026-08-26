@@ -71,6 +71,23 @@ module's own copy ahead of common's, so forking one file is a bounded, per-file
 decision rather than a per-module one. Use it when a file resists everything
 else.
 
+### Race module pair
+
+Race builds from the same current source checkout as the Quetoo client and
+dedicated server, but it does not compile Race policy into shared common
+objects. It owns a bounded set of same-basename files under `src/game/race` and
+`src/cgame/race` when a module hook or manifest seam cannot express the
+required behavior. Race policy must not be added to `src/game/common`,
+`src/cgame/common`, engine, collision, client, or server sources merely to
+reduce an override count.
+
+Every such override is recorded in `doc/race-override-ledger.md`, checked
+against its pinned current stock counterpart, and selected explicitly and
+equally by Autotools, Visual Studio, and Xcode. New Race behavior should still
+prefer a Race-owned manifest, service, or paired GAME/CGAME contract. Add a
+whole-file override only when that is the narrowest mechanism, keep its delta
+reviewable, and extend the ledger and verifier in the same change.
+
 ### Signals that you picked wrong
 
 - Reaching for a hook to insert three lines mid-function → use a guard.

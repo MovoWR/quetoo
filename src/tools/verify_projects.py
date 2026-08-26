@@ -86,6 +86,15 @@ class Autotools:
     for token in self._source_tokens():
       if token.startswith("$(top_srcdir)/"):
         candidate = self.root / token.removeprefix("$(top_srcdir)/")
+      elif token.startswith("$(GAME_COMMON_DIR)/"):
+        candidate = (self.root / "src" / "game" / "common" /
+                     token.removeprefix("$(GAME_COMMON_DIR)/"))
+      elif token.startswith("$(CGAME_COMMON_DIR)/"):
+        candidate = (self.root / "src" / "cgame" / "common" /
+                     token.removeprefix("$(CGAME_COMMON_DIR)/"))
+      elif token.startswith("$(GAME_DIR)/"):
+        candidate = (self.root / "src" / "game" / self.module /
+                     token.removeprefix("$(GAME_DIR)/"))
       else:
         candidates = [base / token for base in search_roots if (base / token).is_file()]
         assert candidates, f"{self.path}: cannot resolve source token {token}"
