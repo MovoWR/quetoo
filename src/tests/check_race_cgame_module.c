@@ -10,6 +10,8 @@
 
 #include "cg_local.h"
 #include "cg_module_compat.h"
+#include "cg_race_admin_auth.h"
+#include "cg_race_admin_command.h"
 #include "cg_race_barriers.h"
 #include "cg_race_double_jump.h"
 #include "cg_race_finish_report.h"
@@ -18,6 +20,7 @@
 #include "cg_race_markers.h"
 #include "cg_race_physics.h"
 #include "cg_race_practice_markers.h"
+#include "cg_race_profiles.h"
 #include "cg_race_replay.h"
 #include "cg_race_training.h"
 #include "cg_race_weapon_tuning.h"
@@ -30,6 +33,9 @@ cg_import_t cgi;
 cg_state_t cg_state;
 
 typedef enum {
+  EVENT_PROFILE_MESSAGE,
+  EVENT_ADMIN_AUTH_CLEAR,
+  EVENT_ADMIN_AUTH_MESSAGE,
   EVENT_WEAPON_TUNING_CLEAR,
   EVENT_WEAPON_TUNING_UPDATE,
   EVENT_WEAPON_TUNING_MESSAGE,
@@ -64,6 +70,8 @@ static race_cgame_event_t events[64];
 static size_t num_events;
 static uint32_t assertions;
 static uint32_t failures;
+static bool profile_owns;
+static bool admin_auth_owns;
 static bool hud_owns;
 static bool finish_owns;
 static bool map_owns;
@@ -96,6 +104,23 @@ static bool EventsEqual(const race_cgame_event_t *expected,
                         const size_t count) {
   return num_events == count &&
          !memcmp(events, expected, count * sizeof(*expected));
+}
+
+void Cg_RaceAdminAuth_Init(void) { }
+void Cg_RaceAdminAuth_Shutdown(void) { }
+void Cg_RaceAdminAuth_Clear(void) { Record(EVENT_ADMIN_AUTH_CLEAR); }
+bool Cg_RaceAdminAuth_ParseMessage(const int32_t command) {
+  (void) command;
+  Record(EVENT_ADMIN_AUTH_MESSAGE);
+  return admin_auth_owns;
+}
+
+void Cg_RaceProfiles_Init(void) { }
+void Cg_RaceProfiles_Shutdown(void) { }
+bool Cg_RaceProfiles_ParseMessage(const int32_t command) {
+  (void) command;
+  Record(EVENT_PROFILE_MESSAGE);
+  return profile_owns;
 }
 
 void Cg_RacePhysics_Init(void) { }
@@ -154,6 +179,10 @@ void Cg_RaceTraining_CompletePrediction(const pm_move_t *pm) {
   (void) pm;
   Record(EVENT_TRAINING_COMPLETE);
 }
+// The registry mirror is a passive ConfigString reader with no lifecycle of
+// its own to assert, so it stubs out like the tuning cache above.
+void Cg_RaceSettings_Init(void) { }
+void Cg_RaceSettings_Clear(void) { }
 void Cg_RaceWeaponTuning_Init(void) { }
 void Cg_RaceWeaponTuning_Clear(void) {
   Record(EVENT_WEAPON_TUNING_CLEAR);
@@ -294,6 +323,25 @@ uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
                  "paired hook speed parser rejects hostile text transactionally");
   }
 
+  char map_token[MAX_QPATH];
+  MODULE_CHECK(Cg_RaceAdminCommand_MapToken("maps/potato.bsp", map_token) &&
+               !strcmp(map_token, "potato") &&
+               Cg_RaceAdminCommand_MapToken("mzc_dj.bsp", map_token) &&
+               !strcmp(map_token, "mzc_dj"),
+               "administrator map command accepts canonical BSP identities");
+  static const char *invalid_map_configstrings[] = {
+    "", "maps/.bsp", "maps/potato", "maps/potato.pk3",
+    "maps/potato;quit.bsp", "maps/potato.bsp;quit", "maps/../potato.bsp",
+    "maps/subdir/potato.bsp", "maps/potato\\quit.bsp",
+    "maps/potato\nquit.bsp"
+  };
+  for (size_t i = 0; i < lengthof(invalid_map_configstrings); i++) {
+    memcpy(map_token, "unchanged", sizeof("unchanged"));
+    MODULE_CHECK(!Cg_RaceAdminCommand_MapToken(
+                   invalid_map_configstrings[i], map_token) && !*map_token,
+                 "administrator map command rejects hostile configstrings");
+  }
+
   Cg_Module_Init();
   cmd_t *double_jump_down = FindCmd("+double_jump");
   cmd_t *double_jump_up = FindCmd("-double_jump");
@@ -346,7 +394,8 @@ uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
   ResetEvents();
   Cg_Module_ClearState();
   const race_cgame_event_t clear[] = {
-    EVENT_WEAPON_TUNING_CLEAR, EVENT_MAIN_CLEAR, EVENT_MAP_CLEAR,
+    EVENT_ADMIN_AUTH_CLEAR, EVENT_WEAPON_TUNING_CLEAR,
+    EVENT_MAIN_CLEAR, EVENT_MAP_CLEAR,
     EVENT_FINISH_CLEAR, EVENT_HUD_CLEAR,
     EVENT_REPLAY_CLEAR, EVENT_PRACTICE_CLEAR, EVENT_PHYSICS_CLEAR,
     EVENT_TRAINING_CLEAR, EVENT_BARRIER_CLEAR
@@ -399,31 +448,57 @@ uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
   MODULE_CHECK(EventsEqual(update, lengthof(update)),
                "frame sync updates authoritative weapon tuning");
 
-  weapon_tuning_owns = true;
+  profile_owns = true;
+  admin_auth_owns = false;
+  weapon_tuning_owns = false;
   hud_owns = finish_owns = map_owns = replay_owns = false;
   ResetEvents();
+  MODULE_CHECK(Cg_Module_ParseMessage(75) && num_events == 1u &&
+               events[0] == EVENT_PROFILE_MESSAGE,
+               "ranked profile authentication owns its server message first");
+
+  profile_owns = false;
+  admin_auth_owns = true;
+  weapon_tuning_owns = false;
+  hud_owns = finish_owns = map_owns = replay_owns = false;
+  ResetEvents();
+  const race_cgame_event_t admin_auth_message[] = {
+    EVENT_PROFILE_MESSAGE, EVENT_ADMIN_AUTH_MESSAGE
+  };
+  MODULE_CHECK(Cg_Module_ParseMessage(76) &&
+               EventsEqual(admin_auth_message, lengthof(admin_auth_message)),
+               "administrator authentication follows ranked profiles");
+
+  admin_auth_owns = false;
+  weapon_tuning_owns = true;
+  ResetEvents();
   const race_cgame_event_t weapon_tuning_message[] = {
+    EVENT_PROFILE_MESSAGE, EVENT_ADMIN_AUTH_MESSAGE,
     EVENT_WEAPON_TUNING_MESSAGE
   };
   MODULE_CHECK(Cg_Module_ParseMessage(77) &&
                EventsEqual(weapon_tuning_message,
                            lengthof(weapon_tuning_message)),
-               "weapon tuning owns its server message first");
+               "weapon tuning owns its message after administrator auth");
 
   weapon_tuning_owns = false;
   hud_owns = true;
   finish_owns = map_owns = replay_owns = false;
   ResetEvents();
-  MODULE_CHECK(Cg_Module_ParseMessage(78) && num_events == 2u &&
-               events[0] == EVENT_WEAPON_TUNING_MESSAGE &&
-               events[1] == EVENT_HUD_MESSAGE,
+  MODULE_CHECK(Cg_Module_ParseMessage(78) && num_events == 4u &&
+               events[0] == EVENT_PROFILE_MESSAGE &&
+               events[1] == EVENT_ADMIN_AUTH_MESSAGE &&
+               events[2] == EVENT_WEAPON_TUNING_MESSAGE &&
+               events[3] == EVENT_HUD_MESSAGE,
                "message first owner short-circuits");
 
   hud_owns = false;
   finish_owns = true;
   ResetEvents();
   const race_cgame_event_t finish_message[] = {
-    EVENT_WEAPON_TUNING_MESSAGE, EVENT_HUD_MESSAGE, EVENT_FINISH_MESSAGE
+    EVENT_PROFILE_MESSAGE, EVENT_ADMIN_AUTH_MESSAGE,
+    EVENT_WEAPON_TUNING_MESSAGE,
+    EVENT_HUD_MESSAGE, EVENT_FINISH_MESSAGE
   };
   MODULE_CHECK(Cg_Module_ParseMessage(79) &&
                EventsEqual(finish_message, lengthof(finish_message)),
@@ -432,8 +507,9 @@ uint32_t Race_NativeTestCgameModule(uint32_t *assertion_count) {
   finish_owns = false;
   ResetEvents();
   const race_cgame_event_t fallthrough[] = {
-    EVENT_WEAPON_TUNING_MESSAGE, EVENT_HUD_MESSAGE,
-    EVENT_FINISH_MESSAGE, EVENT_MAP_MESSAGE,
+    EVENT_PROFILE_MESSAGE, EVENT_ADMIN_AUTH_MESSAGE,
+    EVENT_WEAPON_TUNING_MESSAGE,
+    EVENT_HUD_MESSAGE, EVENT_FINISH_MESSAGE, EVENT_MAP_MESSAGE,
     EVENT_REPLAY_MESSAGE
   };
   MODULE_CHECK(!Cg_Module_ParseMessage(80) &&

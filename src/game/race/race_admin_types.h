@@ -14,10 +14,13 @@
 
 #define RACE_ADMIN_ACCOUNT_ID_MAX 32
 #define RACE_ADMIN_ACCOUNT_ID_SIZE (RACE_ADMIN_ACCOUNT_ID_MAX + 1)
+#define RACE_ADMIN_CHALLENGE_NONCE_SIZE 32
 
 /**
- * @brief The deliberately small set of capabilities required by known Phase 6
- * consumers. These values are server-only and are not a wire contract.
+ * @brief The deliberately small set of Race administrator capabilities.
+ *
+ * These values are server-owned policy. The current client receives the mask
+ * for presentation, but the assignments are not a public protocol contract.
  */
 typedef enum {
   RACE_ADMIN_CAP_SETTINGS_MUTATE = 1u << 0,
@@ -26,8 +29,10 @@ typedef enum {
   RACE_ADMIN_CAP_PLAYER_BAN = 1u << 3,
   RACE_ADMIN_CAP_VOTE_ADMIN = 1u << 4,
   RACE_ADMIN_CAP_ACCOUNT_MANAGE = 1u << 5,
+  RACE_ADMIN_CAP_SERVER_CVAR = 1u << 6,
+  RACE_ADMIN_CAP_CVAR_ALLOWLIST_MANAGE = 1u << 7,
 
-  RACE_ADMIN_CAP_ALL = (1u << 6) - 1u
+  RACE_ADMIN_CAP_ALL = (1u << 8) - 1u
 } race_admin_capability_t;
 
 /**
@@ -43,7 +48,7 @@ typedef enum {
 } race_admin_role_t;
 
 /**
- * @brief The concrete Phase 6 privileged actions.
+ * @brief The concrete Race administrator actions.
  *
  * These values are server-private policy identifiers, not a wire contract.
  */
@@ -52,6 +57,9 @@ typedef enum {
   RACE_ADMIN_ACTION_MAP_CHANGE,
   RACE_ADMIN_ACTION_PLAYER_KICK,
   RACE_ADMIN_ACTION_VOTE_CANCEL,
+  RACE_ADMIN_ACTION_ACCOUNT_MANAGE,
+  RACE_ADMIN_ACTION_SERVER_CVAR,
+  RACE_ADMIN_ACTION_CVAR_ALLOWLIST_MANAGE,
 
   RACE_ADMIN_ACTION_TOTAL
 } race_admin_action_t;
@@ -67,9 +75,9 @@ typedef enum {
  * @brief Connection-local, server-authoritative administrator session.
  *
  * This structure is embedded in Race's module-owned g_client_t persistent
- * state. Common respawn retains it, but disconnect, reconnect, and the current
- * map-change reconnect handshake clear the persistent record. It is never
- * written to disk.
+ * state. Common respawn and map changes retain it for the connection lifetime;
+ * disconnect and reconnect clear the persistent record. It is never written to
+ * disk.
  */
 typedef struct {
   bool authenticated;
@@ -77,3 +85,22 @@ typedef struct {
   uint64_t account_revision;
   uint32_t capabilities;
 } race_admin_session_t;
+
+/**
+ * @brief One-use proof challenge bound to one exact connection and account.
+ */
+typedef struct {
+  bool issued;
+  char account_id[RACE_ADMIN_ACCOUNT_ID_SIZE];
+  uint8_t nonce[RACE_ADMIN_CHALLENGE_NONCE_SIZE];
+  uint64_t issued_at;
+} race_admin_challenge_t;
+
+/**
+ * @brief Fixed account- or address-local failed-login throttle state.
+ */
+typedef struct {
+  uint64_t window_started_at;
+  uint64_t blocked_until;
+  uint8_t failures;
+} race_admin_login_throttle_t;

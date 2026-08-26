@@ -18,18 +18,22 @@ typedef enum {
   RACE_PERSISTENCE_NOT_REGULAR,
   RACE_PERSISTENCE_TOO_LARGE,
   RACE_PERSISTENCE_IO_ERROR,
-  RACE_PERSISTENCE_INVALID_ARGUMENT
+  RACE_PERSISTENCE_INVALID_ARGUMENT,
+  RACE_PERSISTENCE_UNSAFE_PATH
 } race_persistence_result_t;
 
 bool Race_Persistence_CopyRealPath(const char *virtual_path,
                                    const char *real_path,
                                    char *output, size_t capacity);
+bool Race_Persistence_RestrictOwner(const char *path);
 race_persistence_result_t Race_Persistence_Read(const char *path,
                                                 void *buffer, size_t capacity,
                                                 size_t *length);
 race_persistence_result_t Race_Persistence_WriteCandidate(const char *path,
                                                           const void *data,
                                                           size_t length);
+race_persistence_result_t Race_Persistence_WriteCandidateOwnerOnly(
+  const char *path, const void *data, size_t length);
 race_persistence_result_t Race_Persistence_Promote(const char *candidate,
                                                    const char *committed);
 race_persistence_result_t Race_Persistence_Remove(const char *path);

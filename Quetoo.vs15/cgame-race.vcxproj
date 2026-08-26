@@ -19,17 +19,30 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\deps\argon2\include\argon2.h" />
+    <ClInclude Include="..\deps\argon2\src\blake2\blake2-impl.h" />
+    <ClInclude Include="..\deps\argon2\src\blake2\blake2.h" />
+    <ClInclude Include="..\deps\argon2\src\blake2\blamka-round-ref.h" />
+    <ClInclude Include="..\deps\argon2\src\core.h" />
+    <ClInclude Include="..\deps\argon2\src\encoding.h" />
+    <ClInclude Include="..\deps\argon2\src\thread.h" />
     <ClInclude Include="..\src\cgame\race\cg_team_mode.h" />
     <ClInclude Include="..\src\cgame\race\cg_module_compat.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_barriers.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_admin_auth.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_profiles.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_double_jump.h" />
     <ClInclude Include="..\src\cgame\cgame.h" />
     <ClInclude Include="..\src\game\race\bg_item.h" />
     <ClInclude Include="..\src\game\common\bg_pmove.h" />
     <ClInclude Include="..\src\game\race\race_types.h" />
     <ClInclude Include="..\src\game\race\race_clip.h" />
+    <ClInclude Include="..\src\game\race\race_admin_auth.h" />
+    <ClInclude Include="..\src\game\race\race_profile.h" />
+    <ClInclude Include="..\src\game\race\race_profile_auth.h" />
     <ClInclude Include="..\src\game\race\race_wire.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_hud.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_admin_command.h" />
     <ClInclude Include="..\src\cgame\race\cg_input_viewer.h" />
     <ClInclude Include="..\src\cgame\race\cg_input_viewer_math.h" />
     <ClInclude Include="..\src\cgame\race\cg_jump_viewer.h" />
@@ -40,6 +53,7 @@
     <ClInclude Include="..\src\cgame\race\cg_race_physics.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_presentation.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_replay.h" />
+    <ClInclude Include="..\src\cgame\race\cg_race_settings.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_training.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_vote.h" />
     <ClInclude Include="..\src\cgame\race\cg_race_weapon_tuning.h" />
@@ -52,6 +66,7 @@
     <ClInclude Include="..\src\game\race\race_pmove_policy.h" />
     <ClInclude Include="..\src\game\race\race_weapon_tuning_types.h" />
     <ClInclude Include="..\src\game\race\race_weapon_tuning_wire.h" />
+    <ClInclude Include="..\src\game\race\race_settings_wire.h" />
     <ClInclude Include="..\src\game\race\race_training.h" />
     <ClInclude Include="..\src\game\race\race_finish_report.h" />
     <ClInclude Include="..\src\game\race\race_hook.h" />
@@ -82,10 +97,23 @@
     <ClInclude Include="..\src\game\race\race_vote_menu.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\deps\argon2\src\argon2.c" />
+    <ClCompile Include="..\deps\argon2\src\blake2\blake2b.c" />
+    <ClCompile Include="..\deps\argon2\src\core.c" />
+    <ClCompile Include="..\deps\argon2\src\encoding.c" />
+    <ClCompile Include="..\deps\argon2\src\ref.c" />
     <ClCompile Include="..\src\game\race\bg_item.c" />
     <ClCompile Include="..\src\game\race\bg_pmove.c" />
+    <ClCompile Include="..\src\game\race\race_settings.c" />
+    <ClCompile Include="..\src\game\race\race_settings_wire.c" />
     <ClCompile Include="..\src\game\race\race_clip.c" />
+    <ClCompile Include="..\src\game\race\race_admin_auth.c" />
+    <ClCompile Include="..\src\game\race\race_profile.c" />
+    <ClCompile Include="..\src\game\race\race_profile_auth.c" />
     <ClCompile Include="..\src\cgame\race\cg_module.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_admin_auth.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_admin_command.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_profiles.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_barriers.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_double_jump.c" />
     <ClCompile Include="..\src\cgame\race\cg_discord.c" />
@@ -103,6 +131,7 @@
     <ClCompile Include="..\src\cgame\race\cg_race_physics.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_presentation.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_replay.c" />
+    <ClCompile Include="..\src\cgame\race\cg_race_settings.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_training.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_vote.c" />
     <ClCompile Include="..\src\cgame\race\cg_race_weapon_tuning.c" />
@@ -141,6 +170,8 @@
     <ClCompile Include="..\src\game\race\race_weapon_tuning_wire.c" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\deps\argon2\LICENSE" />
+    <None Include="..\deps\argon2\UPSTREAM.md" />
     <None Include="..\src\cgame\race\ui\DialogViewController.css" />
     <None Include="..\src\cgame\race\ui\hud_input_attack.png" />
     <None Include="..\src\cgame\race\ui\hud_input_crouch.png" />
@@ -243,14 +274,14 @@
            These are per project rather than in QuetooFullIncludePath because
            every module has a cg_local.h and a g_types.h: one global list
            would make them ambiguous. -->
-      <AdditionalIncludeDirectories>..\src\cgame\race;..\src\cgame\race\ui\admin;..\src\cgame\race\ui\controls;..\src\cgame\race\ui\credits;..\src\cgame\race\ui\home;..\src\cgame\race\ui\main;..\src\cgame\race\ui\maps;..\src\cgame\race\ui\play;..\src\cgame\race\ui\settings;..\src\cgame\race\ui\voting;..\src\cgame\common;..\src\cgame\common\ui;..\src\cgame\common\ui\controls;..\src\cgame\common\ui\credits;..\src\cgame\common\ui\editor;..\src\cgame\common\ui\home;..\src\cgame\common\ui\main;..\src\cgame\common\ui\play;..\src\cgame\common\ui\settings;..\src\cgame\common\ui\teams;..\src\cgame;..\src\game\race;..\src\game\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\deps\argon2\include;..\deps\argon2\src;..\src\cgame\race;..\src\cgame\race\ui\admin;..\src\cgame\race\ui\controls;..\src\cgame\race\ui\credits;..\src\cgame\race\ui\home;..\src\cgame\race\ui\main;..\src\cgame\race\ui\maps;..\src\cgame\race\ui\play;..\src\cgame\race\ui\settings;..\src\cgame\race\ui\voting;..\src\cgame\common;..\src\cgame\common\ui;..\src\cgame\common\ui\controls;..\src\cgame\common\ui\credits;..\src\cgame\common\ui\editor;..\src\cgame\common\ui\home;..\src\cgame\common\ui\main;..\src\cgame\common\ui\play;..\src\cgame\common\ui\settings;..\src\cgame\common\ui\teams;..\src\cgame;..\src\game\race;..\src\game\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <!-- Race deliberately replaces stock same-basename CGAME and UI files.
            Source ownership is verifier-enforced, so suppress only Clang's
            duplicate-search-path diagnostic for those bounded names. -->
       <!-- Preserve the same intermediate movement rounding on x86-64 and arm64.
            The narrow suppression covers the intentional override of /fp:precise. -->
       <AdditionalOptions>%(AdditionalOptions) -Wno-shadow-header -Wno-overriding-option /clang:-ffp-contract=off</AdditionalOptions>
-      <PreprocessorDefinitions>G_HOOK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ARGON2_NO_THREADS;G_HOOK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>Objectively.lib;ObjectivelyMVC.lib;SDL3.lib;SDL3_image.lib;%(AdditionalDependencies)</AdditionalDependencies>

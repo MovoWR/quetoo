@@ -12,4 +12,8 @@
 #include "g_local.h"
 
 void Race_Profiles_Init(void);
+void Race_Profiles_ClientBegin(g_client_t *cl);
+void Race_Profiles_ClientDisconnect(g_client_t *cl);
 void Race_Profiles_ClientUserInfoChanged(g_client_t *cl);
+bool Race_Profiles_ClientCommand(g_client_t *cl, const char *cmd);
+const char *Race_Profiles_AuthenticatedUid(const g_client_t *cl);

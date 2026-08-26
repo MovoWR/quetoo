@@ -194,21 +194,33 @@ check_net_message_LDADD = \
 check_race_SOURCES = \
 	check_race.c \
 	check_race_map_browser.c \
+	$(top_srcdir)/deps/argon2/src/argon2.c \
+	$(top_srcdir)/deps/argon2/src/blake2/blake2b.c \
+	$(top_srcdir)/deps/argon2/src/core.c \
+	$(top_srcdir)/deps/argon2/src/encoding.c \
+	$(top_srcdir)/deps/argon2/src/ref.c \
 	$(top_srcdir)/src/cgame/race/cg_race_presentation.c \
 	$(top_srcdir)/src/game/race/race_admin.c \
+	$(top_srcdir)/src/game/race/race_admin_admission.c \
+	$(top_srcdir)/src/game/race/race_admin_allowlist.c \
+	$(top_srcdir)/src/game/race/race_admin_auth.c \
+	$(top_srcdir)/src/game/race/race_admin_password.c \
 	$(top_srcdir)/src/game/race/race_admin_store.c \
+	$(top_srcdir)/src/game/race/race_connection_address.c \
 	$(top_srcdir)/src/game/race/race_leaderboard.c \
 	$(top_srcdir)/src/game/race/race_leaderboard_wire.c \
 	$(top_srcdir)/src/game/race/race_finish_report.c \
 	$(top_srcdir)/src/game/race/race_logic.c \
 	$(top_srcdir)/src/game/race/race_map_browser_wire.c \
 	$(top_srcdir)/src/game/race/race_map_catalog.c \
+	$(top_srcdir)/src/game/race/race_map_properties.c \
 	$(top_srcdir)/src/game/race/race_map_state.c \
 	$(top_srcdir)/src/game/race/race_map_state_store.c \
 	$(top_srcdir)/src/game/race/race_persistence.c \
 	$(top_srcdir)/src/game/race/race_physics.c \
 	$(top_srcdir)/src/game/race/race_publication.c \
 	$(top_srcdir)/src/game/race/race_profile.c \
+	$(top_srcdir)/src/game/race/race_profile_auth.c \
 	$(top_srcdir)/src/game/race/race_replay_format.c \
 	$(top_srcdir)/src/game/race/race_replay_playback.c \
 	$(top_srcdir)/src/game/race/race_replay_record.c \
@@ -219,9 +231,14 @@ check_race_SOURCES = \
 	$(top_srcdir)/src/game/race/race_vote.c \
 	$(top_srcdir)/src/game/race/race_vote_menu.c
 check_race_CFLAGS = \
+	-DARGON2_NO_THREADS \
 	-fms-extensions \
+	-Wno-error=type-limits \
+	-I$(top_srcdir)/deps/argon2/include \
+	-I$(top_srcdir)/deps/argon2/src \
 	-I$(top_srcdir)/deps/minizip \
 	-I$(top_srcdir)/src/cgame/race \
+	-I$(top_srcdir)/src/cgame/common \
 	-I$(top_srcdir)/src/game/race \
 	-I$(top_srcdir)/src/game/common \
 	$(RACE_TEST_CFLAGS)
@@ -232,13 +249,16 @@ check_race_LDADD = \
 check_race_native_SOURCES = \
 	check_race_native.c \
 	check_race_cgame_module.c \
+	check_race_persistence_native.c \
 	$(top_srcdir)/src/cgame/race/cg_module.c \
+	$(top_srcdir)/src/cgame/race/cg_race_admin_command.c \
 	$(top_srcdir)/src/cgame/race/cg_race_double_jump.c \
 	$(top_srcdir)/src/cgame/race/cg_score_model.c \
 	$(top_srcdir)/src/cgame/race/cg_team_mode.c \
 	$(top_srcdir)/src/game/race/race_clip.c \
 	$(top_srcdir)/src/game/race/race_hook.c \
 	$(top_srcdir)/src/game/race/race_kick_broker.c \
+	$(top_srcdir)/src/game/race/race_persistence.c \
 	$(top_srcdir)/src/game/race/race_projectile_observer.c
 check_race_native_CFLAGS = \
 	-fms-extensions \

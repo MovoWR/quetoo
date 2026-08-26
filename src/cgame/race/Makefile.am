@@ -6,10 +6,13 @@ GAME_COMMON_DIR = $(top_srcdir)/src/game/common
 vpath %.c $(srcdir):$(CGAME_COMMON_DIR):$(GAME_DIR):$(GAME_COMMON_DIR)
 
 AM_CPPFLAGS = \
+	-DARGON2_NO_THREADS \
 	-DG_HOOK \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/cgame \
+	-I$(top_srcdir)/deps/argon2/include \
+	-I$(top_srcdir)/deps/argon2/src \
 	-I$(CGAME_COMMON_DIR) \
 	-I$(CGAME_COMMON_DIR)/ui \
 	-I$(srcdir)/ui/admin \
@@ -36,6 +39,7 @@ AM_CPPFLAGS = \
 # Keep intermediate rounding independent of the target's FMA policy.
 AM_CFLAGS = \
 	-ffp-contract=off \
+	-Wno-error=type-limits \
 	@SO_CFLAGS@ \
 	@BASE_CFLAGS@ \
 	@OBJECTIVELY_CFLAGS@ \
@@ -147,8 +151,15 @@ cgamelib_LTLIBRARIES = \
 	cgame.la
 
 cgame_la_SOURCES = \
+	$(top_srcdir)/deps/argon2/src/argon2.c \
+	$(top_srcdir)/deps/argon2/src/blake2/blake2b.c \
+	$(top_srcdir)/deps/argon2/src/core.c \
+	$(top_srcdir)/deps/argon2/src/encoding.c \
+	$(top_srcdir)/deps/argon2/src/ref.c \
 	bg_item.c \
 	bg_pmove.c \
+	race_settings.c \
+	race_settings_wire.c \
 	cg_client.c \
 	cg_discord.c \
 	cg_editor.c \
@@ -168,6 +179,8 @@ cgame_la_SOURCES = \
 	cg_main.c \
 	cg_media.c \
 	cg_module.c \
+	cg_race_admin_auth.c \
+	cg_race_admin_command.c \
 	cg_race_barriers.c \
 	cg_race_double_jump.c \
 	cg_muzzle_flash.c \
@@ -180,7 +193,9 @@ cgame_la_SOURCES = \
 	cg_race_practice_markers.c \
 	cg_race_physics.c \
 	cg_race_presentation.c \
+	cg_race_profiles.c \
 	cg_race_replay.c \
+	cg_race_settings.c \
 	cg_race_training.c \
 	cg_race_vote.c \
 	cg_race_weapon_tuning.c \
@@ -195,8 +210,11 @@ cgame_la_SOURCES = \
 	cg_view.c \
 	cg_weapon.c \
 	race_clip.c \
+	race_admin_auth.c \
 	race_finish_report.c \
 	race_hook.c \
+	race_profile.c \
+	race_profile_auth.c \
 	race_physics.c \
 	race_pmove_policy.c \
 	race_leaderboard_wire.c \

@@ -20,8 +20,17 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="game.def" />
+    <None Include="..\deps\argon2\LICENSE" />
+    <None Include="..\deps\argon2\UPSTREAM.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\deps\argon2\include\argon2.h" />
+    <ClInclude Include="..\deps\argon2\src\blake2\blake2-impl.h" />
+    <ClInclude Include="..\deps\argon2\src\blake2\blake2.h" />
+    <ClInclude Include="..\deps\argon2\src\blake2\blamka-round-ref.h" />
+    <ClInclude Include="..\deps\argon2\src\core.h" />
+    <ClInclude Include="..\deps\argon2\src\encoding.h" />
+    <ClInclude Include="..\deps\argon2\src\thread.h" />
     <ClInclude Include="..\deps\minizip\miniz.h" />
     <ClInclude Include="..\src\game\game.h" />
     <ClInclude Include="..\src\game\race\bg_item.h" />
@@ -33,10 +42,15 @@
     <ClInclude Include="..\src\game\race\race.h" />
     <ClInclude Include="..\src\game\race\race_actions.h" />
     <ClInclude Include="..\src\game\race\race_admin.h" />
+    <ClInclude Include="..\src\game\race\race_admin_admission.h" />
+    <ClInclude Include="..\src\game\race\race_admin_allowlist.h" />
     <ClInclude Include="..\src\game\race\race_admin_actions.h" />
+    <ClInclude Include="..\src\game\race\race_admin_auth.h" />
+    <ClInclude Include="..\src\game\race\race_admin_password.h" />
     <ClInclude Include="..\src\game\race\race_admin_service.h" />
     <ClInclude Include="..\src\game\race\race_admin_store.h" />
     <ClInclude Include="..\src\game\race\race_admin_types.h" />
+    <ClInclude Include="..\src\game\race\race_connection_address.h" />
     <ClInclude Include="..\src\game\race\race_cmds.h" />
     <ClInclude Include="..\src\game\race\race_finish_report.h" />
     <ClInclude Include="..\src\game\race\race_hook.h" />
@@ -62,6 +76,7 @@
     <ClInclude Include="..\src\game\race\race_weapon_tuning_wire.h" />
     <ClInclude Include="..\src\game\race\race_publication.h" />
     <ClInclude Include="..\src\game\race\race_profile.h" />
+    <ClInclude Include="..\src\game\race\race_profile_auth.h" />
     <ClInclude Include="..\src\game\race\race_profiles.h" />
     <ClInclude Include="..\src\game\race\race_replay_format.h" />
     <ClInclude Include="..\src\game\race\race_replay_playback.h" />
@@ -73,6 +88,7 @@
     <ClInclude Include="..\src\game\race\race_settings.h" />
     <ClInclude Include="..\src\game\race\race_settings_service.h" />
     <ClInclude Include="..\src\game\race\race_settings_store.h" />
+    <ClInclude Include="..\src\game\race\race_settings_wire.h" />
     <ClInclude Include="..\src\game\race\race_trigger.h" />
     <ClInclude Include="..\src\game\race\race_training.h" />
     <ClInclude Include="..\src\game\race\race_training_service.h" />
@@ -84,6 +100,11 @@
     <ClInclude Include="..\src\game\race\race_vote_service.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\deps\argon2\src\argon2.c" />
+    <ClCompile Include="..\deps\argon2\src\blake2\blake2b.c" />
+    <ClCompile Include="..\deps\argon2\src\core.c" />
+    <ClCompile Include="..\deps\argon2\src\encoding.c" />
+    <ClCompile Include="..\deps\argon2\src\ref.c" />
     <ClCompile Include="..\deps\minizip\miniz.c" />
     <ClCompile Include="..\src\game\race\bg_item.c" />
     <ClCompile Include="..\src\game\race\bg_pmove.c" />
@@ -105,10 +126,15 @@
     <ClCompile Include="..\src\game\race\race.c" />
     <ClCompile Include="..\src\game\race\race_actions.c" />
     <ClCompile Include="..\src\game\race\race_admin.c" />
+    <ClCompile Include="..\src\game\race\race_admin_admission.c" />
+    <ClCompile Include="..\src\game\race\race_admin_allowlist.c" />
     <ClCompile Include="..\src\game\race\race_admin_actions.c" />
+    <ClCompile Include="..\src\game\race\race_admin_auth.c" />
+    <ClCompile Include="..\src\game\race\race_admin_password.c" />
     <ClCompile Include="..\src\game\race\race_admin_service.c" />
     <ClCompile Include="..\src\game\race\race_admin_store.c" />
     <ClCompile Include="..\src\game\race\race_cmds.c" />
+    <ClCompile Include="..\src\game\race\race_connection_address.c" />
     <ClCompile Include="..\src\game\race\race_finish_report.c" />
     <ClCompile Include="..\src\game\race\race_hook.c" />
     <ClCompile Include="..\src\game\race\race_leaderboard.c" />
@@ -132,6 +158,7 @@
     <ClCompile Include="..\src\game\race\race_weapon_tuning_wire.c" />
     <ClCompile Include="..\src\game\race\race_publication.c" />
     <ClCompile Include="..\src\game\race\race_profile.c" />
+    <ClCompile Include="..\src\game\race\race_profile_auth.c" />
     <ClCompile Include="..\src\game\race\race_profiles.c" />
     <ClCompile Include="..\src\game\race\race_replay_format.c" />
     <ClCompile Include="..\src\game\race\race_replay_playback.c" />
@@ -143,6 +170,7 @@
     <ClCompile Include="..\src\game\race\race_settings.c" />
     <ClCompile Include="..\src\game\race\race_settings_service.c" />
     <ClCompile Include="..\src\game\race\race_settings_store.c" />
+    <ClCompile Include="..\src\game\race\race_settings_wire.c" />
     <ClCompile Include="..\src\game\race\race_trigger.c" />
     <ClCompile Include="..\src\game\race\race_training_service.c" />
     <ClCompile Include="..\src\game\race\race_vote.c" />
@@ -198,17 +226,17 @@
       <!-- This module's own directory comes first, then the common one. These
            are per project rather than in QuetooFullIncludePath because every
            module has a g_types.h: one global list would make it ambiguous. -->
-      <AdditionalIncludeDirectories>..\deps\minizip;..\src\game\race;..\src\game\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\deps\argon2\include;..\deps\argon2\src;..\deps\minizip;..\src\game\race;..\src\game\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <!-- g_client_s and g_entity_s embed the server's view of themselves as an
            anonymous member, which needs this. clang-cl enables it by default; it
            is spelled out so that a toolset change cannot take it away quietly. -->
       <!-- Preserve the same intermediate movement rounding on x86-64 and arm64.
            The narrow suppression covers the intentional override of /fp:precise. -->
       <AdditionalOptions>%(AdditionalOptions) -fms-extensions -Wno-microsoft-anon-tag -Wno-overriding-option /clang:-ffp-contract=off</AdditionalOptions>
-      <PreprocessorDefinitions>G_HOOK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ARGON2_NO_THREADS;G_HOOK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>Objectively.lib;SDL3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>bcrypt.lib;Objectively.lib;SDL3.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
       <AdditionalOptions>/Brepro %(AdditionalOptions)</AdditionalOptions>
     </Link>

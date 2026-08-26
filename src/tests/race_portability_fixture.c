@@ -28,10 +28,14 @@
 
 #define RACE_FIXTURE_UID "01234567-89ab-4cde-8f01-23456789abcd"
 #define RACE_FIXTURE_DISPLAY_NAME "^1Runner"
+#define RACE_FIXTURE_PROFILE_CREDENTIAL \
+  "$argon2id$v=19$m=19456,t=2,p=1$" \
+  "AAAAAAAAAAAAAAAAAAAAAA$" \
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 #define RACE_FIXTURE_MAP "edge"
 #define RACE_FIXTURE_PROFILE_FILE "profile.profile"
 #define RACE_FIXTURE_MAP_STATE_FILE "map.state"
-#define RACE_FIXTURE_SETTINGS_FILE "global.settings"
+#define RACE_FIXTURE_SETTINGS_FILE "gset.cfg"
 #define RACE_FIXTURE_REPLAY_FILE "replay.qrpl"
 #define RACE_FIXTURE_WIRE_FILE "wire.bin"
 #define RACE_FIXTURE_PATH_SIZE 1024u
@@ -41,12 +45,12 @@
 #define RACE_FIXTURE_WIRE_RECORD_HEADER_SIZE 8u
 #define RACE_FIXTURE_WIRE_RECORDS 6u
 #define RACE_FIXTURE_INPUT_STAT 23u
-#define RACE_FIXTURE_PROFILE_BYTES 79u
-#define RACE_FIXTURE_PROFILE_CRC32 UINT32_C(0x56755550)
+#define RACE_FIXTURE_PROFILE_BYTES 188u
+#define RACE_FIXTURE_PROFILE_CRC32 UINT32_C(0x073e83a6)
 #define RACE_FIXTURE_MAP_STATE_BYTES 251u
 #define RACE_FIXTURE_MAP_STATE_CRC32 UINT32_C(0xfbf704c3)
-#define RACE_FIXTURE_SETTINGS_BYTES 362u
-#define RACE_FIXTURE_SETTINGS_CRC32 UINT32_C(0x020e177a)
+#define RACE_FIXTURE_SETTINGS_BYTES 316u
+#define RACE_FIXTURE_SETTINGS_CRC32 UINT32_C(0xbea7058c)
 #define RACE_FIXTURE_REPLAY_ID UINT64_C(0xdba8d53d1dc24cab)
 #define RACE_FIXTURE_REPLAY_BYTES 550u
 #define RACE_FIXTURE_REPLAY_CRC32 UINT32_C(0x34c8c332)
@@ -65,6 +69,23 @@ typedef struct {
   uint8_t wire[RACE_FIXTURE_WIRE_SIZE];
   size_t wire_length;
 } race_portability_fixture_t;
+
+typedef struct {
+  race_setting_id_t id;
+  const char *value;
+} race_fixture_setting_assignment_t;
+
+static const race_fixture_setting_assignment_t race_fixture_settings[] = {
+  { RACE_SETTING_CHECKPOINT_FEEDBACK, "silent" },
+  { RACE_SETTING_FINISH_CUE_ENABLED, "0" },
+  { RACE_SETTING_FINISH_CUE_GAIN, "50" },
+  { RACE_SETTING_MAX_VOTES, "5" },
+  { RACE_SETTING_VOTE_ALLOW_SPECTATORS, "1" },
+  { RACE_SETTING_VOTE_MENU_CHOICES, "4" },
+  { RACE_SETTING_VOTE_MENU_DURATION, "15" },
+  { RACE_SETTING_VOTING_TIME, "45" },
+  { RACE_SETTING_WEAPONS, "0" }
+};
 
 static bool Race_FixtureError(const char *message) {
   fprintf(stderr, "RACE_PORTABILITY_FIXTURE_FAIL %s\n",
@@ -295,37 +316,39 @@ static bool Race_FixtureMapState(race_map_state_t *state,
   return true;
 }
 
-static bool Race_FixtureSetSetting(race_settings_state_t *state,
-                                   const char *key, const char *value) {
-  race_settings_state_t next;
-  RACE_FIXTURE_REQUIRE(Race_Settings_StateSet(
-    state, RACE_SETTING_SOURCE_GLOBAL, key, value, &next, NULL, NULL, 0u));
-  *state = next;
-  return true;
-}
+static bool Race_FixtureSettings(char *output, size_t output_size,
+                                 size_t *output_length) {
+  if (!output || !output_size || !output_length) {
+    return false;
+  }
 
-static bool Race_FixtureSettings(race_settings_document_t *document) {
-  race_settings_state_t state;
-  RACE_FIXTURE_REQUIRE(Race_Settings_StateInit(&state));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state,
-                                               "finish_cue_enabled", "0"));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state,
-                                               "finish_cue_gain", "50"));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state,
-                                               "checkpoint_feedback", "silent"));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state,
-                                               "voting_time", "45"));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state,
-                                               "max_votes", "5"));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state,
-                                               "vote_menu_duration", "15"));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state,
-                                               "vote_menu_choices", "4"));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state,
-                                               "vote_allow_spectators", "1"));
-  RACE_FIXTURE_REQUIRE(Race_FixtureSetSetting(&state, "weapons", "0"));
-  RACE_FIXTURE_REQUIRE(Race_Settings_DocumentFromState(
-    document, RACE_SETTING_SCOPE_GLOBAL, NULL, 7u, &state));
+  size_t count;
+  const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
+  RACE_FIXTURE_REQUIRE(catalog && count == RACE_SETTING_TOTAL &&
+                       Race_Settings_ValidateCatalog(catalog, count, NULL, 0));
+
+  const int header = snprintf(output, output_size,
+                              "# Race global cvar overrides\n");
+  RACE_FIXTURE_REQUIRE(header > 0 && (size_t) header < output_size);
+  size_t length = (size_t) header;
+
+  for (size_t i = 0; i < sizeof(race_fixture_settings) /
+                       sizeof(race_fixture_settings[0]); i++) {
+    const race_fixture_setting_assignment_t *assignment =
+      race_fixture_settings + i;
+    RACE_FIXTURE_REQUIRE((size_t) assignment->id < count);
+    const race_setting_descriptor_t *descriptor = catalog + assignment->id;
+    char canonical[RACE_SETTING_VALUE_SIZE];
+    RACE_FIXTURE_REQUIRE(Race_Settings_CanonicalizeValue(
+      descriptor, assignment->value, canonical, sizeof(canonical), NULL, 0));
+    const int written = snprintf(output + length, output_size - length,
+                                 "set %s \"%s\"\n", descriptor->cvar,
+                                 canonical);
+    RACE_FIXTURE_REQUIRE(written > 0 && (size_t) written < output_size - length);
+    length += (size_t) written;
+  }
+
+  *output_length = length;
   return true;
 }
 
@@ -485,6 +508,8 @@ static bool Race_FixtureGenerate(race_portability_fixture_t *fixture) {
   race_profile_t profile;
   RACE_FIXTURE_REQUIRE(Race_Profile_Init(&profile, RACE_FIXTURE_UID,
                                          RACE_FIXTURE_DISPLAY_NAME));
+  RACE_FIXTURE_REQUIRE(Race_Profile_SetCredential(
+    &profile, RACE_FIXTURE_PROFILE_CREDENTIAL));
   RACE_FIXTURE_REQUIRE(Race_Profile_Serialize(
     &profile, fixture->profile, sizeof(fixture->profile),
     &fixture->profile_length));
@@ -506,11 +531,8 @@ static bool Race_FixtureGenerate(race_portability_fixture_t *fixture) {
     &map_state, fixture->map_state, sizeof(fixture->map_state),
     &fixture->map_state_length));
 
-  race_settings_document_t settings;
-  RACE_FIXTURE_REQUIRE(Race_FixtureSettings(&settings));
-  RACE_FIXTURE_REQUIRE(Race_Settings_Serialize(
-    &settings, fixture->settings, sizeof(fixture->settings),
-    &fixture->settings_length));
+  RACE_FIXTURE_REQUIRE(Race_FixtureSettings(
+    fixture->settings, sizeof(fixture->settings), &fixture->settings_length));
   RACE_FIXTURE_REQUIRE(Race_FixtureWire(fixture));
   return true;
 }
@@ -523,6 +545,8 @@ static bool Race_FixtureVerifyProfile(const race_portability_fixture_t *fixture)
   RACE_FIXTURE_REQUIRE(strcmp(profile.uid, RACE_FIXTURE_UID) == 0);
   RACE_FIXTURE_REQUIRE(strcmp(profile.display_name,
                               RACE_FIXTURE_DISPLAY_NAME) == 0);
+  RACE_FIXTURE_REQUIRE(strcmp(profile.credential,
+                              RACE_FIXTURE_PROFILE_CREDENTIAL) == 0);
 
   char serialized[RACE_PROFILE_SERIALIZED_MAX];
   size_t length;
@@ -585,22 +609,11 @@ static bool Race_FixtureVerifyMapState(
 
 static bool Race_FixtureVerifySettings(
     const race_portability_fixture_t *fixture) {
-  race_settings_document_t settings;
-  RACE_FIXTURE_REQUIRE(Race_Settings_Parse(
-    fixture->settings, fixture->settings_length,
-    RACE_SETTING_SCOPE_GLOBAL, NULL, &settings) == RACE_SETTINGS_PARSE_OK);
-  RACE_FIXTURE_REQUIRE(settings.generation == 7u);
-
-  race_settings_document_t expected;
-  RACE_FIXTURE_REQUIRE(Race_FixtureSettings(&expected));
-  RACE_FIXTURE_REQUIRE(Race_Settings_DocumentEquals(&settings, &expected));
-
-  char serialized[RACE_FIXTURE_TEXT_SIZE];
+  char expected[RACE_FIXTURE_TEXT_SIZE];
   size_t length;
-  RACE_FIXTURE_REQUIRE(Race_Settings_Serialize(
-    &settings, serialized, sizeof(serialized), &length));
+  RACE_FIXTURE_REQUIRE(Race_FixtureSettings(expected, sizeof(expected), &length));
   RACE_FIXTURE_REQUIRE(length == fixture->settings_length);
-  RACE_FIXTURE_REQUIRE(memcmp(serialized, fixture->settings, length) == 0);
+  RACE_FIXTURE_REQUIRE(memcmp(expected, fixture->settings, length) == 0);
   return true;
 }
 

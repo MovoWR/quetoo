@@ -13,6 +13,18 @@
     <Filter Include="deps\discord-rpc\src">
       <UniqueIdentifier>{efb61efd-098e-542f-91ad-7ca1d0d9551e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="deps\argon2">
+      <UniqueIdentifier>{7b62da81-02e0-4f4b-b22c-24f04c9920c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\argon2\include">
+      <UniqueIdentifier>{d7995c1d-4dd1-4d54-9e07-369327a36fa4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\argon2\src">
+      <UniqueIdentifier>{1597bd97-044f-4134-9f29-5e7fc16607a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\argon2\src\blake2">
+      <UniqueIdentifier>{30c3d71d-4b60-414e-8cbc-86a8fc706d73}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src">
       <UniqueIdentifier>{3583a5f6-9733-4a0c-9019-f0da06fa5005}</UniqueIdentifier>
     </Filter>
@@ -90,6 +102,27 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\deps\argon2\include\argon2.h">
+      <Filter>deps\argon2\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\blake2\blake2-impl.h">
+      <Filter>deps\argon2\src\blake2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\blake2\blake2.h">
+      <Filter>deps\argon2\src\blake2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\blake2\blamka-round-ref.h">
+      <Filter>deps\argon2\src\blake2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\core.h">
+      <Filter>deps\argon2\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\encoding.h">
+      <Filter>deps\argon2\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\thread.h">
+      <Filter>deps\argon2\src</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\cgame.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -174,6 +207,9 @@
     <ClInclude Include="..\src\cgame\race\cg_race_barriers.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_admin_auth.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_double_jump.h">
       <Filter>src\race</Filter>
     </ClInclude>
@@ -195,10 +231,22 @@
     <ClInclude Include="..\src\cgame\race\cg_race_finish_report.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_admin_command.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_markers.h">
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_practice_markers.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_profiles.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_profile.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_profile_auth.h">
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_physics.h">
@@ -208,6 +256,9 @@
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_replay.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cgame\race\cg_race_settings.h">
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\cgame\race\cg_race_training.h">
@@ -318,6 +369,9 @@
     <ClInclude Include="..\src\game\race\race_weapon_tuning_wire.h">
       <Filter>src\game\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\game\race\race_settings_wire.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\game\race\race_training.h">
       <Filter>src\game\race</Filter>
     </ClInclude>
@@ -325,6 +379,9 @@
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\game\race\race_clip.h">
+      <Filter>src\game\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_admin_auth.h">
       <Filter>src\game\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\game\race\race_wire.h">
@@ -518,6 +575,9 @@
     <ClCompile Include="..\src\cgame\race\cg_race_finish_report.c">
       <Filter>src\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_admin_command.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_vote.c">
       <Filter>src\race</Filter>
     </ClCompile>
@@ -566,6 +626,9 @@
     <ClCompile Include="..\src\cgame\race\cg_race_barriers.c">
       <Filter>src\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_admin_auth.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_double_jump.c">
       <Filter>src\race</Filter>
     </ClCompile>
@@ -584,6 +647,15 @@
     <ClCompile Include="..\src\cgame\race\cg_race_practice_markers.c">
       <Filter>src\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_profiles.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_profile.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_profile_auth.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_physics.c">
       <Filter>src\race</Filter>
     </ClCompile>
@@ -591,6 +663,9 @@
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_replay.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cgame\race\cg_race_settings.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cgame\race\cg_race_training.c">
@@ -797,7 +872,31 @@
     <ClCompile Include="..\src\game\race\bg_pmove.c">
       <Filter>src\game\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\argon2.c">
+      <Filter>deps\argon2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\blake2\blake2b.c">
+      <Filter>deps\argon2\src\blake2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\core.c">
+      <Filter>deps\argon2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\encoding.c">
+      <Filter>deps\argon2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\ref.c">
+      <Filter>deps\argon2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_settings.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_settings_wire.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\game\race\race_clip.c">
+      <Filter>src\game\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_admin_auth.c">
       <Filter>src\game\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\bg_item.c">
@@ -820,6 +919,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\deps\argon2\LICENSE">
+      <Filter>deps\argon2</Filter>
+    </None>
+    <None Include="..\deps\argon2\UPSTREAM.md">
+      <Filter>deps\argon2</Filter>
+    </None>
     <None Include="..\src\cgame\race\ui\DialogViewController.css">
       <Filter>src\race\ui</Filter>
     </None>

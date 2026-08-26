@@ -13,8 +13,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#define RACE_PROFILE_MAGIC "RACE_PROFILE_V1"
+#define RACE_PROFILE_MAGIC "RACE_PROFILE_V2"
+#define RACE_PROFILE_MAGIC_V1 "RACE_PROFILE_V1"
 #define RACE_PROFILE_MAGIC_PREFIX "RACE_PROFILE_V"
+
+#define RACE_PROFILE_CREDENTIAL_PREFIX \
+  "$argon2id$v=19$m=19456,t=2,p=1$"
+#define RACE_PROFILE_CREDENTIAL_SALT_SIZE 22u
+#define RACE_PROFILE_CREDENTIAL_TAG_SIZE 43u
+#define RACE_PROFILE_CREDENTIAL_LENGTH 97u
 
 static bool Race_Profile_IsHex(char c) {
   return (c >= '0' && c <= '9') ||
@@ -36,6 +43,59 @@ static int32_t Race_Profile_HexValue(char c) {
   }
 
   return -1;
+}
+
+static int32_t Race_Profile_Base64Value(const char c) {
+  if (c >= 'A' && c <= 'Z') {
+    return c - 'A';
+  }
+  if (c >= 'a' && c <= 'z') {
+    return c - 'a' + 26;
+  }
+  if (c >= '0' && c <= '9') {
+    return c - '0' + 52;
+  }
+  if (c == '+') {
+    return 62;
+  }
+  if (c == '/') {
+    return 63;
+  }
+  return -1;
+}
+
+static bool Race_Profile_Base64Valid(const char *text, const size_t length,
+                                     const int32_t trailing_mask) {
+  for (size_t i = 0u; i < length; i++) {
+    const int32_t value = Race_Profile_Base64Value(text[i]);
+    if (value < 0 || (i + 1u == length && (value & trailing_mask))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool Race_Profile_CredentialValid(const char *credential) {
+  if (!credential ||
+      strnlen(credential, RACE_PROFILE_CREDENTIAL_SIZE) !=
+        RACE_PROFILE_CREDENTIAL_LENGTH) {
+    return false;
+  }
+
+  const size_t prefix_length = sizeof(RACE_PROFILE_CREDENTIAL_PREFIX) - 1u;
+  if (memcmp(credential, RACE_PROFILE_CREDENTIAL_PREFIX, prefix_length)) {
+    return false;
+  }
+
+  const char *salt = credential + prefix_length;
+  if (!Race_Profile_Base64Valid(salt, RACE_PROFILE_CREDENTIAL_SALT_SIZE,
+                                0x0f) ||
+      salt[RACE_PROFILE_CREDENTIAL_SALT_SIZE] != '$') {
+    return false;
+  }
+  return Race_Profile_Base64Valid(
+    salt + RACE_PROFILE_CREDENTIAL_SALT_SIZE + 1u,
+    RACE_PROFILE_CREDENTIAL_TAG_SIZE, 0x03);
 }
 
 static bool Race_Profile_BoundedLength(const char *string, size_t maximum, size_t *length) {
@@ -103,6 +163,19 @@ bool Race_Profile_SetDisplayName(race_profile_t *profile, const char *display_na
   return true;
 }
 
+bool Race_Profile_SetCredential(race_profile_t *profile,
+                                const char *credential) {
+  if (!profile || !Race_Profile_CredentialValid(credential)) {
+    return false;
+  }
+  memcpy(profile->credential, credential, RACE_PROFILE_CREDENTIAL_LENGTH + 1u);
+  return true;
+}
+
+bool Race_Profile_HasCredential(const race_profile_t *profile) {
+  return profile && Race_Profile_CredentialValid(profile->credential);
+}
+
 bool Race_Profile_Init(race_profile_t *profile, const char *uid, const char *display_name) {
   if (!profile) {
     return false;
@@ -148,7 +221,8 @@ bool Race_Profile_Serialize(const race_profile_t *profile,
   if (!profile || !output || !output_size ||
       !Race_Profile_CanonicalizeUid(profile->uid, canonical) ||
       strcmp(canonical, profile->uid) ||
-      !Race_Profile_BoundedLength(profile->display_name, RACE_PROFILE_NAME_MAX, &name_length)) {
+      !Race_Profile_BoundedLength(profile->display_name, RACE_PROFILE_NAME_MAX, &name_length) ||
+      !Race_Profile_HasCredential(profile)) {
     return false;
   }
 
@@ -160,8 +234,9 @@ bool Race_Profile_Serialize(const race_profile_t *profile,
   encoded_name[name_length * 2] = '\0';
 
   const int32_t length = snprintf(output, output_size,
-                                  RACE_PROFILE_MAGIC "\nuid=%s\nname=%s\n",
-                                  profile->uid, encoded_name);
+                                  RACE_PROFILE_MAGIC "\nuid=%s\nname=%s\ncredential=%s\n",
+                                  profile->uid, encoded_name,
+                                  profile->credential);
 
   if (length < 0 || (size_t) length >= output_size ||
       (size_t) length > RACE_PROFILE_SERIALIZED_MAX) {
@@ -204,7 +279,8 @@ race_profile_parse_result_t Race_Profile_Parse(const void *data, size_t length,
   }
   *line2++ = '\0';
 
-  if (strcmp(line1, RACE_PROFILE_MAGIC)) {
+  const bool version1 = !strcmp(line1, RACE_PROFILE_MAGIC_V1);
+  if (!version1 && strcmp(line1, RACE_PROFILE_MAGIC)) {
     if (!strncmp(line1, RACE_PROFILE_MAGIC_PREFIX,
                  sizeof(RACE_PROFILE_MAGIC_PREFIX) - 1)) {
       return RACE_PROFILE_PARSE_UNKNOWN_VERSION;
@@ -218,11 +294,31 @@ race_profile_parse_result_t Race_Profile_Parse(const void *data, size_t length,
   }
   *line3++ = '\0';
 
-  char *end = strchr(line3, '\n');
-  if (!end || end[1] != '\0') {
+  char *line4 = strchr(line3, '\n');
+  if (!line4) {
     return RACE_PROFILE_PARSE_MALFORMED;
   }
-  *end = '\0';
+  *line4++ = '\0';
+
+  char *credential = NULL;
+  if (version1) {
+    if (*line4) {
+      return RACE_PROFILE_PARSE_MALFORMED;
+    }
+  } else {
+    char *end = strchr(line4, '\n');
+    if (!end || end[1] != '\0') {
+      return RACE_PROFILE_PARSE_MALFORMED;
+    }
+    *end = '\0';
+    if (strncmp(line4, "credential=", 11)) {
+      return RACE_PROFILE_PARSE_MALFORMED;
+    }
+    credential = line4 + 11;
+    if (!Race_Profile_CredentialValid(credential)) {
+      return RACE_PROFILE_PARSE_MALFORMED;
+    }
+  }
 
   if (strncmp(line2, "uid=", 4) || strncmp(line3, "name=", 5)) {
     return RACE_PROFILE_PARSE_MALFORMED;
@@ -259,6 +355,11 @@ race_profile_parse_result_t Race_Profile_Parse(const void *data, size_t length,
     parsed.display_name[i] = c;
   }
   parsed.display_name[name_length] = '\0';
+
+  if (credential) {
+    memcpy(parsed.credential, credential,
+           RACE_PROFILE_CREDENTIAL_LENGTH + 1u);
+  }
 
   *profile = parsed;
   return RACE_PROFILE_PARSE_OK;

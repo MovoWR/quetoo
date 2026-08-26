@@ -69,6 +69,10 @@ typedef enum {
   SV_CMD_RACE_FINISH_REPORT,
   SV_CMD_RACE_SPLIT,
   SV_CMD_RACE_WEAPON_TUNING,
+  SV_CMD_RACE_ADMIN_CHALLENGE,
+  SV_CMD_RACE_PROFILE_REQUEST,
+  SV_CMD_RACE_PROFILE_CHALLENGE,
+  SV_CMD_RACE_PROFILE_ENROLLMENT,
 } g_sv_packet_cmd_t;
 
 /**
@@ -102,6 +106,7 @@ typedef enum {
 #define CS_RACE_VOTE_INFO (CS_GAME + 12) // active yes/no vote status
 #define CS_RACE_VOTE_MENU (CS_GAME + 13) // end-of-map map-choice vote
 #define CS_RACE_WEAPON_TUNING_STATUS (CS_GAME + 14) // compact authoritative tuning state
+#define CS_RACE_SETTINGS_STATUS (CS_GAME + 15) // GSET/MSET registry state mirror
 
 /**
  * @brief Player state statistics (inventory, score, etc).
@@ -1263,6 +1268,11 @@ typedef struct {
    * userinfo GUID, and durable Race profile association.
    */
   race_admin_session_t race_admin_session;
+
+  /**
+   * @brief One-use Race administrator proof challenge for this connection.
+   */
+  race_admin_challenge_t race_admin_challenge;
 
   /**
    * @brief Race vote identity and anti-spam state for this exact connection.

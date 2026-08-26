@@ -323,6 +323,11 @@
 		FA55C1013025000000000004 /* race_persistence.c in Sources */ = {isa = PBXBuildFile; fileRef = FA55C0013025000000000004 /* race_persistence.c */; };
 		FA55C1013025000000000005 /* race_profiles.h in Headers */ = {isa = PBXBuildFile; fileRef = FA55C0013025000000000005 /* race_profiles.h */; };
 		FA55C1013025000000000006 /* race_profiles.c in Sources */ = {isa = PBXBuildFile; fileRef = FA55C0013025000000000006 /* race_profiles.c */; };
+		FD19A1013025000000000001 /* race_connection_address.c in Sources */ = {isa = PBXBuildFile; fileRef = FD19A0013025000000000002 /* race_connection_address.c */; };
+		FD19A1013025000000000002 /* race_profile_auth.c in Sources */ = {isa = PBXBuildFile; fileRef = FD19A0013025000000000004 /* race_profile_auth.c */; };
+		FD19A1013025000000000003 /* race_profile.c in Sources */ = {isa = PBXBuildFile; fileRef = FA55C0013025000000000002 /* race_profile.c */; };
+		FD19A1013025000000000004 /* race_profile_auth.c in Sources */ = {isa = PBXBuildFile; fileRef = FD19A0013025000000000004 /* race_profile_auth.c */; };
+		FD19A1013025000000000005 /* cg_race_profiles.c in Sources */ = {isa = PBXBuildFile; fileRef = FD19A0013025000000000006 /* cg_race_profiles.c */; };
 		FAA0C101302A000000000001 /* race_publication.h in Headers */ = {isa = PBXBuildFile; fileRef = FAA0C001302A000000000001 /* race_publication.h */; };
 		FAA0C101302A000000000002 /* race_publication.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA0C001302A000000000002 /* race_publication.c */; };
 		FAA0C101302A000000000003 /* race_replay_format.h in Headers */ = {isa = PBXBuildFile; fileRef = FAA0C001302A000000000003 /* race_replay_format.h */; };
@@ -342,6 +347,8 @@
 		FAB0C101302B000000000006 /* race_replay_transport.c in Sources */ = {isa = PBXBuildFile; fileRef = FAB0C001302B000000000006 /* race_replay_transport.c */; };
 		FAB0C101302B000000000007 /* cg_race_replay.h in Headers */ = {isa = PBXBuildFile; fileRef = FAB0C001302B000000000007 /* cg_race_replay.h */; };
 		FAB0C101302B000000000008 /* cg_race_replay.c in Sources */ = {isa = PBXBuildFile; fileRef = FAB0C001302B000000000008 /* cg_race_replay.c */; };
+		FAB0C101302B000000000009 /* cg_race_settings.h in Headers */ = {isa = PBXBuildFile; fileRef = FAB0C001302B000000000009 /* cg_race_settings.h */; };
+		FAB0C101302B00000000000A /* cg_race_settings.c in Sources */ = {isa = PBXBuildFile; fileRef = FAB0C001302B00000000000A /* cg_race_settings.c */; };
 		FAB0C201302B000000000005 /* race_replay_transport.h in Headers */ = {isa = PBXBuildFile; fileRef = FAB0C001302B000000000005 /* race_replay_transport.h */; };
 		FAB0C201302B000000000006 /* race_replay_transport.c in Sources */ = {isa = PBXBuildFile; fileRef = FAB0C001302B000000000006 /* race_replay_transport.c */; };
 		FAD0C101302D000000000003 /* race_training_service.c in Sources */ = {isa = PBXBuildFile; fileRef = FAD0C001302D000000000003 /* race_training_service.c */; };
@@ -386,6 +393,9 @@
 		FB94C101302F300000000008 /* race_map_browser_wire.c in Sources */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000002 /* race_map_browser_wire.c */; };
 		FB94C101302F300000000009 /* cg_race_map_browser.h in Headers */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000007 /* cg_race_map_browser.h */; };
 		FB94C101302F30000000000A /* cg_race_map_browser.c in Sources */ = {isa = PBXBuildFile; fileRef = FB94C001302F300000000008 /* cg_race_map_browser.c */; };
+		FE31A101303C000000000001 /* cg_race_admin_command.h in Headers */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000001 /* cg_race_admin_command.h */; };
+		FE31A101303C000000000002 /* cg_race_admin_command.c in Sources */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000002 /* cg_race_admin_command.c */; };
+		FE31A101303C000000000003 /* cg_race_admin_command.c in Sources */ = {isa = PBXBuildFile; fileRef = FE31A001303C000000000002 /* cg_race_admin_command.c */; };
 		FB9AC1013031000000000001 /* race_finish_report.h in Headers */ = {isa = PBXBuildFile; fileRef = FB9AC0013031000000000001 /* race_finish_report.h */; };
 		FB9AC1013031000000000002 /* race_finish_report.c in Sources */ = {isa = PBXBuildFile; fileRef = FB9AC0013031000000000002 /* race_finish_report.c */; };
 		FB9AC1013031000000000003 /* cg_race_finish_report.h in Headers */ = {isa = PBXBuildFile; fileRef = FB9AC0013031000000000003 /* cg_race_finish_report.h */; };
@@ -429,10 +439,14 @@
 		FA77C1013027000000000002 /* race_settings.c in Sources */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000002 /* race_settings.c */; };
 		FA77C1013027000000000003 /* race_settings_store.h in Headers */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000003 /* race_settings_store.h */; };
 		FA77C1013027000000000004 /* race_settings_store.c in Sources */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000004 /* race_settings_store.c */; };
+		FA77C1013027000000000007 /* race_settings_wire.h in Headers */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000007 /* race_settings_wire.h */; };
+		FA77C1013027000000000008 /* race_settings_wire.c in Sources */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000008 /* race_settings_wire.c */; };
 		FA77C1013027000000000005 /* race_settings_service.h in Headers */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000005 /* race_settings_service.h */; };
 		FA77C1013027000000000006 /* race_settings_service.c in Sources */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000006 /* race_settings_service.c */; };
 		FA88C1013028000000000001 /* race_admin.h in Headers */ = {isa = PBXBuildFile; fileRef = FA88C0013028000000000001 /* race_admin.h */; };
 		FA88C1013028000000000002 /* race_admin.c in Sources */ = {isa = PBXBuildFile; fileRef = FA88C0013028000000000002 /* race_admin.c */; };
+		FA89C1013028000000000001 /* race_admin_allowlist.h in Headers */ = {isa = PBXBuildFile; fileRef = FA89C0013028000000000001 /* race_admin_allowlist.h */; };
+		FA89C1013028000000000002 /* race_admin_allowlist.c in Sources */ = {isa = PBXBuildFile; fileRef = FA89C0013028000000000002 /* race_admin_allowlist.c */; };
 		FA88C1013028000000000008 /* race_admin_actions.h in Headers */ = {isa = PBXBuildFile; fileRef = FA88C0013028000000000008 /* race_admin_actions.h */; };
 		FA88C1013028000000000009 /* race_admin_actions.c in Sources */ = {isa = PBXBuildFile; fileRef = FA88C0013028000000000009 /* race_admin_actions.c */; };
 		FA88C1013028000000000003 /* race_admin_types.h in Headers */ = {isa = PBXBuildFile; fileRef = FA88C0013028000000000003 /* race_admin_types.h */; };
@@ -440,6 +454,22 @@
 		FA88C1013028000000000005 /* race_admin_store.c in Sources */ = {isa = PBXBuildFile; fileRef = FA88C0013028000000000005 /* race_admin_store.c */; };
 		FA88C1013028000000000006 /* race_admin_service.h in Headers */ = {isa = PBXBuildFile; fileRef = FA88C0013028000000000006 /* race_admin_service.h */; };
 		FA88C1013028000000000007 /* race_admin_service.c in Sources */ = {isa = PBXBuildFile; fileRef = FA88C0013028000000000007 /* race_admin_service.c */; };
+		FAA2D100302D100000000001 /* argon2.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000001 /* argon2.c */; };
+		FAA2D100302D100000000002 /* core.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000002 /* core.c */; };
+		FAA2D100302D100000000003 /* encoding.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000003 /* encoding.c */; };
+		FAA2D100302D100000000004 /* ref.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000004 /* ref.c */; };
+		FAA2D100302D100000000005 /* blake2b.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000005 /* blake2b.c */; };
+		FAA2D100302D100000000006 /* race_admin_password.h in Headers */ = {isa = PBXBuildFile; fileRef = FAA2D000302D10000000000F /* race_admin_password.h */; };
+		FAA2D100302D100000000007 /* race_admin_password.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000010 /* race_admin_password.c */; };
+		FC2501013025000000000001 /* race_admin_admission.c in Sources */ = {isa = PBXBuildFile; fileRef = FC2500013025000000000002 /* race_admin_admission.c */; };
+		FC2501013025000000000002 /* race_admin_auth.c in Sources */ = {isa = PBXBuildFile; fileRef = FC2500013025000000000004 /* race_admin_auth.c */; };
+		FC2501013025000000000003 /* race_admin_auth.c in Sources */ = {isa = PBXBuildFile; fileRef = FC2500013025000000000004 /* race_admin_auth.c */; };
+		FC2501013025000000000004 /* cg_race_admin_auth.c in Sources */ = {isa = PBXBuildFile; fileRef = FC2500013025000000000006 /* cg_race_admin_auth.c */; };
+		FC2501013025000000000005 /* argon2.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000001 /* argon2.c */; };
+		FC2501013025000000000006 /* core.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000002 /* core.c */; };
+		FC2501013025000000000007 /* encoding.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000003 /* encoding.c */; };
+		FC2501013025000000000008 /* ref.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000004 /* ref.c */; };
+		FC2501013025000000000009 /* blake2b.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA2D000302D100000000005 /* blake2b.c */; };
 		FA99D1013029000000000001 /* race_actions.h in Headers */ = {isa = PBXBuildFile; fileRef = FA99D0013029000000000001 /* race_actions.h */; };
 		FA99D1013029000000000002 /* race_actions.c in Sources */ = {isa = PBXBuildFile; fileRef = FA99D0013029000000000002 /* race_actions.c */; };
 		FA99D1013029000000000003 /* race_vote.h in Headers */ = {isa = PBXBuildFile; fileRef = FA99D0013029000000000003 /* race_vote.h */; };
@@ -450,6 +480,9 @@
 		FA11C3F030224900C0DE0001 /* bg_item.c in Sources */ = {isa = PBXBuildFile; fileRef = FA11C23E302248070012862B /* bg_item.c */; };
 		CE05B3F030224900C0DE0002 /* bg_pmove.c in Sources */ = {isa = PBXBuildFile; fileRef = CE12D6411C5C58C300CD0B13 /* bg_pmove.c */; };
 		FA11C3F030224900C0DE0002 /* bg_pmove.c in Sources */ = {isa = PBXBuildFile; fileRef = FA8A00012026081000000001 /* bg_pmove.c */; };
+		FA77C2013027000000000002 /* race_settings.c in Sources */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000002 /* race_settings.c */; };
+		FA77C2013027000000000007 /* race_settings_wire.h in Headers */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000007 /* race_settings_wire.h */; };
+		FA77C2013027000000000008 /* race_settings_wire.c in Sources */ = {isa = PBXBuildFile; fileRef = FA77C0013027000000000008 /* race_settings_wire.c */; };
 		CE05B3F030224900C0DE0003 /* BindTextView.c in Sources */ = {isa = PBXBuildFile; fileRef = CE32529B1F760D3F00512523 /* BindTextView.c */; };
 		FA11C3F030224900C0DE0003 /* BindTextView.c in Sources */ = {isa = PBXBuildFile; fileRef = CE32529B1F760D3F00512523 /* BindTextView.c */; };
 		CE05B3F030224900C0DE0004 /* cg_client.c in Sources */ = {isa = PBXBuildFile; fileRef = CE12D55E1C5C58C300CD0B13 /* cg_client.c */; };
@@ -498,6 +531,8 @@
 		FB21F1013035000000000002 /* cg_score_model.h in Headers */ = {isa = PBXBuildFile; fileRef = FB21F0013035000000000002 /* cg_score_model.h */; };
 		FB21E1013035000000000001 /* check_race_native.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21E0013035000000000001 /* check_race_native.c */; };
 		FB21E1013035000000000002 /* check_race_cgame_module.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21E0013035000000000002 /* check_race_cgame_module.c */; };
+		FB21E1013035000000000009 /* check_race_persistence_native.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21E0013035000000000004 /* check_race_persistence_native.c */; };
+		FB21E101303500000000000A /* race_persistence.c in Sources */ = {isa = PBXBuildFile; fileRef = FA55C0013025000000000004 /* race_persistence.c */; };
 		FB21E1013035000000000003 /* cg_module.c in Sources */ = {isa = PBXBuildFile; fileRef = FA11C3FC30224E3E0012870A /* cg_module.c */; };
 		FBD1E1013036000000000001 /* cg_race_double_jump.c in Sources */ = {isa = PBXBuildFile; fileRef = FBD1C0013036000000000001 /* cg_race_double_jump.c */; };
 		FB21E1013035000000000004 /* cg_score_model.c in Sources */ = {isa = PBXBuildFile; fileRef = FB21F0013035000000000001 /* cg_score_model.c */; };
@@ -2003,6 +2038,12 @@
 		FA55C0013025000000000004 /* race_persistence.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_persistence.c; sourceTree = "<group>"; };
 		FA55C0013025000000000005 /* race_profiles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_profiles.h; sourceTree = "<group>"; };
 		FA55C0013025000000000006 /* race_profiles.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_profiles.c; sourceTree = "<group>"; };
+		FD19A0013025000000000001 /* race_connection_address.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_connection_address.h; sourceTree = "<group>"; };
+		FD19A0013025000000000002 /* race_connection_address.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_connection_address.c; sourceTree = "<group>"; };
+		FD19A0013025000000000003 /* race_profile_auth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_profile_auth.h; sourceTree = "<group>"; };
+		FD19A0013025000000000004 /* race_profile_auth.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_profile_auth.c; sourceTree = "<group>"; };
+		FD19A0013025000000000005 /* cg_race_profiles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_profiles.h; sourceTree = "<group>"; };
+		FD19A0013025000000000006 /* cg_race_profiles.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_profiles.c; sourceTree = "<group>"; };
 		FAA0C001302A000000000001 /* race_publication.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_publication.h; sourceTree = "<group>"; };
 		FAA0C001302A000000000002 /* race_publication.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_publication.c; sourceTree = "<group>"; };
 		FAA0C001302A000000000003 /* race_replay_format.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_replay_format.h; sourceTree = "<group>"; };
@@ -2021,6 +2062,8 @@
 		FAB0C001302B000000000006 /* race_replay_transport.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_replay_transport.c; sourceTree = "<group>"; };
 		FAB0C001302B000000000007 /* cg_race_replay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_replay.h; sourceTree = "<group>"; };
 		FAB0C001302B000000000008 /* cg_race_replay.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_replay.c; sourceTree = "<group>"; };
+		FAB0C001302B000000000009 /* cg_race_settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_settings.h; sourceTree = "<group>"; };
+		FAB0C001302B00000000000A /* cg_race_settings.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_settings.c; sourceTree = "<group>"; };
 		FAD0C001302D000000000001 /* race_training.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_training.h; sourceTree = "<group>"; };
 		FAD0C001302D000000000002 /* race_training_service.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_training_service.h; sourceTree = "<group>"; };
 		FAD0C001302D000000000003 /* race_training_service.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_training_service.c; sourceTree = "<group>"; };
@@ -2082,6 +2125,8 @@
 		FB94C001302F300000000006 /* race_map_browser_service.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_map_browser_service.c; sourceTree = "<group>"; };
 		FB94C001302F300000000007 /* cg_race_map_browser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_map_browser.h; sourceTree = "<group>"; };
 		FB94C001302F300000000008 /* cg_race_map_browser.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_map_browser.c; sourceTree = "<group>"; };
+		FE31A001303C000000000001 /* cg_race_admin_command.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_admin_command.h; sourceTree = "<group>"; };
+		FE31A001303C000000000002 /* cg_race_admin_command.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_admin_command.c; sourceTree = "<group>"; };
 		FB9AC0013031000000000001 /* race_finish_report.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_finish_report.h; sourceTree = "<group>"; };
 		FB9AC0013031000000000002 /* race_finish_report.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_finish_report.c; sourceTree = "<group>"; };
 		FB9AC0013031000000000003 /* cg_race_finish_report.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_finish_report.h; sourceTree = "<group>"; };
@@ -2151,10 +2196,14 @@
 		FA77C0013027000000000002 /* race_settings.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_settings.c; sourceTree = "<group>"; };
 		FA77C0013027000000000003 /* race_settings_store.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_settings_store.h; sourceTree = "<group>"; };
 		FA77C0013027000000000004 /* race_settings_store.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_settings_store.c; sourceTree = "<group>"; };
+		FA77C0013027000000000007 /* race_settings_wire.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_settings_wire.h; sourceTree = "<group>"; };
+		FA77C0013027000000000008 /* race_settings_wire.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_settings_wire.c; sourceTree = "<group>"; };
 		FA77C0013027000000000005 /* race_settings_service.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_settings_service.h; sourceTree = "<group>"; };
 		FA77C0013027000000000006 /* race_settings_service.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_settings_service.c; sourceTree = "<group>"; };
 		FA88C0013028000000000001 /* race_admin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_admin.h; sourceTree = "<group>"; };
 		FA88C0013028000000000002 /* race_admin.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_admin.c; sourceTree = "<group>"; };
+		FA89C0013028000000000001 /* race_admin_allowlist.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_admin_allowlist.h; sourceTree = "<group>"; };
+		FA89C0013028000000000002 /* race_admin_allowlist.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_admin_allowlist.c; sourceTree = "<group>"; };
 		FA88C0013028000000000008 /* race_admin_actions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_admin_actions.h; sourceTree = "<group>"; };
 		FA88C0013028000000000009 /* race_admin_actions.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_admin_actions.c; sourceTree = "<group>"; };
 		FA88C0013028000000000003 /* race_admin_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_admin_types.h; sourceTree = "<group>"; };
@@ -2162,6 +2211,28 @@
 		FA88C0013028000000000005 /* race_admin_store.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_admin_store.c; sourceTree = "<group>"; };
 		FA88C0013028000000000006 /* race_admin_service.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_admin_service.h; sourceTree = "<group>"; };
 		FA88C0013028000000000007 /* race_admin_service.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_admin_service.c; sourceTree = "<group>"; };
+		FAA2D000302D100000000001 /* argon2.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = argon2.c; sourceTree = "<group>"; };
+		FAA2D000302D100000000002 /* core.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = core.c; sourceTree = "<group>"; };
+		FAA2D000302D100000000003 /* encoding.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = encoding.c; sourceTree = "<group>"; };
+		FAA2D000302D100000000004 /* ref.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ref.c; sourceTree = "<group>"; };
+		FAA2D000302D100000000005 /* blake2b.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = blake2b.c; sourceTree = "<group>"; };
+		FAA2D000302D100000000006 /* argon2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = argon2.h; sourceTree = "<group>"; };
+		FAA2D000302D100000000007 /* core.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = core.h; sourceTree = "<group>"; };
+		FAA2D000302D100000000008 /* encoding.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = encoding.h; sourceTree = "<group>"; };
+		FAA2D000302D100000000009 /* thread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = thread.h; sourceTree = "<group>"; };
+		FAA2D000302D10000000000A /* blake2-impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "blake2-impl.h"; sourceTree = "<group>"; };
+		FAA2D000302D10000000000B /* blake2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = blake2.h; sourceTree = "<group>"; };
+		FAA2D000302D10000000000C /* blamka-round-ref.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "blamka-round-ref.h"; sourceTree = "<group>"; };
+		FAA2D000302D10000000000D /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		FAA2D000302D10000000000E /* UPSTREAM.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = UPSTREAM.md; sourceTree = "<group>"; };
+		FAA2D000302D10000000000F /* race_admin_password.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_admin_password.h; sourceTree = "<group>"; };
+		FAA2D000302D100000000010 /* race_admin_password.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_admin_password.c; sourceTree = "<group>"; };
+		FC2500013025000000000001 /* race_admin_admission.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_admin_admission.h; sourceTree = "<group>"; };
+		FC2500013025000000000002 /* race_admin_admission.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_admin_admission.c; sourceTree = "<group>"; };
+		FC2500013025000000000003 /* race_admin_auth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_admin_auth.h; sourceTree = "<group>"; };
+		FC2500013025000000000004 /* race_admin_auth.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_admin_auth.c; sourceTree = "<group>"; };
+		FC2500013025000000000005 /* cg_race_admin_auth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cg_race_admin_auth.h; sourceTree = "<group>"; };
+		FC2500013025000000000006 /* cg_race_admin_auth.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cg_race_admin_auth.c; sourceTree = "<group>"; };
 		FA99D0013029000000000001 /* race_actions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_actions.h; sourceTree = "<group>"; };
 		FA99D0013029000000000002 /* race_actions.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_actions.c; sourceTree = "<group>"; };
 		FA99D0013029000000000003 /* race_vote.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = race_vote.h; sourceTree = "<group>"; };
@@ -2447,6 +2518,7 @@
 		FA77000131E9000000000001 /* race_portability_fixture.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = race_portability_fixture.c; sourceTree = "<group>"; };
 		FB21E0013035000000000001 /* check_race_native.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_native.c; sourceTree = "<group>"; };
 		FB21E0013035000000000002 /* check_race_cgame_module.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_cgame_module.c; sourceTree = "<group>"; };
+		FB21E0013035000000000004 /* check_race_persistence_native.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_persistence_native.c; sourceTree = "<group>"; };
 		FB21E0013035000000000003 /* check-race-native */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "check-race-native"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1240824000000000000000A /* check_race_weapon_tuning.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = check_race_weapon_tuning.c; sourceTree = "<group>"; };
 		A1240824000000000000000B /* check-race-weapon-tuning */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "check-race-weapon-tuning"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -3504,8 +3576,16 @@
 				FA99D0013029000000000002 /* race_actions.c */,
 				FA88C0013028000000000001 /* race_admin.h */,
 				FA88C0013028000000000002 /* race_admin.c */,
+				FC2500013025000000000001 /* race_admin_admission.h */,
+				FC2500013025000000000002 /* race_admin_admission.c */,
+				FA89C0013028000000000001 /* race_admin_allowlist.h */,
+				FA89C0013028000000000002 /* race_admin_allowlist.c */,
 				FA88C0013028000000000008 /* race_admin_actions.h */,
 				FA88C0013028000000000009 /* race_admin_actions.c */,
+				FC2500013025000000000003 /* race_admin_auth.h */,
+				FC2500013025000000000004 /* race_admin_auth.c */,
+				FAA2D000302D10000000000F /* race_admin_password.h */,
+				FAA2D000302D100000000010 /* race_admin_password.c */,
 				FA88C0013028000000000006 /* race_admin_service.h */,
 				FA88C0013028000000000007 /* race_admin_service.c */,
 				FA88C0013028000000000004 /* race_admin_store.h */,
@@ -3558,6 +3638,10 @@
 				FA8B00012026081000000004 /* race_physics_service.c */,
 				FA55C0013025000000000001 /* race_profile.h */,
 				FA55C0013025000000000002 /* race_profile.c */,
+				FD19A0013025000000000001 /* race_connection_address.h */,
+				FD19A0013025000000000002 /* race_connection_address.c */,
+				FD19A0013025000000000003 /* race_profile_auth.h */,
+				FD19A0013025000000000004 /* race_profile_auth.c */,
 				FA55C0013025000000000005 /* race_profiles.h */,
 				FA55C0013025000000000006 /* race_profiles.c */,
 				FAA0C001302A000000000001 /* race_publication.h */,
@@ -3582,6 +3666,8 @@
 				FA77C0013027000000000006 /* race_settings_service.c */,
 				FA77C0013027000000000003 /* race_settings_store.h */,
 				FA77C0013027000000000004 /* race_settings_store.c */,
+				FA77C0013027000000000007 /* race_settings_wire.h */,
+				FA77C0013027000000000008 /* race_settings_wire.c */,
 				FA22C0013023000000000005 /* race_trigger.h */,
 				FA22C0013023000000000006 /* race_trigger.c */,
 				FAD0C001302D000000000001 /* race_training.h */,
@@ -3617,6 +3703,10 @@
 				FA11C3FC30224E3E0012870A /* cg_module.c */,
 				FB21C0013035000000000001 /* cg_race_barriers.c */,
 				FB21C0013035000000000002 /* cg_race_barriers.h */,
+				FC2500013025000000000005 /* cg_race_admin_auth.h */,
+				FC2500013025000000000006 /* cg_race_admin_auth.c */,
+				FD19A0013025000000000005 /* cg_race_profiles.h */,
+				FD19A0013025000000000006 /* cg_race_profiles.c */,
 				FBD1C0013036000000000001 /* cg_race_double_jump.c */,
 				FBD1C0013036000000000002 /* cg_race_double_jump.h */,
 				A12408240000000000000008 /* cg_race_weapon_tuning.h */,
@@ -3634,6 +3724,8 @@
 				FAD0C001302D000000000006 /* cg_jump_viewer.c */,
 				FB94C001302F300000000007 /* cg_race_map_browser.h */,
 				FB94C001302F300000000008 /* cg_race_map_browser.c */,
+				FE31A001303C000000000001 /* cg_race_admin_command.h */,
+				FE31A001303C000000000002 /* cg_race_admin_command.c */,
 				FB9AC0013031000000000003 /* cg_race_finish_report.h */,
 				FB9AC0013031000000000004 /* cg_race_finish_report.c */,
 				FB95C001302F400000000005 /* cg_race_vote.h */,
@@ -3650,6 +3742,8 @@
 				FA44C0013024000000000004 /* cg_race_presentation.c */,
 				FAB0C001302B000000000007 /* cg_race_replay.h */,
 				FAB0C001302B000000000008 /* cg_race_replay.c */,
+				FAB0C001302B000000000009 /* cg_race_settings.h */,
+				FAB0C001302B00000000000A /* cg_race_settings.c */,
 				FAD0C001302D00000000000A /* cg_race_training.h */,
 				FAD0C001302D00000000000B /* cg_race_training.c */,
 				FAD0C001302D000000000007 /* cg_strafe_helper.h */,
@@ -3849,12 +3943,58 @@
 		CE12D4A91C5C58C300CD0B13 /* deps */ = {
 			isa = PBXGroup;
 			children = (
+				FAA2D200302D100000000001 /* argon2 */,
 				CE27E0D127AC1682003D56AC /* discord-rpc */,
 				CE12D5011C5C58C300CD0B13 /* minizip */,
 				CE27E0E427AC172E003D56AC /* rapidjson */,
 				CE12D4FF1C5C58C300CD0B13 /* Makefile.am */,
 			);
 			path = deps;
+			sourceTree = "<group>";
+		};
+		FAA2D200302D100000000001 /* argon2 */ = {
+			isa = PBXGroup;
+			children = (
+				FAA2D000302D10000000000D /* LICENSE */,
+				FAA2D000302D10000000000E /* UPSTREAM.md */,
+				FAA2D200302D100000000002 /* include */,
+				FAA2D200302D100000000003 /* src */,
+			);
+			path = argon2;
+			sourceTree = "<group>";
+		};
+		FAA2D200302D100000000002 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				FAA2D000302D100000000006 /* argon2.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		FAA2D200302D100000000003 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				FAA2D000302D100000000001 /* argon2.c */,
+				FAA2D200302D100000000004 /* blake2 */,
+				FAA2D000302D100000000002 /* core.c */,
+				FAA2D000302D100000000007 /* core.h */,
+				FAA2D000302D100000000003 /* encoding.c */,
+				FAA2D000302D100000000008 /* encoding.h */,
+				FAA2D000302D100000000004 /* ref.c */,
+				FAA2D000302D100000000009 /* thread.h */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		FAA2D200302D100000000004 /* blake2 */ = {
+			isa = PBXGroup;
+			children = (
+				FAA2D000302D10000000000A /* blake2-impl.h */,
+				FAA2D000302D10000000000B /* blake2.h */,
+				FAA2D000302D100000000005 /* blake2b.c */,
+				FAA2D000302D10000000000C /* blamka-round-ref.h */,
+			);
+			path = blake2;
 			sourceTree = "<group>";
 		};
 		CE12D5011C5C58C300CD0B13 /* minizip */ = {
@@ -4291,6 +4431,7 @@
 				FA77000131E9000000000001 /* race_portability_fixture.c */,
 				FB21E0013035000000000001 /* check_race_native.c */,
 				FB21E0013035000000000002 /* check_race_cgame_module.c */,
+				FB21E0013035000000000004 /* check_race_persistence_native.c */,
 				A1240824000000000000000A /* check_race_weapon_tuning.c */,
 				A1240824000000000000000C /* check_race_weapon_tuning_service.c */,
 				E53D0B6E0000000000000001 /* check_race_weapon_movement.c */,
@@ -5130,8 +5271,11 @@
 				FA77C1013027000000000001 /* race_settings.h in Headers */,
 				FA77C1013027000000000005 /* race_settings_service.h in Headers */,
 				FA77C1013027000000000003 /* race_settings_store.h in Headers */,
+				FA77C1013027000000000007 /* race_settings_wire.h in Headers */,
 				FA88C1013028000000000001 /* race_admin.h in Headers */,
+				FA89C1013028000000000001 /* race_admin_allowlist.h in Headers */,
 				FA88C1013028000000000008 /* race_admin_actions.h in Headers */,
+				FAA2D100302D100000000006 /* race_admin_password.h in Headers */,
 				FA88C1013028000000000006 /* race_admin_service.h in Headers */,
 				FA88C1013028000000000004 /* race_admin_store.h in Headers */,
 				FA88C1013028000000000003 /* race_admin_types.h in Headers */,
@@ -5235,6 +5379,7 @@
 				FB93C101302F200000000002 /* SettingsViewController.h in Headers */,
 				FB93C101302F200000000007 /* StrafeHelperPreview.h in Headers */,
 				FB94C101302F300000000009 /* cg_race_map_browser.h in Headers */,
+				FE31A101303C000000000001 /* cg_race_admin_command.h in Headers */,
 				FB9AC1013031000000000003 /* cg_race_finish_report.h in Headers */,
 				FB94C101302F30000000000B /* MapBrowserViewController.h in Headers */,
 				FB94C101302F300000000007 /* race_map_browser_wire.h in Headers */,
@@ -5251,12 +5396,14 @@
 				FA8B10012026081000000007 /* cg_race_physics.h in Headers */,
 				FA44C1013024000000000003 /* cg_race_presentation.h in Headers */,
 				FAB0C101302B000000000007 /* cg_race_replay.h in Headers */,
+				FAB0C101302B000000000009 /* cg_race_settings.h in Headers */,
 				FAB0C201302B000000000005 /* race_replay_transport.h in Headers */,
 				FA8B10012026081000000005 /* race_physics.h in Headers */,
 				FE30A101303B000000000003 /* race_hook.h in Headers */,
 				FA8B10012026082300000003 /* race_pmove_policy.h in Headers */,
 				A12408241000000000000002 /* race_weapon_tuning_types.h in Headers */,
 				A12408241000000000000004 /* race_weapon_tuning_wire.h in Headers */,
+				FA77C2013027000000000007 /* race_settings_wire.h in Headers */,
 				FB9AC1013031000000000001 /* race_finish_report.h in Headers */,
 				FA33C1013023000000000005 /* race_types.h in Headers */,
 				FA33C1013023000000000006 /* race_wire.h in Headers */,
@@ -6744,6 +6891,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FAA2D100302D100000000001 /* argon2.c in Sources */,
+				FAA2D100302D100000000005 /* blake2b.c in Sources */,
+				FAA2D100302D100000000002 /* core.c in Sources */,
+				FAA2D100302D100000000003 /* encoding.c in Sources */,
+				FAA2D100302D100000000004 /* ref.c in Sources */,
 				FAB1C101302B100000000001 /* miniz.c in Sources */,
 				FBC100013034000000000002 /* race_clip.c in Sources */,
 				FBC100013034000000000004 /* race_kick_broker.c in Sources */,
@@ -6752,7 +6904,11 @@
 				FA22C1013023000000000004 /* race.c in Sources */,
 				FA99D1013029000000000002 /* race_actions.c in Sources */,
 				FA88C1013028000000000002 /* race_admin.c in Sources */,
+				FC2501013025000000000001 /* race_admin_admission.c in Sources */,
+				FA89C1013028000000000002 /* race_admin_allowlist.c in Sources */,
 				FA88C1013028000000000009 /* race_admin_actions.c in Sources */,
+				FC2501013025000000000002 /* race_admin_auth.c in Sources */,
+				FAA2D100302D100000000007 /* race_admin_password.c in Sources */,
 				FA88C1013028000000000007 /* race_admin_service.c in Sources */,
 				FA88C1013028000000000005 /* race_admin_store.c in Sources */,
 				FA22C1013023000000000008 /* race_cmds.c in Sources */,
@@ -6778,6 +6934,8 @@
 				A1240824100000000000000A /* race_weapon_tuning_service.c in Sources */,
 				A12408241000000000000005 /* race_weapon_tuning_wire.c in Sources */,
 				FA55C1013025000000000002 /* race_profile.c in Sources */,
+				FD19A1013025000000000001 /* race_connection_address.c in Sources */,
+				FD19A1013025000000000002 /* race_profile_auth.c in Sources */,
 				FA55C1013025000000000006 /* race_profiles.c in Sources */,
 				FAA0C101302A000000000002 /* race_publication.c in Sources */,
 				FAA0C101302A000000000004 /* race_replay_format.c in Sources */,
@@ -6790,6 +6948,7 @@
 				FA77C1013027000000000002 /* race_settings.c in Sources */,
 				FA77C1013027000000000006 /* race_settings_service.c in Sources */,
 				FA77C1013027000000000004 /* race_settings_store.c in Sources */,
+				FA77C1013027000000000008 /* race_settings_wire.c in Sources */,
 				FA22C1013023000000000006 /* race_trigger.c in Sources */,
 				FAD0C101302D000000000003 /* race_training_service.c in Sources */,
 				FA99D1013029000000000004 /* race_vote.c in Sources */,
@@ -6904,6 +7063,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FC2501013025000000000005 /* argon2.c in Sources */,
+				FC2501013025000000000009 /* blake2b.c in Sources */,
+				FC2501013025000000000006 /* core.c in Sources */,
+				FC2501013025000000000007 /* encoding.c in Sources */,
+				FC2501013025000000000008 /* ref.c in Sources */,
 				FBC100013034000000000006 /* race_clip.c in Sources */,
 				FA11C3F030224900C0DE0003 /* BindTextView.c in Sources */,
 				FB92C101302F100000000002 /* ControlsViewController.c in Sources */,
@@ -6951,6 +7115,8 @@
 				FA11C3F030224900C0DE003F /* UpdateViewController.c in Sources */,
 				FA11C3F030224900C0DE0001 /* bg_item.c in Sources */,
 				FA11C3F030224900C0DE0002 /* bg_pmove.c in Sources */,
+				FA77C2013027000000000002 /* race_settings.c in Sources */,
+				FA77C2013027000000000008 /* race_settings_wire.c in Sources */,
 				FA11C3F030224900C0DE0004 /* cg_client.c in Sources */,
 				FA11C3F030224900C0DE0005 /* cg_discord.c in Sources */,
 				FA11C3F030224900C0DE0006 /* cg_editor.c in Sources */,
@@ -6975,11 +7141,17 @@
 				FA11C3F030224900C0DE0018 /* cg_sound.c in Sources */,
 				FA11C3F030224900C0DE0019 /* cg_sprite.c in Sources */,
 				FA11C3FC30224E3E0012870B /* cg_module.c in Sources */,
+				FC2501013025000000000004 /* cg_race_admin_auth.c in Sources */,
+				FC2501013025000000000003 /* race_admin_auth.c in Sources */,
+				FD19A1013025000000000003 /* race_profile.c in Sources */,
+				FD19A1013025000000000004 /* race_profile_auth.c in Sources */,
+				FD19A1013025000000000005 /* cg_race_profiles.c in Sources */,
 				FB21C1013035000000000001 /* cg_race_barriers.c in Sources */,
 				FBD1C1013036000000000001 /* cg_race_double_jump.c in Sources */,
 				FAE0C101302E000000000003 /* cg_input_viewer.c in Sources */,
 				FAD0C101302D000000000006 /* cg_jump_viewer.c in Sources */,
 				FB94C101302F30000000000A /* cg_race_map_browser.c in Sources */,
+				FE31A101303C000000000002 /* cg_race_admin_command.c in Sources */,
 				FB9AC1013031000000000004 /* cg_race_finish_report.c in Sources */,
 				FB95C101302F400000000007 /* cg_race_vote.c in Sources */,
 				A1240824100000000000000C /* cg_race_weapon_tuning.c in Sources */,
@@ -6989,6 +7161,7 @@
 				FA8B10012026081000000008 /* cg_race_physics.c in Sources */,
 				FA44C1013024000000000004 /* cg_race_presentation.c in Sources */,
 				FAB0C101302B000000000008 /* cg_race_replay.c in Sources */,
+				FAB0C101302B00000000000A /* cg_race_settings.c in Sources */,
 				FAD0C101302D00000000000B /* cg_race_training.c in Sources */,
 				FAD0C101302D000000000009 /* cg_strafe_helper.c in Sources */,
 				FAB0C201302B000000000006 /* race_replay_transport.c in Sources */,
@@ -7201,7 +7374,10 @@
 			files = (
 				FB21E1013035000000000001 /* check_race_native.c in Sources */,
 				FB21E1013035000000000002 /* check_race_cgame_module.c in Sources */,
+				FB21E1013035000000000009 /* check_race_persistence_native.c in Sources */,
+				FB21E101303500000000000A /* race_persistence.c in Sources */,
 				FB21E1013035000000000003 /* cg_module.c in Sources */,
+				FE31A101303C000000000003 /* cg_race_admin_command.c in Sources */,
 				FE30A101303B000000000005 /* race_hook.c in Sources */,
 				FBD1E1013036000000000001 /* cg_race_double_jump.c in Sources */,
 				FB21E1013035000000000004 /* cg_score_model.c in Sources */,
@@ -7975,6 +8151,7 @@
 				EXECUTABLE_EXTENSION = so;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					ARGON2_NO_THREADS,
 					G_HOOK,
 				);
 				LIBRARY_SEARCH_PATHS = "$(HOMEBREW_PREFIX)/lib";
@@ -7989,6 +8166,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)",
+					"$(SRCROOT)/deps/argon2/include",
+					"$(SRCROOT)/deps/argon2/src",
 					"$(SRCROOT)/deps/minizip",
 					"$(SRCROOT)/src",
 					"$(SRCROOT)/src/game/common",
@@ -8033,6 +8212,7 @@
 				EXECUTABLE_EXTENSION = so;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					ARGON2_NO_THREADS,
 					G_HOOK,
 				);
 				LIBRARY_SEARCH_PATHS = "$(HOMEBREW_PREFIX)/lib";
@@ -8047,6 +8227,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)",
+					"$(SRCROOT)/deps/argon2/include",
+					"$(SRCROOT)/deps/argon2/src",
 					"$(SRCROOT)/deps/minizip",
 					"$(SRCROOT)/src",
 					"$(SRCROOT)/src/game/common",
@@ -8099,6 +8281,7 @@
 				EXECUTABLE_EXTENSION = so;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					ARGON2_NO_THREADS,
 					G_HOOK,
 				);
 				LIBRARY_SEARCH_PATHS = "$(HOMEBREW_PREFIX)/lib";
@@ -8112,6 +8295,8 @@
 				PRODUCT_NAME = "cgame-race";
 				USER_HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)",
+					"$(SRCROOT)/deps/argon2/include",
+					"$(SRCROOT)/deps/argon2/src",
 					"$(SRCROOT)/src",
 					"$(SRCROOT)/src/cgame",
 					"$(SRCROOT)/src/cgame/common",
@@ -8182,6 +8367,7 @@
 				EXECUTABLE_EXTENSION = so;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					ARGON2_NO_THREADS,
 					G_HOOK,
 				);
 				LIBRARY_SEARCH_PATHS = "$(HOMEBREW_PREFIX)/lib";
@@ -8195,6 +8381,8 @@
 				PRODUCT_NAME = "cgame-race";
 				USER_HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)",
+					"$(SRCROOT)/deps/argon2/include",
+					"$(SRCROOT)/deps/argon2/src",
 					"$(SRCROOT)/src",
 					"$(SRCROOT)/src/cgame",
 					"$(SRCROOT)/src/cgame/common",

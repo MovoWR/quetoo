@@ -648,40 +648,12 @@ static void G_Spectate_f(g_client_t *cl) {
 }
 
 /**
- * @brief Handles the admin command for server administration and privilege escalation.
+ * @brief Rejects Quetoo's legacy shared-password administrator command.
  */
 static void G_Admin_f(g_client_t *cl) {
-
-  if (q_strlen(g_admin_password->string) == 0) { // blank password (default) disabled
-    gi.ClientPrint(cl, PRINT_HIGH, "Admin features disabled\n");
-    return;
-  }
-
-  if (gi.Argc() < 2) {  // no arguments supplied, show help
-    if (!cl->persistent.admin) {
-      gi.ClientPrint(cl, PRINT_HIGH, "Usage: admin <password>\n");
-    } else {
-      gi.ClientPrint(cl, PRINT_HIGH, "Admin commands:\n");
-      gi.ClientPrint(cl, PRINT_HIGH, "kick, remove, mute, unmute, timeout, timein\n");
-    }
-    return;
-  }
-
-  if (!cl->persistent.admin) { // not yet an admin, assuming auth
-    if (q_strcmp(gi.Argv(1), g_admin_password->string) == 0) {
-      cl->persistent.admin = true;
-      gi.BroadcastPrint(PRINT_HIGH, "%s became an admin\n", cl->persistent.net_name);
-    } else {
-      gi.ClientPrint(cl, PRINT_HIGH, "Invalid admin password\n");
-    }
-    return;
-  }
-
-  if (gi.Argc() > 2) {
-    if (q_strcmp(gi.Argv(2), "mute") == 0) {
-      G_MuteClient(va("%s", gi.Argv(3)), true);
-    }
-  }
+  gi.ClientPrint(cl, PRINT_HIGH,
+                 "Legacy admin login is disabled in Race; use "
+                 "set radmin_password <password>; radmin <account>\n");
 }
 
 /**
@@ -724,6 +696,26 @@ static void G_EditorUse_f(g_client_t *cl) {
 void G_RecordPmove(void);
 void G_PlayPmove(void);
 #endif
+
+/**
+ * @return True when the current client command belongs to the private Race
+ * administrator command surface and must never fall through to public chat.
+ */
+static bool G_PrivateRaceAdminCommand(const char *cmd) {
+  if (q_strcmp(cmd, "admin") == 0 || q_strcmp(cmd, "radmin") == 0 ||
+      q_strcmp(cmd, "race_admin") == 0 || q_strcmp(cmd, "race_settings") == 0 ||
+      q_strcmp(cmd, "gset") == 0 || q_strcmp(cmd, "gget") == 0 ||
+      q_strcmp(cmd, "gclear") == 0 || q_strcmp(cmd, "mset") == 0 ||
+      q_strcmp(cmd, "mget") == 0 || q_strcmp(cmd, "mclear") == 0 ||
+      q_strcmp(cmd, "allowcvar") == 0 || q_strcmp(cmd, "race_tune") == 0) {
+    return true;
+  }
+
+  return q_strcmp(cmd, "race") == 0 && gi.Argc() >= 2 &&
+         (q_strcmp(gi.Argv(1), "admin") == 0 ||
+          q_strcmp(gi.Argv(1), "admin_logout") == 0 ||
+          q_strcmp(gi.Argv(1), "tune") == 0);
+}
 
 /**
  * @brief Dispatches an incoming client command string to the appropriate handler.
@@ -792,6 +784,9 @@ void G_ClientCommand(g_client_t *cl) {
 #endif
 
   else if (G_Module_ClientCommand(cl, cmd)) {
+    return;
+  } else if (G_PrivateRaceAdminCommand(cmd)) {
+    gi.ClientPrint(cl, PRINT_HIGH, "Administrator command unavailable\n");
     return;
   } else {
     // anything that doesn't match a command will be a chat

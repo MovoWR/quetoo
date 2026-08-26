@@ -7,574 +7,1466 @@
  * of the License, or (at your option) any later version.
  */
 
-#include "race_settings_service.h"
+#include "g_local.h"
 
+#include <ctype.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include "g_local.h"
 #include "race_admin_service.h"
+#include "race_map_properties.h"
 #include "race_persistence.h"
-#include "race_settings.h"
+#include "race_physics_service.h"
+#include "race_settings_service.h"
 #include "race_settings_store.h"
+#include "race_settings_wire.h"
 
-typedef enum {
-  RACE_SETTINGS_SERVICE_UNAVAILABLE,
-  RACE_SETTINGS_SERVICE_READY,
-  RACE_SETTINGS_SERVICE_CORRUPT
-} race_settings_service_status_t;
+#define RACE_SETTINGS_DIRECTORY "race"
+#define RACE_SETTINGS_MAP_CANDIDATE_SUFFIX ".candidate"
+#define RACE_SETTINGS_MAP_BUFFER_SIZE (RACE_MAP_PROPERTIES_MAX_FILE_BYTES + 1u)
+#define RACE_SETTINGS_AUDIT_SUBJECT_SIZE 512u
 
-static race_settings_state_t race_settings_state;
-static race_settings_document_t race_settings_global;
-static race_settings_document_t race_settings_map;
-static race_settings_service_status_t race_settings_global_status;
-static race_settings_service_status_t race_settings_map_status;
-static char race_settings_current_map[RACE_MAP_IDENTITY_SIZE];
+static bool race_settings_catalog_valid;
+static bool race_settings_ready;
+static cvar_t *race_settings_cvars[RACE_SETTING_TOTAL];
+static race_gset_document_t race_settings_gset;
+static char race_settings_global_values[RACE_SETTING_TOTAL][RACE_SETTING_VALUE_SIZE];
+static race_setting_value_t race_settings_effective[RACE_SETTING_TOTAL];
+static bool race_settings_map_overrides[RACE_SETTING_TOTAL];
 static bool race_settings_weapons_enabled = true;
+static char race_settings_current_map[RACE_MAP_IDENTITY_SIZE];
+
+static bool race_settings_fallback_valid;
+static int32_t race_settings_fallback_gravity;
+static g_gameplay_id_t race_settings_fallback_gameplay;
+static bool race_settings_fallback_teams;
+static int32_t race_settings_fallback_frag_limit;
+static int32_t race_settings_fallback_time_limit;
+static char race_settings_fallback_music[MAX_STRING_CHARS];
+static char race_settings_fallback_tracks[MAX_MUSICS][MAX_QPATH];
 
 static void Race_SettingsService_Reply(g_client_t *cl, const char *format, ...) {
+  if (!cl || !cl->in_use || !format) {
+    return;
+  }
+
   char message[MAX_PRINT_MSG];
   va_list args;
   va_start(args, format);
   vsnprintf(message, sizeof(message), format, args);
   va_end(args);
-
-  if (cl) {
-    gi.ClientPrint(cl, PRINT_HIGH, "%s", message);
-  } else {
-    gi.Print("%s", message);
-  }
+  gi.ClientPrint(cl, PRINT_HIGH, "%s", message);
 }
 
-static const char *Race_SettingsService_StatusName(
-  race_settings_service_status_t status) {
-  switch (status) {
-    case RACE_SETTINGS_SERVICE_READY:
-      return "ready";
-    case RACE_SETTINGS_SERVICE_CORRUPT:
-      return "corrupt-quarantined";
-    default:
-      return "unavailable";
-  }
+static bool Race_SettingsService_IsSensitiveName(const char *name) {
+  return name && (!strcmp(name, "rcon_password") ||
+                  !strcmp(name, "g_password") ||
+                  !strcmp(name, "g_admin_password"));
 }
 
-static bool Race_SettingsService_RealPaths(
-  race_setting_scope_t scope, const char *map,
-  char committed[MAX_OS_PATH], char candidate[MAX_OS_PATH],
-  char committed_virtual[MAX_OS_PATH], char candidate_virtual[MAX_OS_PATH]) {
-  if (!Race_Settings_Paths(scope, map,
-                           committed_virtual, MAX_OS_PATH,
-                           candidate_virtual, MAX_OS_PATH)) {
+static bool Race_SettingsService_CurrentMap(char map[RACE_MAP_IDENTITY_SIZE]) {
+  if (!map || !*g_level.name) {
     return false;
   }
 
-  if (!Race_Persistence_CopyRealPath(committed_virtual,
-                                     gi.RealPath(committed_virtual),
-                                     committed, MAX_OS_PATH)) {
+  q_strlcpy(map, g_level.name, RACE_MAP_IDENTITY_SIZE);
+  return true;
+}
+
+static bool Race_SettingsService_RealPath(const char *virtual_path,
+                                          char *real_path,
+                                          const size_t real_path_size) {
+  if (!virtual_path || !*virtual_path || !real_path || !real_path_size) {
     return false;
   }
 
-  if (!Race_Persistence_CopyRealPath(candidate_virtual,
-                                     gi.RealPath(candidate_virtual),
-                                     candidate, MAX_OS_PATH)) {
+  return Race_Persistence_CopyRealPath(
+    virtual_path, gi.RealPath(virtual_path), real_path, real_path_size);
+}
+
+static bool Race_SettingsService_GlobalPaths(char committed[MAX_OS_PATH],
+                                             char candidate[MAX_OS_PATH]) {
+  char committed_virtual[MAX_QPATH];
+  char candidate_virtual[MAX_QPATH];
+  const int32_t committed_written = q_snprintf(
+    committed_virtual, sizeof(committed_virtual), "%s/%s",
+    RACE_SETTINGS_DIRECTORY, RACE_SETTINGS_GSET_COMMITTED);
+  const int32_t candidate_written = q_snprintf(
+    candidate_virtual, sizeof(candidate_virtual), "%s/%s",
+    RACE_SETTINGS_DIRECTORY, RACE_SETTINGS_GSET_CANDIDATE);
+  if (committed_written < 0 ||
+      (size_t) committed_written >= sizeof(committed_virtual) ||
+      candidate_written < 0 ||
+      (size_t) candidate_written >= sizeof(candidate_virtual)) {
     return false;
+  }
+
+  return Race_SettingsService_RealPath(
+           committed_virtual, committed, MAX_OS_PATH) &&
+         Race_SettingsService_RealPath(
+           candidate_virtual, candidate, MAX_OS_PATH);
+}
+
+static bool Race_SettingsService_DescriptorValue(
+  const race_setting_descriptor_t *descriptor, const char *text,
+  char value[RACE_SETTING_VALUE_SIZE]) {
+  return descriptor && text && value &&
+         Race_Settings_CanonicalizeValue(
+           descriptor, text, value, RACE_SETTING_VALUE_SIZE, NULL, 0);
+}
+
+static bool Race_SettingsService_SetEffective(
+  const race_setting_descriptor_t *descriptor, const char *text) {
+  if (!descriptor || descriptor->id >= RACE_SETTING_TOTAL || !text) {
+    return false;
+  }
+
+  race_setting_value_t value;
+  if (!Race_Settings_ParseValue(descriptor, text, &value, NULL, 0)) {
+    return false;
+  }
+
+  race_settings_effective[descriptor->id] = value;
+  return true;
+}
+
+static bool Race_SettingsService_HasGlobalOverride(
+  const race_setting_descriptor_t *descriptor) {
+  return descriptor &&
+         Race_SettingsStore_Find(&race_settings_gset, descriptor->cvar) != NULL;
+}
+
+static const char *Race_SettingsService_Activation(
+  const race_setting_descriptor_t *descriptor, const cvar_t *var) {
+  if (descriptor) {
+    return Race_Settings_ActivationName(descriptor->activation);
+  }
+  return var && (var->flags & CVAR_LATCH) ? "next map" : "active now";
+}
+
+static void Race_SettingsService_Audit(g_client_t *cl,
+                                       const race_setting_descriptor_t *descriptor,
+                                       const char *cvar, const char *scope,
+                                       const char *map, const char *result) {
+  char subject[RACE_SETTINGS_AUDIT_SUBJECT_SIZE];
+  q_snprintf(subject, sizeof(subject),
+             "scope=%s,cvar=%s,map=%s,activation=%s",
+             scope ? scope : "unknown", cvar && *cvar ? cvar : "-",
+             map && *map ? map : "-",
+             Race_SettingsService_Activation(
+               descriptor, cvar && *cvar ? gi.GetCvar(cvar) : NULL));
+  Race_AdminService_AuditClientAction(
+    cl, RACE_ADMIN_ACTION_SERVER_CVAR, subject, result);
+}
+
+static void Race_SettingsService_ReplyMutation(
+  g_client_t *cl, const race_setting_descriptor_t *descriptor,
+  const char *cvar, const char *scope, const char *map, const char *result) {
+  Race_SettingsService_Reply(
+    cl, "Race configuration: scope=%s cvar=%s map=%s activation=%s result=%s\n",
+    scope, cvar, map && *map ? map : "-",
+    Race_SettingsService_Activation(
+      descriptor, cvar && *cvar ? gi.GetCvar(cvar) : NULL), result);
+}
+
+static bool Race_SettingsService_EnsureDescriptorCvars(void) {
+  size_t count;
+  const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
+  if (!race_settings_catalog_valid || count != RACE_SETTING_TOTAL) {
+    return false;
+  }
+
+  for (size_t i = 0; i < count; i++) {
+    const race_setting_descriptor_t *descriptor = catalog + i;
+    cvar_t *var = gi.GetCvar(descriptor->cvar);
+    if (!var) {
+      var = gi.AddCvar(descriptor->cvar, descriptor->default_value,
+                       descriptor->cvar_flags, descriptor->description);
+    }
+    if (!var) {
+      G_Warn("Race settings cvar unavailable: %s\n", descriptor->cvar);
+      return false;
+    }
+    race_settings_cvars[descriptor->id] = var;
   }
   return true;
 }
 
-static race_settings_service_status_t Race_SettingsService_LoadScope(
-  race_setting_scope_t scope, const char *map,
-  race_settings_document_t *document) {
-  Race_Settings_DocumentInit(document, scope, map, 0);
+static bool Race_SettingsService_ValidateGset(
+  const race_gset_document_t *document) {
+  if (!document) {
+    return false;
+  }
+
+  for (size_t i = 0; i < document->count; i++) {
+    const race_gset_assignment_t *assignment = document->assignments + i;
+    cvar_t *var = gi.GetCvar(assignment->name);
+    if (!var || (var->flags & CVAR_NO_SET)) {
+      return false;
+    }
+
+    const race_setting_descriptor_t *descriptor =
+      Race_Settings_DescriptorForCvar(var->name);
+    if (descriptor) {
+      char canonical[RACE_SETTING_VALUE_SIZE];
+      if (!Race_SettingsService_DescriptorValue(
+            descriptor, assignment->value, canonical) ||
+          strcmp(canonical, assignment->value)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+static void Race_SettingsService_LoadGset(void) {
+  Race_SettingsStore_DocumentInit(&race_settings_gset);
 
   char committed[MAX_OS_PATH];
   char candidate[MAX_OS_PATH];
-  char committed_virtual[MAX_OS_PATH];
-  char candidate_virtual[MAX_OS_PATH];
-  if (!Race_SettingsService_RealPaths(scope, map,
-                                      committed, candidate,
-                                      committed_virtual, candidate_virtual)) {
-    G_Warn("Could not resolve Race settings paths for scope %s\n",
-           scope == RACE_SETTING_SCOPE_GLOBAL ? "global" : "map");
-    return RACE_SETTINGS_SERVICE_UNAVAILABLE;
-  }
-
-  race_settings_parse_result_t parse_result = RACE_SETTINGS_PARSE_OK;
-  const race_settings_store_result_t load = Race_SettingsStore_Load(
-    committed, scope, map, document, &parse_result);
-  if (load == RACE_SETTINGS_STORE_OK || load == RACE_SETTINGS_STORE_MISSING) {
-    gi.Print("Race settings source: scope=%s status=ready source=%s generation=%llu%s%s\n",
-             scope == RACE_SETTING_SCOPE_GLOBAL ? "global" : "map",
-             load == RACE_SETTINGS_STORE_OK ? "committed" : "empty",
-             (unsigned long long) document->generation,
-             scope == RACE_SETTING_SCOPE_MAP ? " map=" : "",
-             scope == RACE_SETTING_SCOPE_MAP ? document->map : "");
-    if (gi.FileExists(candidate_virtual)) {
-      gi.Print("Race settings source: scope=%s stale candidate ignored%s%s\n",
-               scope == RACE_SETTING_SCOPE_GLOBAL ? "global" : "map",
-               scope == RACE_SETTING_SCOPE_MAP ? " map=" : "",
-               scope == RACE_SETTING_SCOPE_MAP ? document->map : "");
-    }
-    return RACE_SETTINGS_SERVICE_READY;
-  }
-
-  if (load == RACE_SETTINGS_STORE_CORRUPT) {
-    G_Warn("Race settings source quarantined: scope=%s%s%s result=%s parse=%s; committed data was left unchanged\n",
-           scope == RACE_SETTING_SCOPE_GLOBAL ? "global" : "map",
-           scope == RACE_SETTING_SCOPE_MAP ? " map=" : "",
-           scope == RACE_SETTING_SCOPE_MAP ? map : "",
-           Race_SettingsStore_ResultName(load),
-           Race_Settings_ParseResultName(parse_result));
-    return RACE_SETTINGS_SERVICE_CORRUPT;
-  }
-
-  G_Warn("Race settings source unavailable: scope=%s%s%s result=%s\n",
-         scope == RACE_SETTING_SCOPE_GLOBAL ? "global" : "map",
-         scope == RACE_SETTING_SCOPE_MAP ? " map=" : "",
-         scope == RACE_SETTING_SCOPE_MAP ? map : "",
-         Race_SettingsStore_ResultName(load));
-  return RACE_SETTINGS_SERVICE_UNAVAILABLE;
-}
-
-static void Race_SettingsService_PrintEntry(
-  g_client_t *cl, const race_setting_descriptor_t *descriptor) {
-  if (!descriptor) {
-    Race_SettingsService_Reply(cl, "Unknown Race setting\n");
+  if (!Race_SettingsService_GlobalPaths(committed, candidate)) {
+    G_Warn("Race global settings path resolution failed\n");
     return;
   }
 
-  const race_setting_entry_t *entry = &race_settings_state.entries[descriptor->id];
-  char value[64];
-  if (!Race_Settings_FormatValue(descriptor, &entry->effective,
-                                 value, sizeof(value))) {
-    q_strlcpy(value, "<invalid>", sizeof(value));
+  race_gset_document_t document;
+  const race_settings_store_result_t loaded =
+    Race_SettingsStore_Load(committed, &document);
+  if (loaded == RACE_SETTINGS_STORE_MISSING) {
+    return;
   }
-  Race_SettingsService_Reply(
-    cl, "  %s=%s type=%s source=%s default=%s ranking=quetoo-common-v1-compatible\n",
-    descriptor->key, value, Race_Settings_TypeName(descriptor->type),
-    Race_Settings_SourceName(entry->source),
-    entry->differs_from_default ? "no" : "yes");
+  if (loaded != RACE_SETTINGS_STORE_OK) {
+    G_Warn("Race global settings ignored: %s\n",
+           Race_SettingsStore_ResultName(loaded));
+    return;
+  }
+  if (!Race_SettingsService_ValidateGset(&document)) {
+    G_Warn("Race global settings ignored: invalid cvar assignment\n");
+    return;
+  }
+
+  for (size_t i = 0; i < document.count; i++) {
+    const race_gset_assignment_t *assignment = document.assignments + i;
+    if (!gi.SetCvarString(assignment->name, assignment->value)) {
+      G_Warn("Race global settings ignored: cvar assignment failed\n");
+      return;
+    }
+  }
+
+  race_settings_gset = document;
+  gi.Print("Race global cvars: source=committed assignments=%zu\n",
+           document.count);
 }
 
-static void Race_SettingsService_PrintList(void) {
-  gi.Print("Race settings: revision=%llu map=%s global_generation=%llu map_generation=%llu global_status=%s map_status=%s\n",
-           (unsigned long long) race_settings_state.revision,
-           *race_settings_current_map ? race_settings_current_map : "unavailable",
-           (unsigned long long) race_settings_global.generation,
-           (unsigned long long) race_settings_map.generation,
-           Race_SettingsService_StatusName(race_settings_global_status),
-           Race_SettingsService_StatusName(race_settings_map_status));
+static void Race_SettingsService_CaptureGlobalValues(void) {
+  size_t count;
+  const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
+
+  for (size_t i = 0; i < count; i++) {
+    const race_setting_descriptor_t *descriptor = catalog + i;
+    cvar_t *var = race_settings_cvars[descriptor->id];
+    char canonical[RACE_SETTING_VALUE_SIZE];
+    if (!var || !Race_SettingsService_DescriptorValue(
+                  descriptor, var->string, canonical)) {
+      q_strlcpy(canonical, descriptor->default_value, sizeof(canonical));
+      var = gi.SetCvarString(descriptor->cvar, canonical);
+      race_settings_cvars[descriptor->id] = var;
+      G_Warn("Race settings reset invalid cvar %s to its default\n",
+             descriptor->cvar);
+    }
+
+    q_strlcpy(race_settings_global_values[descriptor->id], canonical,
+              sizeof(race_settings_global_values[descriptor->id]));
+    Race_SettingsService_SetEffective(descriptor, canonical);
+  }
+  race_settings_weapons_enabled =
+    race_settings_effective[RACE_SETTING_WEAPONS].boolean;
+}
+
+static void Race_SettingsService_DetectLegacyMapSettings(const char *path,
+                                                         void *data) {
+  if (path && *path && data) {
+    *(bool *) data = true;
+  }
+}
+
+static void Race_SettingsService_CheckLegacyFiles(void) {
+  bool legacy_map_settings = false;
+  if (gi.EnumerateFiles) {
+    gi.EnumerateFiles("settings/maps/*.settings",
+                      Race_SettingsService_DetectLegacyMapSettings,
+                      &legacy_map_settings);
+  }
+
+  const bool legacy = gi.FileExists("race/settings/global.settings") ||
+                      gi.FileExists("settings/global.settings") ||
+                      legacy_map_settings;
+  if (legacy) {
+    G_Warn("Race legacy settings files are inert; migrate to gset and mset\n");
+  }
+}
+
+static void Race_SettingsService_CaptureMapFallback(void) {
+  race_settings_fallback_gravity = g_level.gravity;
+  race_settings_fallback_gameplay = g_level.gameplay;
+  race_settings_fallback_teams = g_level.teams;
+  race_settings_fallback_frag_limit = g_level.frag_limit;
+  race_settings_fallback_time_limit = g_level.time_limit;
+  q_strlcpy(race_settings_fallback_music, g_level.music,
+            sizeof(race_settings_fallback_music));
+  for (int32_t i = 0; i < MAX_MUSICS; i++) {
+    const char *track = gi.GetConfigString(CS_MUSICS + i);
+    q_strlcpy(race_settings_fallback_tracks[i], track ? track : "",
+              sizeof(race_settings_fallback_tracks[i]));
+  }
+  race_settings_fallback_valid = true;
+}
+
+static void Race_SettingsService_ObserveGlobalValues(void) {
+  size_t count;
+  const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
+  for (size_t i = 0; i < count; i++) {
+    const race_setting_descriptor_t *descriptor = catalog + i;
+    if (race_settings_map_overrides[descriptor->id]) {
+      continue;
+    }
+
+    cvar_t *var = race_settings_cvars[descriptor->id];
+    char canonical[RACE_SETTING_VALUE_SIZE];
+    if (var && Race_SettingsService_DescriptorValue(
+                 descriptor, var->string, canonical)) {
+      q_strlcpy(race_settings_global_values[descriptor->id], canonical,
+                sizeof(race_settings_global_values[descriptor->id]));
+    }
+  }
+}
+
+static bool Race_SettingsService_SetDescriptor(
+  const race_setting_descriptor_t *descriptor, const char *value) {
+  if (!descriptor || !value) {
+    return false;
+  }
+
+  cvar_t *var = gi.SetCvarString(descriptor->cvar, value);
+  if (!var) {
+    return false;
+  }
+  race_settings_cvars[descriptor->id] = var;
+  return true;
+}
+
+static void Race_SettingsService_PublishMusic(const char *music) {
+  for (int32_t i = 0; i < MAX_MUSICS; i++) {
+    gi.SetConfigString(CS_MUSICS + i, "");
+  }
+
+  if (!music || !*music) {
+    return;
+  }
+
+  char buffer[MAX_STRING_CHARS];
+  q_strlcpy(buffer, music, sizeof(buffer));
+  int32_t index = 0;
+  for (char *track = strtok(buffer, ",");
+       track && index < MAX_MUSICS;
+       track = strtok(NULL, ",")) {
+    while (isspace((unsigned char) *track)) {
+      track++;
+    }
+
+    char *end = track + strlen(track);
+    while (end > track && isspace((unsigned char) end[-1])) {
+      *--end = '\0';
+    }
+    if (*track) {
+      gi.SetConfigString(CS_MUSICS + index++, track);
+    }
+  }
+}
+
+static void Race_SettingsService_RestoreFallbackMusic(void) {
+  for (int32_t i = 0; i < MAX_MUSICS; i++) {
+    gi.SetConfigString(CS_MUSICS + i, race_settings_fallback_tracks[i]);
+  }
+}
+
+static void Race_SettingsService_ApplyEngineValues(void) {
+  if (!race_settings_fallback_valid) {
+    return;
+  }
+
+  const race_setting_descriptor_t *gravity =
+    Race_Settings_DescriptorForCvar("g_gravity");
+  const race_setting_descriptor_t *gameplay =
+    Race_Settings_DescriptorForCvar("g_gameplay");
+  const race_setting_descriptor_t *frag_limit =
+    Race_Settings_DescriptorForCvar("g_frag_limit");
+  const race_setting_descriptor_t *time_limit =
+    Race_Settings_DescriptorForCvar("g_time_limit");
+  const race_setting_descriptor_t *music =
+    Race_Settings_DescriptorForCvar("g_music");
+
+  if (gravity) {
+    cvar_t *var = race_settings_cvars[gravity->id];
+    if (var && (race_settings_map_overrides[gravity->id] ||
+                Race_SettingsService_HasGlobalOverride(gravity))) {
+      g_level.gravity = var->integer;
+    } else {
+      g_level.gravity = race_settings_fallback_gravity;
+    }
+    if (var) {
+      var->modified = false;
+    }
+  }
+
+  if (gameplay) {
+    cvar_t *var = race_settings_cvars[gameplay->id];
+    if (var && (race_settings_map_overrides[gameplay->id] ||
+                Race_SettingsService_HasGlobalOverride(gameplay)) &&
+        strcmp(var->string, "default")) {
+      g_level.gameplay = G_GameplayByName(var->string)->id;
+      g_level.teams = (g_level.gameplay & GAMEPLAY_TEAMS) != 0;
+    } else {
+      g_level.gameplay = race_settings_fallback_gameplay;
+      g_level.teams = race_settings_fallback_teams;
+    }
+    gi.SetConfigString(CS_GAMEPLAY, va("%d", g_level.gameplay));
+    G_InitNumTeams();
+    if (var) {
+      var->modified = false;
+    }
+  }
+
+  if (frag_limit) {
+    cvar_t *var = race_settings_cvars[frag_limit->id];
+    if (var && (race_settings_map_overrides[frag_limit->id] ||
+                Race_SettingsService_HasGlobalOverride(frag_limit))) {
+      g_level.frag_limit = var->integer;
+    } else {
+      g_level.frag_limit = race_settings_fallback_frag_limit;
+    }
+    if (var) {
+      var->modified = false;
+    }
+  }
+
+  if (time_limit) {
+    cvar_t *var = race_settings_cvars[time_limit->id];
+    if (var && (race_settings_map_overrides[time_limit->id] ||
+                Race_SettingsService_HasGlobalOverride(time_limit))) {
+      const double milliseconds = (double) var->value * 60.0 * 1000.0;
+      g_level.time_limit = milliseconds >= (double) INT32_MAX
+        ? INT32_MAX
+        : milliseconds > 0.0 ? (int32_t) milliseconds : 0;
+    } else {
+      g_level.time_limit = race_settings_fallback_time_limit;
+    }
+    if (var) {
+      var->modified = false;
+    }
+  }
+
+  if (music) {
+    cvar_t *var = race_settings_cvars[music->id];
+    if (var && (race_settings_map_overrides[music->id] ||
+                Race_SettingsService_HasGlobalOverride(music)) &&
+        *var->string) {
+      q_strlcpy(g_level.music, var->string, sizeof(g_level.music));
+      Race_SettingsService_PublishMusic(g_level.music);
+    } else {
+      q_strlcpy(g_level.music, race_settings_fallback_music,
+                sizeof(g_level.music));
+      Race_SettingsService_RestoreFallbackMusic();
+    }
+  }
+
+  Race_PhysicsService_RefreshLevelParams();
+}
+
+static void Race_SettingsService_RefreshEffective(void) {
+  size_t count;
+  const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
+
+  for (size_t i = 0; i < count; i++) {
+    const race_setting_descriptor_t *descriptor = catalog + i;
+    cvar_t *var = race_settings_cvars[descriptor->id];
+    char canonical[RACE_SETTING_VALUE_SIZE];
+    if (!var || !Race_SettingsService_DescriptorValue(
+                  descriptor, var->string, canonical)) {
+      q_strlcpy(canonical, descriptor->default_value, sizeof(canonical));
+      Race_SettingsService_SetDescriptor(descriptor, canonical);
+    }
+    Race_SettingsService_SetEffective(descriptor, canonical);
+  }
+  race_settings_weapons_enabled =
+    race_settings_effective[RACE_SETTING_WEAPONS].boolean;
+}
+
+static bool Race_SettingsService_CatalogPath(
+  char path[RACE_MAP_PROPERTIES_MAX_VIRTUAL_PATH + 1u],
+  char *error, const size_t error_size) {
+  cvar_t *map_list = gi.GetCvar("sv_map_list");
+  if (!map_list || !*map_list->string) {
+    q_snprintf(error, error_size, "sv_map_list is unavailable");
+    return false;
+  }
+
+  if (Race_MapProperties_ValidateVirtualPath(
+        map_list->string, error, error_size) != RACE_MAP_PROPERTIES_OK) {
+    return false;
+  }
+
+  q_strlcpy(path, map_list->string,
+            RACE_MAP_PROPERTIES_MAX_VIRTUAL_PATH + 1u);
+  return true;
+}
+
+static bool Race_SettingsService_LoadCatalog(
+  const char *path, char contents[RACE_SETTINGS_MAP_BUFFER_SIZE],
+  size_t *length, char *error, const size_t error_size) {
+  char committed[MAX_OS_PATH];
+  if (!Race_SettingsService_RealPath(path, committed, sizeof(committed))) {
+    q_snprintf(error, error_size, "could not resolve %s", path);
+    return false;
+  }
+
+  const race_persistence_result_t writable = Race_Persistence_Read(
+    committed, contents, RACE_SETTINGS_MAP_BUFFER_SIZE, length);
+  if (writable == RACE_PERSISTENCE_OK) {
+    if (*length > RACE_MAP_PROPERTIES_MAX_FILE_BYTES) {
+      q_snprintf(error, error_size, "%s is too large", path);
+      return false;
+    }
+    return true;
+  }
+  if (writable != RACE_PERSISTENCE_NOT_FOUND) {
+    q_snprintf(error, error_size, "could not load writable %s: %s", path,
+               Race_Persistence_ResultName(writable));
+    return false;
+  }
+
+  void *packaged = NULL;
+  const int64_t packaged_length = gi.LoadFile(path, &packaged);
+  if (packaged_length < 0 ||
+      (uint64_t) packaged_length > RACE_MAP_PROPERTIES_MAX_FILE_BYTES ||
+      (!packaged && packaged_length)) {
+    if (packaged) {
+      gi.FreeFile(packaged);
+    }
+    q_snprintf(error, error_size, "could not load %s", path);
+    return false;
+  }
+
+  *length = (size_t) packaged_length;
+  if (*length) {
+    memcpy(contents, packaged, *length);
+  }
+  if (packaged) {
+    gi.FreeFile(packaged);
+  }
+  return true;
+}
+
+static bool Race_SettingsService_LoadMapProperties(
+  const char *map, race_map_properties_t *properties,
+  char *error, const size_t error_size) {
+  char path[RACE_MAP_PROPERTIES_MAX_VIRTUAL_PATH + 1u];
+  if (!Race_SettingsService_CatalogPath(path, error, error_size)) {
+    return false;
+  }
+
+  char *contents = malloc(RACE_SETTINGS_MAP_BUFFER_SIZE);
+  if (!contents) {
+    q_snprintf(error, error_size, "out of memory");
+    return false;
+  }
+
+  size_t length;
+  if (!Race_SettingsService_LoadCatalog(
+        path, contents, &length, error, error_size)) {
+    free(contents);
+    return false;
+  }
+  const race_map_properties_result_t result = Race_MapProperties_Parse(
+    contents, length, map, properties,
+    error, error_size);
+  free(contents);
+  return result == RACE_MAP_PROPERTIES_OK;
+}
+
+static void Race_SettingsService_PrepareMap(const char *map) {
+  if (!race_settings_ready || !map || !*map) {
+    return;
+  }
+
+  Race_SettingsService_ObserveGlobalValues();
+  memset(race_settings_map_overrides, 0, sizeof(race_settings_map_overrides));
 
   size_t count;
   const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
   for (size_t i = 0; i < count; i++) {
-    Race_SettingsService_PrintEntry(NULL, catalog + i);
-  }
-}
-
-static void Race_SettingsService_PrintSource(g_client_t *cl, const char *key) {
-  const race_setting_descriptor_t *descriptor = Race_Settings_DescriptorForKey(key);
-  if (!descriptor) {
-    Race_SettingsService_Reply(cl, "Unknown Race setting: %s\n",
-                               key ? key : "<null>");
-    return;
+    const race_setting_descriptor_t *descriptor = catalog + i;
+    Race_SettingsService_SetDescriptor(
+      descriptor, race_settings_global_values[descriptor->id]);
   }
 
-  Race_SettingsService_PrintEntry(cl, descriptor);
-  for (race_setting_source_t source = RACE_SETTING_SOURCE_GLOBAL;
-       source < RACE_SETTING_SOURCE_TOTAL; source++) {
-    const race_setting_source_value_t *source_value =
-      &race_settings_state.sources[descriptor->id][source];
-    char value[64] = "<unset>";
-    if (source_value->present) {
-      Race_Settings_FormatValue(descriptor, &source_value->value,
-                                value, sizeof(value));
+  race_map_properties_t properties;
+  char error[256];
+  if (Race_SettingsService_LoadMapProperties(
+        map, &properties, error, sizeof(error))) {
+    for (size_t i = 0; i < count; i++) {
+      const race_setting_descriptor_t *descriptor = catalog + i;
+      const race_map_property_t *property =
+        properties.properties + descriptor->id;
+      if (!property->present) {
+        continue;
+      }
+      if (property->valid && !property->duplicate) {
+        if (Race_SettingsService_SetDescriptor(
+              descriptor, property->canonical)) {
+          race_settings_map_overrides[descriptor->id] = true;
+        } else {
+          G_Warn("Race map setting ignored: map=%s cvar=%s\n",
+                 map, descriptor->cvar);
+        }
+      } else {
+        G_Warn("Race map setting ignored: map=%s cvar=%s invalid-property\n",
+               map, descriptor->cvar);
+      }
     }
-    Race_SettingsService_Reply(cl, "    %s=%s\n",
-                               Race_Settings_SourceName(source), value);
-  }
-}
-
-static bool Race_SettingsService_ParseSource(const char *name,
-                                             race_setting_source_t *source) {
-  if (!strcmp(name, "global")) {
-    *source = RACE_SETTING_SOURCE_GLOBAL;
-  } else if (!strcmp(name, "map")) {
-    *source = RACE_SETTING_SOURCE_MAP;
-  } else if (!strcmp(name, "runtime")) {
-    *source = RACE_SETTING_SOURCE_RUNTIME;
   } else {
-    return false;
+    G_Warn("Race map settings unavailable for %s: %s\n", map, error);
   }
-  return true;
+
+  q_strlcpy(race_settings_current_map, map,
+            sizeof(race_settings_current_map));
+  Race_SettingsService_RefreshEffective();
 }
 
-static bool Race_SettingsService_PersistentReady(
-  race_setting_source_t source,
-  race_settings_document_t **document,
-  race_settings_service_status_t **status) {
-  if (source == RACE_SETTING_SOURCE_GLOBAL) {
-    *document = &race_settings_global;
-    *status = &race_settings_global_status;
-  } else if (source == RACE_SETTING_SOURCE_MAP &&
-             *race_settings_current_map) {
-    *document = &race_settings_map;
-    *status = &race_settings_map_status;
-  } else {
-    return false;
-  }
-  return **status == RACE_SETTINGS_SERVICE_READY;
-}
-
-static bool Race_SettingsService_Commit(
-  race_setting_source_t source,
-  const race_settings_state_t *candidate_state,
-  g_client_t *cl) {
-  race_settings_document_t *current_document;
-  race_settings_service_status_t *status;
-  if (!Race_SettingsService_PersistentReady(source,
-                                            &current_document, &status)) {
-    Race_SettingsService_Reply(
-      cl, "Race settings mutation rejected: source is unavailable or quarantined\n");
-    return false;
-  }
-  if (current_document->generation == UINT64_MAX) {
-    Race_SettingsService_Reply(
-      cl, "Race settings mutation rejected: source generation overflow\n");
-    return false;
-  }
-
-  const race_setting_scope_t scope = source == RACE_SETTING_SOURCE_GLOBAL
-    ? RACE_SETTING_SCOPE_GLOBAL
-    : RACE_SETTING_SCOPE_MAP;
-  const char *map = scope == RACE_SETTING_SCOPE_MAP
-    ? race_settings_current_map
-    : NULL;
-  race_settings_document_t candidate_document;
-  if (!Race_Settings_DocumentFromState(&candidate_document, scope, map,
-                                       current_document->generation + 1u,
-                                       candidate_state)) {
-    Race_SettingsService_Reply(
-      cl, "Race settings mutation rejected: invalid persisted document\n");
-    return false;
-  }
-
-  char committed[MAX_OS_PATH];
-  char candidate[MAX_OS_PATH];
-  char committed_virtual[MAX_OS_PATH];
-  char candidate_virtual[MAX_OS_PATH];
-  if (!Race_SettingsService_RealPaths(scope, map,
-                                      committed, candidate,
-                                      committed_virtual, candidate_virtual)) {
-    Race_SettingsService_Reply(
-      cl, "Race settings mutation rejected: could not resolve persistence paths\n");
-    return false;
-  }
-
-  race_settings_parse_result_t parse_result = RACE_SETTINGS_PARSE_OK;
-  const race_settings_store_result_t persisted = Race_SettingsStore_Commit(
-    committed, candidate, &candidate_document, &parse_result);
-  if (persisted != RACE_SETTINGS_STORE_OK) {
-    Race_SettingsService_Reply(
-      cl, "Race settings mutation rejected: persistence=%s parse=%s; effective state unchanged\n",
-      Race_SettingsStore_ResultName(persisted),
-      Race_Settings_ParseResultName(parse_result));
-    return false;
-  }
-
-  *current_document = candidate_document;
-  *status = RACE_SETTINGS_SERVICE_READY;
-  return true;
-}
-
-static bool Race_SettingsService_Mutate(g_client_t *cl, bool reset,
-                                        race_setting_source_t source,
-                                        const char *key, const char *value) {
-  race_settings_state_t candidate;
-  race_settings_change_t change;
-  char error[128];
-  const bool valid = reset
-    ? Race_Settings_StateUnset(&race_settings_state, source, key,
-                               &candidate, &change, error, sizeof(error))
-    : Race_Settings_StateSet(&race_settings_state, source, key, value,
-                             &candidate, &change,
-                             error, sizeof(error));
-  if (!valid) {
-    Race_SettingsService_Reply(cl, "Race settings mutation rejected: %s\n",
-                               error);
+static bool Race_SettingsService_ResolveCvar(
+  const char *input, const race_setting_descriptor_t **descriptor_out,
+  cvar_t **var_out) {
+  if (!input || !*input || !descriptor_out || !var_out) {
     return false;
   }
 
   const race_setting_descriptor_t *descriptor =
-    Race_Settings_DescriptorForKey(key);
-  if (!change.source_changed) {
-    Race_SettingsService_Reply(
-      cl, "Race settings mutation: no-op revision=%llu\n",
-      (unsigned long long) race_settings_state.revision);
-    Race_SettingsService_PrintSource(cl, key);
-    return true;
-  }
-
-  if (source != RACE_SETTING_SOURCE_RUNTIME &&
-      !Race_SettingsService_Commit(source, &candidate, cl)) {
+    Race_Settings_DescriptorForName(input);
+  const char *canonical = descriptor ? descriptor->cvar : input;
+  cvar_t *var = descriptor ? race_settings_cvars[descriptor->id]
+                           : gi.GetCvar(canonical);
+  if (!var) {
     return false;
   }
 
-  race_settings_state = candidate;
-  Race_SettingsService_Reply(
-    cl, descriptor && descriptor->next_map
-      ? "Race settings mutation: queued-next-map source=%s revision=%llu effective_changed=%d\n"
-      : "Race settings mutation: applied source=%s revision=%llu effective_changed=%d\n",
-    Race_Settings_SourceName(source),
-    (unsigned long long) race_settings_state.revision,
-    change.effective_changed);
-  Race_SettingsService_PrintSource(cl, key);
+  *descriptor_out = descriptor;
+  *var_out = var;
   return true;
 }
 
-static void Race_SettingsService_CommandMutate(bool reset) {
-  const int32_t required = reset ? 4 : 5;
-  if (gi.Argc() != required) {
-    gi.Print(reset
-      ? "Usage: race_settings reset <global|map|runtime> <key>\n"
-      : "Usage: race_settings set <global|map|runtime> <key> <value>\n");
-    return;
+static bool Race_SettingsService_AuthorizeCvar(
+  g_client_t *cl, const race_setting_descriptor_t *descriptor, cvar_t *var,
+  const char *scope, const char *map) {
+  if (!cl || !var) {
+    return false;
   }
 
-  race_setting_source_t source;
-  if (!Race_SettingsService_ParseSource(gi.Argv(2), &source)) {
-    gi.Print("Unknown Race settings source: %s\n", gi.Argv(2));
-    return;
+  if (!Race_AdminService_AuthorizeClientAction(
+        cl, RACE_ADMIN_ACTION_SERVER_CVAR)) {
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, scope, map, "denied");
+    return false;
   }
-
-  Race_SettingsService_Mutate(NULL, reset, source, gi.Argv(3),
-                              reset ? NULL : gi.Argv(4));
+  if (!Race_AdminService_ClientCvarAllowed(cl, var->name)) {
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, scope, map, "not-allowlisted");
+    Race_SettingsService_Reply(
+      cl, "Race configuration rejected: cvar=%s is not delegated\n", var->name);
+    return false;
+  }
+  if (var->flags & CVAR_NO_SET) {
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, scope, map, "write-protected");
+    Race_SettingsService_Reply(
+      cl, "Race configuration rejected: cvar=%s is write protected\n", var->name);
+    return false;
+  }
+  return true;
 }
 
-static void Race_SettingsService_Command(void) {
-  if (gi.Argc() == 1 || (gi.Argc() == 2 && !strcmp(gi.Argv(1), "list"))) {
-    Race_SettingsService_PrintList();
-    return;
+static bool Race_SettingsService_CommitGlobal(
+  const race_gset_document_t *candidate) {
+  char committed[MAX_OS_PATH];
+  char candidate_path[MAX_OS_PATH];
+  if (!candidate || !gi.Mkdir(RACE_SETTINGS_DIRECTORY) ||
+      !Race_SettingsService_GlobalPaths(committed, candidate_path)) {
+    return false;
   }
-  if (gi.Argc() == 3 && !strcmp(gi.Argv(1), "get")) {
-    const race_setting_descriptor_t *descriptor =
-      Race_Settings_DescriptorForKey(gi.Argv(2));
-    if (!descriptor) {
-      gi.Print("Unknown Race setting: %s\n", gi.Argv(2));
-      return;
-    }
-    Race_SettingsService_PrintEntry(NULL, descriptor);
-    return;
+  return Race_SettingsStore_Commit(committed, candidate_path, candidate) ==
+         RACE_SETTINGS_STORE_OK;
+}
+
+static bool Race_SettingsService_SetNative(cvar_t *var, const char *value,
+                                           bool *queued) {
+  if (!var || !value || !queued) {
+    return false;
   }
-  if (gi.Argc() == 3 && !strcmp(gi.Argv(1), "source")) {
-    Race_SettingsService_PrintSource(NULL, gi.Argv(2));
-    return;
+
+  cvar_t *updated = gi.SetCvarString(var->name, value);
+  if (!updated) {
+    return false;
   }
-  if (!strcmp(gi.Argv(1), "set")) {
-    Race_SettingsService_CommandMutate(false);
-    return;
-  }
-  if (!strcmp(gi.Argv(1), "reset")) {
-    Race_SettingsService_CommandMutate(true);
-    return;
-  }
-  if (gi.Argc() == 2 && !strcmp(gi.Argv(1), "reload")) {
-    if (*race_settings_current_map) {
-      const bool weapons_enabled = race_settings_weapons_enabled;
-      Race_SettingsService_Load(race_settings_current_map);
-      race_settings_weapons_enabled = weapons_enabled;
-    } else {
-      gi.Print("Race settings reload rejected: no current map\n");
-    }
+  *queued = updated->latched_string &&
+            !strcmp(updated->latched_string, value);
+  return *queued || !strcmp(updated->string, value);
+}
+
+static void Race_SettingsService_HandleGset(g_client_t *cl) {
+  if (gi.Argc() != 3) {
+    Race_SettingsService_Reply(cl, "Usage: gset <alias-or-cvar> <value>\n");
     return;
   }
 
-  gi.Print("Usage: race_settings <list|get|source|set|reset|reload> ...\n");
+  const race_setting_descriptor_t *descriptor;
+  cvar_t *var;
+  if (!Race_SettingsService_ResolveCvar(gi.Argv(1), &descriptor, &var)) {
+    Race_SettingsService_Reply(cl, "Race configuration rejected: unknown cvar\n");
+    return;
+  }
+
+  if (!Race_SettingsService_AuthorizeCvar(cl, descriptor, var, "global",
+                                          race_settings_current_map)) {
+    return;
+  }
+
+  char canonical[RACE_SETTING_VALUE_SIZE];
+  const char *value = gi.Argv(2);
+  if (descriptor) {
+    if (!Race_SettingsService_DescriptorValue(descriptor, value, canonical)) {
+      Race_SettingsService_Audit(
+        cl, descriptor, var->name, "global", race_settings_current_map,
+        "invalid-value");
+      Race_SettingsService_Reply(
+        cl, "Race configuration rejected: invalid value for cvar=%s\n",
+        var->name);
+      return;
+    }
+    value = canonical;
+  }
+
+  race_gset_document_t candidate;
+  if (!Race_SettingsStore_Set(&race_settings_gset, var->name, value,
+                              &candidate) ||
+      !Race_SettingsService_CommitGlobal(&candidate)) {
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, "global", race_settings_current_map,
+      "write-failed");
+    Race_SettingsService_ReplyMutation(
+      cl, descriptor, var->name, "global", race_settings_current_map,
+      "write-failed");
+    return;
+  }
+
+  const race_gset_document_t previous = race_settings_gset;
+  race_settings_gset = candidate;
+
+  bool queued = false;
+  bool applied = true;
+  if (!descriptor || !race_settings_map_overrides[descriptor->id]) {
+    applied = Race_SettingsService_SetNative(var, value, &queued);
+  }
+  if (!applied) {
+    Race_SettingsService_CommitGlobal(&previous);
+    race_settings_gset = previous;
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, "global", race_settings_current_map,
+      "native-rejected");
+    Race_SettingsService_ReplyMutation(
+      cl, descriptor, var->name, "global", race_settings_current_map,
+      "native-rejected");
+    return;
+  }
+
+  if (descriptor) {
+    q_strlcpy(race_settings_global_values[descriptor->id], value,
+              sizeof(race_settings_global_values[descriptor->id]));
+    if (!race_settings_map_overrides[descriptor->id] &&
+        descriptor->activation == RACE_SETTING_ACTIVATION_IMMEDIATE) {
+      Race_SettingsService_SetEffective(descriptor, value);
+      Race_SettingsService_ApplyEngineValues();
+    }
+    if (descriptor->activation != RACE_SETTING_ACTIVATION_IMMEDIATE) {
+      var->modified = false;
+    }
+  }
+
+  const char *result = queued ? "queued" :
+    descriptor && race_settings_map_overrides[descriptor->id]
+      ? "persisted-map-override-active" : "persisted";
+  Race_SettingsService_Audit(
+    cl, descriptor, var->name, "global", race_settings_current_map, result);
+  Race_SettingsService_ReplyMutation(
+    cl, descriptor, var->name, "global", race_settings_current_map, result);
+}
+
+static void Race_SettingsService_HandleGclear(g_client_t *cl) {
+  if (gi.Argc() != 2) {
+    Race_SettingsService_Reply(cl, "Usage: gclear <alias-or-cvar>\n");
+    return;
+  }
+
+  const race_setting_descriptor_t *descriptor;
+  cvar_t *var;
+  if (!Race_SettingsService_ResolveCvar(gi.Argv(1), &descriptor, &var)) {
+    Race_SettingsService_Reply(cl, "Race configuration rejected: unknown cvar\n");
+    return;
+  }
+  if (!Race_SettingsService_AuthorizeCvar(cl, descriptor, var, "global",
+                                          race_settings_current_map)) {
+    return;
+  }
+
+  race_gset_document_t candidate;
+  if (!Race_SettingsStore_Remove(&race_settings_gset, var->name, &candidate) ||
+      !Race_SettingsService_CommitGlobal(&candidate)) {
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, "global", race_settings_current_map,
+      "write-failed");
+    Race_SettingsService_ReplyMutation(
+      cl, descriptor, var->name, "global", race_settings_current_map,
+      "write-failed");
+    return;
+  }
+
+  const race_gset_document_t previous = race_settings_gset;
+  race_settings_gset = candidate;
+  const char *value = descriptor ? descriptor->default_value : var->default_string;
+  bool queued = false;
+  bool applied = true;
+  if (!descriptor || !race_settings_map_overrides[descriptor->id]) {
+    applied = Race_SettingsService_SetNative(var, value, &queued);
+  }
+  if (!applied) {
+    Race_SettingsService_CommitGlobal(&previous);
+    race_settings_gset = previous;
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, "global", race_settings_current_map,
+      "native-rejected");
+    Race_SettingsService_ReplyMutation(
+      cl, descriptor, var->name, "global", race_settings_current_map,
+      "native-rejected");
+    return;
+  }
+
+  if (descriptor) {
+    q_strlcpy(race_settings_global_values[descriptor->id], value,
+              sizeof(race_settings_global_values[descriptor->id]));
+    if (!race_settings_map_overrides[descriptor->id] &&
+        descriptor->activation == RACE_SETTING_ACTIVATION_IMMEDIATE) {
+      Race_SettingsService_SetEffective(descriptor, value);
+      Race_SettingsService_ApplyEngineValues();
+    }
+    if (descriptor->activation != RACE_SETTING_ACTIVATION_IMMEDIATE) {
+      var->modified = false;
+    }
+  }
+
+  const char *result = queued ? "cleared-queued" :
+    descriptor && race_settings_map_overrides[descriptor->id]
+      ? "cleared-map-override-active" : "cleared";
+  Race_SettingsService_Audit(
+    cl, descriptor, var->name, "global", race_settings_current_map, result);
+  Race_SettingsService_ReplyMutation(
+    cl, descriptor, var->name, "global", race_settings_current_map, result);
+}
+
+static void Race_SettingsService_PrintGlobal(
+  g_client_t *cl, const race_setting_descriptor_t *descriptor, cvar_t *var) {
+  const char *value = var->string;
+  if (descriptor) {
+    value = race_settings_global_values[descriptor->id];
+  }
+  Race_SettingsService_Reply(
+    cl, "Race global cvar: cvar=%s value=%s activation=%s map_override=%d\n",
+    var->name, Race_SettingsService_IsSensitiveName(var->name) ? "<redacted>" : value,
+    Race_SettingsService_Activation(descriptor, var),
+    descriptor && race_settings_map_overrides[descriptor->id]);
+}
+
+static void Race_SettingsService_HandleGget(g_client_t *cl) {
+  if (gi.Argc() > 2) {
+    Race_SettingsService_Reply(cl, "Usage: gget [alias-or-cvar]\n");
+    return;
+  }
+  if (!Race_AdminService_AuthorizeClientAction(
+        cl, RACE_ADMIN_ACTION_SERVER_CVAR)) {
+    return;
+  }
+
+  if (gi.Argc() == 2) {
+    const race_setting_descriptor_t *descriptor;
+    cvar_t *var;
+    if (!Race_SettingsService_ResolveCvar(gi.Argv(1), &descriptor, &var) ||
+        !Race_SettingsService_AuthorizeCvar(
+          cl, descriptor, var, "global", race_settings_current_map)) {
+      return;
+    }
+    Race_SettingsService_PrintGlobal(cl, descriptor, var);
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, "global", race_settings_current_map, "read");
+    return;
+  }
+
+  size_t count;
+  const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
+  Race_SettingsService_Reply(cl, "Race global cvars:\n");
+  for (size_t i = 0; i < count; i++) {
+    const race_setting_descriptor_t *descriptor = catalog + i;
+    cvar_t *var = race_settings_cvars[descriptor->id];
+    if (var && Race_AdminService_ClientCvarAllowed(cl, var->name)) {
+      Race_SettingsService_PrintGlobal(cl, descriptor, var);
+    }
+  }
+  Race_AdminService_AuditClientAction(
+    cl, RACE_ADMIN_ACTION_SERVER_CVAR, "scope=global,cvar=registry", "listed");
+}
+
+static bool Race_SettingsService_EnsureCatalogDirectory(const char *path) {
+  char directory[RACE_MAP_PROPERTIES_MAX_VIRTUAL_PATH + 1u];
+  q_strlcpy(directory, path, sizeof(directory));
+  char *separator = strrchr(directory, '/');
+  if (!separator) {
+    return true;
+  }
+  *separator = '\0';
+  return !*directory || gi.Mkdir(directory);
+}
+
+static bool Race_SettingsService_CommitMapEdit(
+  const char *map, const race_setting_descriptor_t *descriptor,
+  const char *value, char *error, const size_t error_size) {
+  char catalog_path[RACE_MAP_PROPERTIES_MAX_VIRTUAL_PATH + 1u];
+  if (!Race_SettingsService_CatalogPath(
+        catalog_path, error, error_size)) {
+    return false;
+  }
+
+  char *candidate_data = malloc(RACE_SETTINGS_MAP_BUFFER_SIZE);
+  char *verified_data = malloc(RACE_SETTINGS_MAP_BUFFER_SIZE);
+  if (!candidate_data || !verified_data) {
+    free(candidate_data);
+    free(verified_data);
+    q_snprintf(error, error_size, "out of memory");
+    return false;
+  }
+
+  size_t loaded;
+  if (!Race_SettingsService_LoadCatalog(
+        catalog_path, verified_data, &loaded, error, error_size)) {
+    free(candidate_data);
+    free(verified_data);
+    return false;
+  }
+
+  race_map_properties_edit_t edit;
+  const race_map_properties_result_t edited = Race_MapProperties_Edit(
+    verified_data, loaded, map, descriptor, value,
+    candidate_data, RACE_SETTINGS_MAP_BUFFER_SIZE, &edit, error, error_size);
+  if (edited != RACE_MAP_PROPERTIES_OK) {
+    free(candidate_data);
+    free(verified_data);
+    return false;
+  }
+
+  char candidate_virtual[RACE_MAP_PROPERTIES_MAX_VIRTUAL_PATH +
+                         sizeof(RACE_SETTINGS_MAP_CANDIDATE_SUFFIX)];
+  const int32_t candidate_written = q_snprintf(
+    candidate_virtual, sizeof(candidate_virtual), "%s%s",
+    catalog_path, RACE_SETTINGS_MAP_CANDIDATE_SUFFIX);
+  char committed[MAX_OS_PATH];
+  char candidate[MAX_OS_PATH];
+  if (candidate_written < 0 ||
+      (size_t) candidate_written >= sizeof(candidate_virtual) ||
+      !Race_SettingsService_EnsureCatalogDirectory(catalog_path) ||
+      !Race_SettingsService_RealPath(catalog_path, committed, sizeof(committed)) ||
+      !Race_SettingsService_RealPath(candidate_virtual, candidate,
+                                     sizeof(candidate)) ||
+      Race_Persistence_WriteCandidateOwnerOnly(
+        candidate, candidate_data, edit.length) != RACE_PERSISTENCE_OK) {
+    free(candidate_data);
+    free(verified_data);
+    q_snprintf(error, error_size, "candidate write failed");
+    return false;
+  }
+
+  size_t verified_length;
+  if (Race_Persistence_Read(candidate, verified_data,
+                            RACE_SETTINGS_MAP_BUFFER_SIZE,
+                            &verified_length) != RACE_PERSISTENCE_OK ||
+      verified_length != edit.length ||
+      memcmp(verified_data, candidate_data, edit.length) ||
+      Race_MapProperties_ValidateCandidate(
+        verified_data, verified_length, map, descriptor, value,
+        NULL, error, error_size) != RACE_MAP_PROPERTIES_OK ||
+      Race_Persistence_Promote(candidate, committed) != RACE_PERSISTENCE_OK) {
+    Race_Persistence_Remove(candidate);
+    free(candidate_data);
+    free(verified_data);
+    if (!*error) {
+      q_snprintf(error, error_size, "candidate validation failed");
+    }
+    return false;
+  }
+
+  free(candidate_data);
+  free(verified_data);
+  return true;
+}
+
+static bool Race_SettingsService_ResolveMapDescriptor(
+  g_client_t *cl, const char *input,
+  const race_setting_descriptor_t **descriptor_out, cvar_t **var_out,
+  const char *scope, const char *map) {
+  const race_setting_descriptor_t *descriptor;
+  cvar_t *var;
+  if (!Race_SettingsService_ResolveCvar(input, &descriptor, &var)) {
+    Race_SettingsService_Reply(cl, "Race map configuration rejected: unknown cvar\n");
+    return false;
+  }
+  if (!descriptor || !descriptor->map_overridable) {
+    Race_SettingsService_Reply(
+      cl, "Race map configuration rejected: cvar=%s is not map-overridable\n",
+      var->name);
+    return false;
+  }
+  if (!Race_SettingsService_AuthorizeCvar(cl, descriptor, var, scope, map)) {
+    return false;
+  }
+  *descriptor_out = descriptor;
+  *var_out = var;
+  return true;
+}
+
+static void Race_SettingsService_HandleMset(g_client_t *cl) {
+  if (gi.Argc() != 3) {
+    Race_SettingsService_Reply(cl, "Usage: mset <alias-or-cvar> <value>\n");
+    return;
+  }
+
+  char map[RACE_MAP_IDENTITY_SIZE];
+  if (!Race_SettingsService_CurrentMap(map)) {
+    Race_SettingsService_Reply(cl, "Race map configuration rejected: no active map\n");
+    return;
+  }
+
+  const race_setting_descriptor_t *descriptor;
+  cvar_t *var;
+  if (!Race_SettingsService_ResolveMapDescriptor(
+        cl, gi.Argv(1), &descriptor, &var, "map", map)) {
+    return;
+  }
+
+  char canonical[RACE_SETTING_VALUE_SIZE];
+  if (!Race_SettingsService_DescriptorValue(
+        descriptor, gi.Argv(2), canonical)) {
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, "map", map, "invalid-value");
+    Race_SettingsService_Reply(
+      cl, "Race map configuration rejected: invalid value for cvar=%s\n",
+      var->name);
+    return;
+  }
+
+  char error[256] = "";
+  if (!Race_SettingsService_CommitMapEdit(
+        map, descriptor, canonical, error, sizeof(error))) {
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, "map", map, "write-failed");
+    Race_SettingsService_ReplyMutation(
+      cl, descriptor, var->name, "map", map, "write-failed");
+    return;
+  }
+
+  const char *result = "persisted-next-map";
+  Race_SettingsService_Audit(cl, descriptor, var->name, "map", map, result);
+  Race_SettingsService_ReplyMutation(
+    cl, descriptor, var->name, "map", map, result);
+}
+
+static void Race_SettingsService_HandleMclear(g_client_t *cl) {
+  if (gi.Argc() != 2) {
+    Race_SettingsService_Reply(cl, "Usage: mclear <alias-or-cvar>\n");
+    return;
+  }
+
+  char map[RACE_MAP_IDENTITY_SIZE];
+  if (!Race_SettingsService_CurrentMap(map)) {
+    Race_SettingsService_Reply(cl, "Race map configuration rejected: no active map\n");
+    return;
+  }
+
+  const race_setting_descriptor_t *descriptor;
+  cvar_t *var;
+  if (!Race_SettingsService_ResolveMapDescriptor(
+        cl, gi.Argv(1), &descriptor, &var, "map", map)) {
+    return;
+  }
+
+  char error[256] = "";
+  if (!Race_SettingsService_CommitMapEdit(
+        map, descriptor, NULL, error, sizeof(error))) {
+    Race_SettingsService_Audit(
+      cl, descriptor, var->name, "map", map, "write-failed");
+    Race_SettingsService_ReplyMutation(
+      cl, descriptor, var->name, "map", map, "write-failed");
+    return;
+  }
+
+  const char *result = "cleared-next-map";
+  Race_SettingsService_Audit(cl, descriptor, var->name, "map", map, result);
+  Race_SettingsService_ReplyMutation(
+    cl, descriptor, var->name, "map", map, result);
+}
+
+static void Race_SettingsService_PrintMapProperty(
+  g_client_t *cl, const char *map, const race_setting_descriptor_t *descriptor,
+  const race_map_properties_t *properties) {
+  const race_map_property_t *property =
+    properties->properties + descriptor->id;
+  const char *state = !property->present ? "inherited" :
+    property->valid && !property->duplicate ? "override" : "invalid";
+  const char *value = property->valid && !property->duplicate
+    ? property->canonical : "<none>";
+  Race_SettingsService_Reply(
+    cl, "Race map cvar: map=%s cvar=%s state=%s value=%s activation=%s\n",
+    map, descriptor->cvar, state, value,
+    Race_Settings_ActivationName(descriptor->activation));
+}
+
+static void Race_SettingsService_HandleMget(g_client_t *cl) {
+  if (gi.Argc() > 2) {
+    Race_SettingsService_Reply(cl, "Usage: mget [alias-or-cvar]\n");
+    return;
+  }
+
+  char map[RACE_MAP_IDENTITY_SIZE];
+  if (!Race_SettingsService_CurrentMap(map)) {
+    Race_SettingsService_Reply(cl, "Race map configuration rejected: no active map\n");
+    return;
+  }
+  if (!Race_AdminService_AuthorizeClientAction(
+        cl, RACE_ADMIN_ACTION_SERVER_CVAR)) {
+    return;
+  }
+
+  race_map_properties_t properties;
+  char error[256];
+  if (!Race_SettingsService_LoadMapProperties(
+        map, &properties, error, sizeof(error))) {
+    Race_SettingsService_Reply(
+      cl, "Race map configuration unavailable: map=%s\n", map);
+    return;
+  }
+
+  if (gi.Argc() == 2) {
+    const race_setting_descriptor_t *descriptor;
+    cvar_t *var;
+    if (!Race_SettingsService_ResolveMapDescriptor(
+          cl, gi.Argv(1), &descriptor, &var, "map", map)) {
+      return;
+    }
+    Race_SettingsService_PrintMapProperty(cl, map, descriptor, &properties);
+    Race_SettingsService_Audit(cl, descriptor, var->name, "map", map, "read");
+    return;
+  }
+
+  size_t count;
+  const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
+  Race_SettingsService_Reply(cl, "Race map cvars: map=%s\n", map);
+  for (size_t i = 0; i < count; i++) {
+    const race_setting_descriptor_t *descriptor = catalog + i;
+    cvar_t *var = race_settings_cvars[descriptor->id];
+    if (var && Race_AdminService_ClientCvarAllowed(cl, var->name)) {
+      Race_SettingsService_PrintMapProperty(cl, map, descriptor, &properties);
+    }
+  }
+  Race_AdminService_AuditClientAction(
+    cl, RACE_ADMIN_ACTION_SERVER_CVAR, "scope=map,cvar=registry", "listed");
 }
 
 void Race_SettingsService_Init(void) {
+  memset(race_settings_cvars, 0, sizeof(race_settings_cvars));
+  memset(race_settings_global_values, 0, sizeof(race_settings_global_values));
+  memset(race_settings_effective, 0, sizeof(race_settings_effective));
+  memset(race_settings_map_overrides, 0, sizeof(race_settings_map_overrides));
+  memset(race_settings_current_map, 0, sizeof(race_settings_current_map));
+  memset(race_settings_fallback_music, 0, sizeof(race_settings_fallback_music));
+  memset(race_settings_fallback_tracks, 0,
+         sizeof(race_settings_fallback_tracks));
+  race_settings_ready = false;
+  race_settings_fallback_valid = false;
+  Race_SettingsStore_DocumentInit(&race_settings_gset);
+
   size_t count;
   const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
-  char error[128];
-  if (!Race_Settings_CatalogRankCompatible(catalog, count,
-                                            "q2-v1",
-                                            error, sizeof(error)) ||
-      !Race_Settings_StateInit(&race_settings_state) ||
-      !Race_Settings_DocumentInit(&race_settings_global,
-                                  RACE_SETTING_SCOPE_GLOBAL, NULL, 0)) {
-    G_Error("Could not initialize Race settings: %s\n", error);
+  char error[256];
+  race_settings_catalog_valid = Race_Settings_ValidateCatalog(
+    catalog, count, error, sizeof(error));
+  if (!race_settings_catalog_valid) {
+    G_Warn("Race settings catalog rejected: %s\n", error);
   }
-
-  Race_Settings_DocumentInit(&race_settings_map,
-                             RACE_SETTING_SCOPE_MAP, "unavailable", 0);
-  race_settings_global_status = RACE_SETTINGS_SERVICE_UNAVAILABLE;
-  race_settings_map_status = RACE_SETTINGS_SERVICE_UNAVAILABLE;
-  race_settings_current_map[0] = '\0';
-  race_settings_weapons_enabled = true;
-
-  if (!gi.Mkdir(RACE_SETTINGS_DIRECTORY) ||
-      !gi.Mkdir(RACE_SETTINGS_MAP_DIRECTORY)) {
-    G_Warn("Could not prepare the Race settings storage directories\n");
-  }
-
-  gi.AddCmd("race_settings", Race_SettingsService_Command, CMD_GAME,
-            "Inspect or mutate authoritative Race settings");
 }
 
-void Race_SettingsService_Load(const char *map) {
-  char canonical[RACE_MAP_IDENTITY_SIZE];
-  if (!Race_MapState_CanonicalizeMap(map, canonical)) {
-    G_Warn("Could not derive a safe Race settings identity for map %s\n",
-           map ? map : "<null>");
+void Race_SettingsService_PostInit(void) {
+  if (!race_settings_catalog_valid ||
+      !Race_SettingsService_EnsureDescriptorCvars()) {
     return;
   }
 
-  race_settings_document_t global;
-  race_settings_document_t map_document;
-  const race_settings_service_status_t global_status =
-    Race_SettingsService_LoadScope(RACE_SETTING_SCOPE_GLOBAL, NULL, &global);
-  const race_settings_service_status_t map_status =
-    Race_SettingsService_LoadScope(RACE_SETTING_SCOPE_MAP, canonical,
-                                   &map_document);
+  Race_SettingsService_LoadGset();
+  Race_SettingsService_CaptureGlobalValues();
+  Race_SettingsService_CheckLegacyFiles();
+  race_settings_ready = true;
+}
 
-  race_settings_state_t candidate;
-  if (!Race_Settings_StateInit(&candidate)) {
-    G_Warn("Could not initialize Race settings resolution for map %s\n", canonical);
-    return;
-  }
-  if (global_status == RACE_SETTINGS_SERVICE_READY &&
-      !Race_Settings_DocumentApply(&global, &candidate)) {
-    G_Warn("Could not apply global Race settings for map %s\n", canonical);
-    return;
-  }
-  if (map_status == RACE_SETTINGS_SERVICE_READY &&
-      !Race_Settings_DocumentApply(&map_document, &candidate)) {
-    G_Warn("Could not apply map Race settings for map %s\n", canonical);
+/**
+ * @brief Publishes both registry stores into CS_RACE_SETTINGS_STATUS.
+ * @details The cgame compiles `race_settings.c`, so it already holds the whole
+ * catalog. What it cannot reach is state: `cgi.Print` runs module-to-console
+ * and nothing carries a `gget` reply back, so without this the menu would have
+ * to show catalog defaults and call them current. Publishing the two masks and
+ * the values behind them is the read path, and it costs nothing for the rows
+ * nobody has assigned.
+ */
+static void Race_SettingsService_PublishStatus(void) {
+
+  if (!race_settings_ready) {
     return;
   }
 
-  race_settings_change_t change;
-  char error[128];
-  if (!Race_Settings_StateResolve(&race_settings_state, &candidate,
-                                  &change, error, sizeof(error))) {
-    G_Warn("Could not resolve Race settings for map %s: %s\n",
-           canonical, error);
+  race_settings_status_t status = { 0 };
+  q_strlcpy(status.map, race_settings_current_map, sizeof(status.map));
+
+  size_t count;
+  const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
+  for (size_t i = 0; i < count; i++) {
+    const race_setting_descriptor_t *descriptor = catalog + i;
+    if (descriptor->id >= RACE_SETTING_TOTAL) {
+      continue;
+    }
+    const uint16_t id = descriptor->id;
+
+    const race_gset_assignment_t *assignment =
+      Race_SettingsStore_Find(&race_settings_gset, descriptor->cvar);
+    if (assignment) {
+      status.global_mask |= 1u << id;
+      if (strlen(assignment->value) <= RACE_SETTINGS_STATUS_VALUE_MAX) {
+        q_strlcpy(status.global[id], assignment->value,
+                  sizeof(status.global[id]));
+      } else {
+        status.truncated = true;
+      }
+    }
+  }
+
+  // `mset` edits `sv_map_list` and deliberately leaves the running level alone,
+  // so `race_settings_map_overrides` - which is what actually applied at level
+  // load - goes stale the moment an operator writes one. The menu's MSET tab
+  // reports the store, so the store is what gets re-read here.
+  race_map_properties_t properties;
+  char error[256];
+  if (status.map[0] && Race_SettingsService_LoadMapProperties(
+        status.map, &properties, error, sizeof(error))) {
+    for (size_t i = 0; i < count; i++) {
+      const race_setting_descriptor_t *descriptor = catalog + i;
+      if (descriptor->id >= RACE_SETTING_TOTAL) {
+        continue;
+      }
+      const uint16_t id = descriptor->id;
+      const race_map_property_t *property = properties.properties + id;
+      if (!property->present || !property->valid || property->duplicate) {
+        continue;
+      }
+      status.map_mask |= 1u << id;
+      if (strlen(property->canonical) <= RACE_SETTINGS_STATUS_VALUE_MAX) {
+        q_strlcpy(status.overrides[id], property->canonical,
+                  sizeof(status.overrides[id]));
+      } else {
+        status.truncated = true;
+      }
+    }
+  }
+
+  // Shed the longest value at a time until the payload fits. The row stays
+  // assigned in its mask; only the value goes, and `truncated` is what tells the
+  // menu to say the value is unknown instead of drawing a default the server is
+  // not running.
+  char wire[RACE_SETTINGS_STATUS_SIZE];
+  while (!Race_Settings_StatusEncode(&status, wire, sizeof(wire))) {
+
+    char *longest = NULL;
+    size_t longest_length = 0u;
+    for (uint16_t id = 0u; id < RACE_SETTING_TOTAL; id++) {
+      char *const candidates[] = { status.global[id], status.overrides[id] };
+      for (size_t c = 0; c < lengthof(candidates); c++) {
+        const size_t length = strlen(candidates[c]);
+        if (length > longest_length) {
+          longest = candidates[c];
+          longest_length = length;
+        }
+      }
+    }
+
+    if (!longest) {
+      // Unreachable with a bounded map name and fifteen descriptors, but a
+      // stale mirror would be worse than an empty one.
+      memset(&status, 0, sizeof(status));
+      status.truncated = true;
+      if (!Race_Settings_StatusEncode(&status, wire, sizeof(wire))) {
+        return;
+      }
+      break;
+    }
+
+    *longest = '\0';
+    status.truncated = true;
+  }
+
+  gi.SetConfigString(CS_RACE_SETTINGS_STATUS, wire);
+}
+
+void Race_SettingsService_PrepareLevel(const char *map) {
+  Race_SettingsService_PrepareMap(map);
+}
+
+void Race_SettingsService_FinalizeLevel(const char *map) {
+  if (!race_settings_ready || !map || !*map ||
+      strcmp(race_settings_current_map, map)) {
     return;
   }
 
-  race_settings_state = candidate;
-  race_settings_weapons_enabled =
-    candidate.entries[RACE_SETTING_WEAPONS].effective.boolean;
-  race_settings_global = global;
-  race_settings_map = map_document;
-  race_settings_global_status = global_status;
-  race_settings_map_status = map_status;
-  q_strlcpy(race_settings_current_map, canonical,
-            sizeof(race_settings_current_map));
-
-  gi.Print("Race settings resolved: map=%s revision=%llu effective_changed=%d runtime=cleared precedence=runtime>map>global>default\n",
-           canonical, (unsigned long long) race_settings_state.revision,
-           change.effective_changed);
-  Race_SettingsService_PrintList();
+  Race_SettingsService_CaptureMapFallback();
+  Race_SettingsService_ApplyEngineValues();
+  Race_SettingsService_PublishStatus();
 }
 
-bool Race_SettingsService_FinishCueEnabled(void) {
-  return race_settings_state.entries[RACE_SETTING_FINISH_CUE_ENABLED]
-    .effective.boolean;
+void Race_SettingsService_PrintMigrationHint(g_client_t *cl) {
+  Race_SettingsService_Reply(
+    cl, "Race settings migration: use gset/gget/gclear or mset/mget/mclear; "
+    "use allowcvar for Operator delegation.\n");
 }
 
-float Race_SettingsService_FinishCueGain(void) {
-  return race_settings_state.entries[RACE_SETTING_FINISH_CUE_GAIN]
-    .effective.integer / 100.f;
-}
-
-bool Race_SettingsService_CheckpointTimeEnabled(void) {
-  return !strcmp(
-    race_settings_state.entries[RACE_SETTING_CHECKPOINT_FEEDBACK]
-      .effective.enumeration,
-    "time");
-}
-
-int32_t Race_SettingsService_VotingTime(void) {
-  return race_settings_state.entries[RACE_SETTING_VOTING_TIME]
-    .effective.integer;
-}
-
-int32_t Race_SettingsService_MaxVotes(void) {
-  return race_settings_state.entries[RACE_SETTING_MAX_VOTES]
-    .effective.integer;
-}
-
-int32_t Race_SettingsService_VoteMenuDuration(void) {
-  return race_settings_state.entries[RACE_SETTING_VOTE_MENU_DURATION]
-    .effective.integer;
-}
-
-int32_t Race_SettingsService_VoteMenuChoices(void) {
-  return race_settings_state.entries[RACE_SETTING_VOTE_MENU_CHOICES]
-    .effective.integer;
-}
-
-bool Race_SettingsService_VoteAllowSpectators(void) {
-  return race_settings_state.entries[RACE_SETTING_VOTE_ALLOW_SPECTATORS]
-    .effective.boolean;
-}
-
-bool Race_SettingsService_WeaponsEnabled(void) {
-  return race_settings_weapons_enabled;
-}
-
-bool Race_SettingsService_ClientInspect(g_client_t *cl, const char *key,
-                                        bool include_sources) {
-  if (!Race_AdminService_AuthorizeClientAction(
-        cl, RACE_ADMIN_ACTION_SETTINGS_MUTATE)) {
+bool Race_SettingsService_ClientCommand(g_client_t *cl, const char *command) {
+  if (!cl || !cl->in_use || !command) {
     return false;
   }
 
-  const race_setting_descriptor_t *descriptor =
-    Race_Settings_DescriptorForKey(key);
-  if (!descriptor) {
-    gi.ClientPrint(cl, PRINT_HIGH, "Unknown Race setting\n");
-    Race_AdminService_AuditClientAction(
-      cl, RACE_ADMIN_ACTION_SETTINGS_MUTATE, "invalid", "inspect-rejected");
-    return false;
+  if (!strcmp(command, "gset")) {
+    Race_SettingsService_HandleGset(cl);
+    Race_SettingsService_PublishStatus();
+    return true;
+  }
+  if (!strcmp(command, "gget")) {
+    Race_SettingsService_HandleGget(cl);
+    return true;
+  }
+  if (!strcmp(command, "gclear")) {
+    Race_SettingsService_HandleGclear(cl);
+    Race_SettingsService_PublishStatus();
+    return true;
+  }
+  if (!strcmp(command, "mset")) {
+    Race_SettingsService_HandleMset(cl);
+    Race_SettingsService_PublishStatus();
+    return true;
+  }
+  if (!strcmp(command, "mget")) {
+    Race_SettingsService_HandleMget(cl);
+    return true;
+  }
+  if (!strcmp(command, "mclear")) {
+    Race_SettingsService_HandleMclear(cl);
+    Race_SettingsService_PublishStatus();
+    return true;
+  }
+  if (!strcmp(command, "allowcvar")) {
+    const int32_t argc = gi.Argc();
+    Race_AdminService_ClientCvarAllowlistCommand(
+      cl, argc >= 2 && argc <= 3 ? gi.Argv(1) : NULL,
+      argc == 3 ? gi.Argv(2) : NULL);
+    return true;
   }
 
-  if (include_sources) {
-    Race_SettingsService_PrintSource(cl, descriptor->key);
-  } else {
-    Race_SettingsService_PrintEntry(cl, descriptor);
+  if (!strcmp(command, "race_settings") ||
+      (!strcmp(command, "race") && gi.Argc() >= 3 &&
+       !strcmp(gi.Argv(1), "admin") &&
+       (!strcmp(gi.Argv(2), "settings") || !strcmp(gi.Argv(2), "cvar")))) {
+    Race_SettingsService_PrintMigrationHint(cl);
+    return true;
   }
-  Race_AdminService_AuditClientAction(
-    cl, RACE_ADMIN_ACTION_SETTINGS_MUTATE, descriptor->key,
-    include_sources ? "source-inspected" : "inspected");
+
+  return false;
+}
+
+bool Race_SettingsService_EffectiveValue(const race_setting_id_t id,
+                                         race_setting_value_t *value) {
+  if (!race_settings_ready || id >= RACE_SETTING_TOTAL || !value) {
+    return false;
+  }
+  *value = race_settings_effective[id];
   return true;
 }
 
-bool Race_SettingsService_ClientMutate(g_client_t *cl, bool reset,
-                                       const char *source_name,
-                                       const char *key, const char *value) {
-  race_setting_source_t source;
-  if (!source_name || !Race_SettingsService_ParseSource(source_name, &source)) {
-    Race_AdminService_AuditClientAction(
-      cl, RACE_ADMIN_ACTION_SETTINGS_MUTATE, NULL, "invalid-source");
-    gi.ClientPrint(cl, PRINT_HIGH, "Unknown Race settings source\n");
-    return false;
-  }
+bool Race_SettingsService_HasMapOverride(const race_setting_id_t id) {
+  return race_settings_ready && id < RACE_SETTING_TOTAL &&
+         race_settings_map_overrides[id];
+}
 
-  if (!Race_AdminService_AuthorizeClientAction(
-        cl, RACE_ADMIN_ACTION_SETTINGS_MUTATE)) {
-    return false;
-  }
+bool Race_SettingsService_FinishCueEnabled(void) {
+  return race_settings_ready &&
+         race_settings_effective[RACE_SETTING_FINISH_CUE_ENABLED].boolean;
+}
 
-  const bool success = Race_SettingsService_Mutate(
-    cl, reset, source, key, value);
-  const race_setting_descriptor_t *descriptor =
-    Race_Settings_DescriptorForKey(key);
-  Race_AdminService_AuditClientAction(
-    cl, RACE_ADMIN_ACTION_SETTINGS_MUTATE,
-    descriptor ? descriptor->key : "invalid",
-    success ? (reset ? "reset" : "set") : "mutation-rejected");
-  return success;
+float Race_SettingsService_FinishCueGain(void) {
+  return race_settings_ready
+    ? (float) race_settings_effective[RACE_SETTING_FINISH_CUE_GAIN].integer / 100.f
+    : 1.f;
+}
+
+bool Race_SettingsService_CheckpointTimeEnabled(void) {
+  return race_settings_ready &&
+         !strcmp(race_settings_effective[
+                   RACE_SETTING_CHECKPOINT_FEEDBACK].string, "time");
+}
+
+int32_t Race_SettingsService_VotingTime(void) {
+  return race_settings_ready
+    ? race_settings_effective[RACE_SETTING_VOTING_TIME].integer : 30;
+}
+
+int32_t Race_SettingsService_MaxVotes(void) {
+  return race_settings_ready
+    ? race_settings_effective[RACE_SETTING_MAX_VOTES].integer : 3;
+}
+
+int32_t Race_SettingsService_VoteMenuDuration(void) {
+  return race_settings_ready
+    ? race_settings_effective[RACE_SETTING_VOTE_MENU_DURATION].integer : 20;
+}
+
+int32_t Race_SettingsService_VoteMenuChoices(void) {
+  return race_settings_ready
+    ? race_settings_effective[RACE_SETTING_VOTE_MENU_CHOICES].integer : 3;
+}
+
+bool Race_SettingsService_VoteAllowSpectators(void) {
+  return race_settings_ready &&
+         race_settings_effective[RACE_SETTING_VOTE_ALLOW_SPECTATORS].boolean;
+}
+
+bool Race_SettingsService_WeaponsEnabled(void) {
+  return race_settings_ready ? race_settings_weapons_enabled : true;
 }

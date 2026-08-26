@@ -15,6 +15,7 @@
 #include "race_admin_actions.h"
 #include "race_admin_service.h"
 #include "race_actions.h"
+#include "race_map_state.h"
 #include "race_settings_service.h"
 #include "race_vote_service.h"
 
@@ -23,45 +24,75 @@
 static void Race_AdminActions_Help(g_client_t *cl) {
   gi.ClientPrint(cl, PRINT_HIGH,
                  "Race admin commands:\n"
+                 "  set radmin_password <password>; radmin <account>\n"
+                 "  radmin logout\n"
                  "  race admin status\n"
                  "  race admin help\n"
-                 "  race admin settings get <key>\n"
-                 "  race admin settings source <key>\n"
-                 "  race admin settings set <global|map|runtime> <key> <value>\n"
-                 "  race admin settings reset <global|map|runtime> <key>\n"
+                 "  gset <alias-or-cvar> <value>\n"
+                 "  gget [alias-or-cvar]\n"
+                 "  gclear <alias-or-cvar>\n"
+                 "  mset <alias-or-cvar> <value>\n"
+                 "  mget [alias-or-cvar]\n"
+                 "  mclear <alias-or-cvar>\n"
+                 "  allowcvar <list|add|remove|reload> ...\n"
                  "  race admin map <map>\n"
+                 "  race admin map validate <map>\n"
                  "  race admin kick <client-slot>\n"
                  "  race admin vote cancel\n"
+                 "  race admin account <list|add|remove|role|enable|disable|password> ...\n"
                  "  race admin_logout\n"
-                 "Provisioning and session grants remain server console/rcon only.\n");
+                 "The server console bootstraps the first owner once.\n");
 }
 
 static void Race_AdminActions_Settings(g_client_t *cl) {
-  if (gi.Argc() == 5 && !strcmp(gi.Argv(3), "get")) {
-    Race_SettingsService_ClientInspect(cl, gi.Argv(4), false);
-    return;
-  }
-  if (gi.Argc() == 5 && !strcmp(gi.Argv(3), "source")) {
-    Race_SettingsService_ClientInspect(cl, gi.Argv(4), true);
-    return;
-  }
-  if (gi.Argc() == 7 && !strcmp(gi.Argv(3), "set")) {
-    Race_SettingsService_ClientMutate(cl, false, gi.Argv(4), gi.Argv(5),
-                                      gi.Argv(6));
-    return;
-  }
-  if (gi.Argc() == 6 && !strcmp(gi.Argv(3), "reset")) {
-    Race_SettingsService_ClientMutate(cl, true, gi.Argv(4), gi.Argv(5), NULL);
+  Race_SettingsService_PrintMigrationHint(cl);
+}
+
+static void Race_AdminActions_Cvar(g_client_t *cl) {
+  Race_SettingsService_PrintMigrationHint(cl);
+}
+
+/**
+ * @brief `race admin map validate <map>` - reports whether a map is installed.
+ * @details Ungated on purpose, at every role: this reads whether a .bsp is
+ * present in the server's search path and grants no authority over anything.
+ * It is the read half of the menu's Add map surface, and it exists so an
+ * administrator can tell "the server does not have that map" apart from "the
+ * name was rejected" before scheduling it.
+ *
+ * The name is normalized the same way a map change normalizes it, so
+ * `maps/edge.bsp`, `edge.bsp` and `edge` all answer the same question.
+ */
+static void Race_AdminActions_MapValidate(g_client_t *cl) {
+
+  char map[RACE_MAP_IDENTITY_SIZE];
+
+  if (!Race_MapState_CanonicalizeMap(gi.Argv(4), map)) {
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "Race administrator map validate rejected: invalid bounded map name\n");
     return;
   }
 
-  gi.ClientPrint(cl, PRINT_HIGH,
-                 "Usage: race admin settings <get|source|set|reset> ...\n");
+  char path[MAX_QPATH + sizeof("maps/.bsp")];
+  q_snprintf(path, sizeof(path), "maps/%s.bsp", map);
+
+  if (gi.FileExists(path)) {
+    gi.ClientPrint(cl, PRINT_HIGH, "%s - present\n", path);
+  } else {
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "%s - not installed on this server\n", path);
+  }
 }
 
 static void Race_AdminActions_Map(g_client_t *cl) {
+  if (gi.Argc() == 5 && !strcmp(gi.Argv(3), "validate")) {
+    Race_AdminActions_MapValidate(cl);
+    return;
+  }
+
   if (gi.Argc() != 4) {
-    gi.ClientPrint(cl, PRINT_HIGH, "Usage: race admin map <map>\n");
+    gi.ClientPrint(cl, PRINT_HIGH,
+                   "Usage: race admin map <map> | race admin map validate <map>\n");
     return;
   }
 
@@ -173,12 +204,21 @@ void Race_AdminActions_ClientCommand(g_client_t *cl) {
     Race_AdminActions_Help(cl);
   } else if (gi.Argc() >= 3 && !strcmp(gi.Argv(2), "settings")) {
     Race_AdminActions_Settings(cl);
+  } else if (gi.Argc() >= 3 && !strcmp(gi.Argv(2), "cvar")) {
+    Race_AdminActions_Cvar(cl);
+  } else if (gi.Argc() >= 3 && !strcmp(gi.Argv(2), "allowcvar")) {
+    const int32_t argc = gi.Argc();
+    Race_AdminService_ClientCvarAllowlistCommand(
+      cl, argc >= 4 && argc <= 5 ? gi.Argv(3) : NULL,
+      argc == 5 ? gi.Argv(4) : NULL);
   } else if (gi.Argc() >= 3 && !strcmp(gi.Argv(2), "map")) {
     Race_AdminActions_Map(cl);
   } else if (gi.Argc() >= 3 && !strcmp(gi.Argv(2), "kick")) {
     Race_AdminActions_Kick(cl);
   } else if (gi.Argc() >= 3 && !strcmp(gi.Argv(2), "vote")) {
     Race_AdminActions_Vote(cl);
+  } else if (gi.Argc() >= 3 && !strcmp(gi.Argv(2), "account")) {
+    Race_AdminService_ClientAccountCommand(cl);
   } else {
     Race_AdminActions_Help(cl);
   }

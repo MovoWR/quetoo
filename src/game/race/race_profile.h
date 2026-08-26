@@ -11,26 +11,36 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #define RACE_PROFILE_UID_LENGTH 36
 #define RACE_PROFILE_UID_SIZE (RACE_PROFILE_UID_LENGTH + 1)
 #define RACE_PROFILE_NAME_MAX 63
 #define RACE_PROFILE_NAME_SIZE (RACE_PROFILE_NAME_MAX + 1)
-#define RACE_PROFILE_SERIALIZED_MAX 256
+#define RACE_PROFILE_CREDENTIAL_SIZE 128
+#define RACE_PROFILE_SERIALIZED_MAX 384
 
 #define RACE_PROFILE_DIRECTORY "profiles"
 
 typedef struct {
   char uid[RACE_PROFILE_UID_SIZE];
   char display_name[RACE_PROFILE_NAME_SIZE];
+  char credential[RACE_PROFILE_CREDENTIAL_SIZE];
 } race_profile_t;
+
+#define RACE_PROFILE_AUTH_NONCE_SIZE 16
 
 /**
  * @brief Connection-local reference to a durable Race profile.
  */
 typedef struct {
   bool ready;
+  bool enrollment_issued;
   char uid[RACE_PROFILE_UID_SIZE];
+  char challenge_uid[RACE_PROFILE_UID_SIZE];
+  uint8_t challenge_nonce[RACE_PROFILE_AUTH_NONCE_SIZE];
+  uint64_t challenge_issued_at;
+  bool challenge_issued;
 } race_profile_association_t;
 
 typedef enum {
@@ -43,6 +53,8 @@ typedef enum {
 bool Race_Profile_CanonicalizeUid(const char *input, char output[RACE_PROFILE_UID_SIZE]);
 bool Race_Profile_Init(race_profile_t *profile, const char *uid, const char *display_name);
 bool Race_Profile_SetDisplayName(race_profile_t *profile, const char *display_name);
+bool Race_Profile_SetCredential(race_profile_t *profile, const char *credential);
+bool Race_Profile_HasCredential(const race_profile_t *profile);
 bool Race_Profile_Paths(const char *uid,
                         char *committed, size_t committed_size,
                         char *candidate, size_t candidate_size);

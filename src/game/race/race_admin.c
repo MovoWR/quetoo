@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "race_admin_password.h"
+
 typedef struct {
   char *data;
   size_t capacity;
@@ -107,7 +109,8 @@ uint32_t Race_Admin_RoleCapabilities(race_admin_role_t role) {
                              RACE_ADMIN_CAP_VOTE_ADMIN;
   const uint32_t operator = moderator |
                             RACE_ADMIN_CAP_SETTINGS_MUTATE |
-                            RACE_ADMIN_CAP_MAP_CHANGE;
+                            RACE_ADMIN_CAP_MAP_CHANGE |
+                            RACE_ADMIN_CAP_SERVER_CVAR;
 
   switch (role) {
     case RACE_ADMIN_ROLE_MODERATOR:
@@ -115,7 +118,8 @@ uint32_t Race_Admin_RoleCapabilities(race_admin_role_t role) {
     case RACE_ADMIN_ROLE_OPERATOR:
       return operator;
     case RACE_ADMIN_ROLE_OWNER:
-      return operator | RACE_ADMIN_CAP_ACCOUNT_MANAGE;
+      return operator | RACE_ADMIN_CAP_ACCOUNT_MANAGE |
+             RACE_ADMIN_CAP_CVAR_ALLOWLIST_MANAGE;
     case RACE_ADMIN_ROLE_NONE:
     case RACE_ADMIN_ROLE_TOTAL:
       return 0;
@@ -137,6 +141,10 @@ const char *Race_Admin_CapabilityName(race_admin_capability_t capability) {
       return "vote-admin";
     case RACE_ADMIN_CAP_ACCOUNT_MANAGE:
       return "account-manage";
+    case RACE_ADMIN_CAP_SERVER_CVAR:
+      return "server-cvar";
+    case RACE_ADMIN_CAP_CVAR_ALLOWLIST_MANAGE:
+      return "cvar-allowlist-manage";
     default:
       return "invalid";
   }
@@ -152,6 +160,12 @@ const char *Race_Admin_ActionName(race_admin_action_t action) {
       return "kick";
     case RACE_ADMIN_ACTION_VOTE_CANCEL:
       return "vote-cancel";
+    case RACE_ADMIN_ACTION_ACCOUNT_MANAGE:
+      return "account";
+    case RACE_ADMIN_ACTION_SERVER_CVAR:
+      return "cvar";
+    case RACE_ADMIN_ACTION_CVAR_ALLOWLIST_MANAGE:
+      return "allowcvar";
     case RACE_ADMIN_ACTION_TOTAL:
       break;
   }
@@ -168,6 +182,12 @@ race_admin_capability_t Race_Admin_ActionCapability(race_admin_action_t action) 
       return RACE_ADMIN_CAP_PLAYER_KICK;
     case RACE_ADMIN_ACTION_VOTE_CANCEL:
       return RACE_ADMIN_CAP_VOTE_ADMIN;
+    case RACE_ADMIN_ACTION_ACCOUNT_MANAGE:
+      return RACE_ADMIN_CAP_ACCOUNT_MANAGE;
+    case RACE_ADMIN_ACTION_SERVER_CVAR:
+      return RACE_ADMIN_CAP_SERVER_CVAR;
+    case RACE_ADMIN_ACTION_CVAR_ALLOWLIST_MANAGE:
+      return RACE_ADMIN_CAP_CVAR_ALLOWLIST_MANAGE;
     case RACE_ADMIN_ACTION_TOTAL:
       break;
   }
@@ -199,7 +219,9 @@ bool Race_Admin_DocumentValid(const race_admin_document_t *document,
         strcmp(handle, account->handle) ||
         account->role <= RACE_ADMIN_ROLE_NONE ||
         account->role >= RACE_ADMIN_ROLE_TOTAL ||
-        !Race_Admin_RoleCapabilities(account->role) || !account->revision) {
+        !Race_Admin_RoleCapabilities(account->role) || !account->revision ||
+        (*account->credential &&
+         !Race_AdminPassword_EncodedValid(account->credential))) {
       return false;
     }
 
@@ -219,7 +241,8 @@ bool Race_Admin_DocumentEquals(const race_admin_document_t *left,
                                const race_admin_document_t *right) {
   if (!Race_Admin_DocumentValid(left, false) ||
       !Race_Admin_DocumentValid(right, false) ||
-      left->generation != right->generation || left->count != right->count) {
+      left->generation != right->generation ||
+      left->count != right->count) {
     return false;
   }
 
@@ -230,11 +253,35 @@ bool Race_Admin_DocumentEquals(const race_admin_document_t *left,
         strcmp(left_account->handle, right_account->handle) ||
         left_account->role != right_account->role ||
         left_account->enabled != right_account->enabled ||
-        left_account->revision != right_account->revision) {
+        left_account->revision != right_account->revision ||
+        strcmp(left_account->credential, right_account->credential)) {
       return false;
     }
   }
   return true;
+}
+
+bool Race_Admin_DocumentHasEnabledCredentialedOwner(
+  const race_admin_document_t *document) {
+  if (!Race_Admin_DocumentValid(document, false)) {
+    return false;
+  }
+
+  for (size_t i = 0; i < document->count; i++) {
+    const race_admin_account_t *account = document->accounts + i;
+    if (account->enabled && account->role == RACE_ADMIN_ROLE_OWNER &&
+        *account->credential) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool Race_Admin_PreservesEnabledCredentialedOwner(
+  const race_admin_document_t *current,
+  const race_admin_document_t *candidate) {
+  return !Race_Admin_DocumentHasEnabledCredentialedOwner(current) ||
+         Race_Admin_DocumentHasEnabledCredentialedOwner(candidate);
 }
 
 static size_t Race_Admin_LowerBound(const race_admin_document_t *document,
@@ -296,7 +343,7 @@ static bool Race_Admin_NextGeneration(const race_admin_document_t *current,
 
 bool Race_Admin_AddAccount(const race_admin_document_t *current,
                            const char *id, const char *handle,
-                           race_admin_role_t role,
+                           race_admin_role_t role, const char *credential,
                            race_admin_document_t *candidate) {
   char canonical_id[RACE_ADMIN_ACCOUNT_ID_SIZE];
   char canonical_handle[RACE_ADMIN_HANDLE_SIZE];
@@ -305,6 +352,8 @@ bool Race_Admin_AddAccount(const race_admin_document_t *current,
       !Race_Admin_CanonicalizeAccountId(id, canonical_id) ||
       !Race_Admin_CanonicalizeHandle(handle, canonical_handle) ||
       role <= RACE_ADMIN_ROLE_NONE || role >= RACE_ADMIN_ROLE_TOTAL ||
+      (credential && *credential &&
+       !Race_AdminPassword_EncodedValid(credential)) ||
       Race_Admin_AccountById(current, canonical_id) ||
       Race_Admin_AccountByHandle(current, canonical_handle) ||
       !Race_Admin_NextGeneration(current, candidate)) {
@@ -323,6 +372,10 @@ bool Race_Admin_AddAccount(const race_admin_document_t *current,
   memcpy(candidate->accounts[index].id, canonical_id, sizeof(canonical_id));
   memcpy(candidate->accounts[index].handle, canonical_handle,
          sizeof(canonical_handle));
+  if (credential && *credential) {
+    memcpy(candidate->accounts[index].credential, credential,
+           strlen(credential) + 1u);
+  }
   candidate->count++;
   return true;
 }
@@ -341,6 +394,10 @@ bool Race_Admin_RemoveAccount(const race_admin_document_t *current,
   candidate->count--;
   memset(candidate->accounts + candidate->count, 0,
          sizeof(*candidate->accounts));
+  if (!Race_Admin_PreservesEnabledCredentialedOwner(current, candidate)) {
+    *candidate = *current;
+    return false;
+  }
   return true;
 }
 
@@ -374,6 +431,10 @@ bool Race_Admin_SetAccountRole(const race_admin_document_t *current,
   }
   account->role = role;
   account->revision++;
+  if (!Race_Admin_PreservesEnabledCredentialedOwner(current, candidate)) {
+    *candidate = *current;
+    return false;
+  }
   return true;
 }
 
@@ -395,6 +456,10 @@ bool Race_Admin_SetAccountEnabled(const race_admin_document_t *current,
   }
   account->enabled = enabled;
   account->revision++;
+  if (!Race_Admin_PreservesEnabledCredentialedOwner(current, candidate)) {
+    *candidate = *current;
+    return false;
+  }
   return true;
 }
 
@@ -424,6 +489,74 @@ bool Race_Admin_SetAccountHandle(const race_admin_document_t *current,
   memcpy(account->handle, canonical, sizeof(canonical));
   account->revision++;
   return true;
+}
+
+bool Race_Admin_SetAccountCredential(const race_admin_document_t *current,
+                                     const char *id, const char *credential,
+                                     race_admin_document_t *candidate) {
+  const race_admin_account_t *existing = Race_Admin_AccountById(current, id);
+  if (!existing || !candidate ||
+      !Race_AdminPassword_EncodedValid(credential)) {
+    return false;
+  }
+  if (!strcmp(existing->credential, credential)) {
+    *candidate = *current;
+    return true;
+  }
+
+  race_admin_account_t *account = Race_Admin_MutableAccount(current, id,
+                                                             candidate);
+  if (!account) {
+    return false;
+  }
+  memset(account->credential, 0, sizeof(account->credential));
+  memcpy(account->credential, credential, strlen(credential) + 1u);
+  account->revision++;
+  return true;
+}
+
+void Race_Admin_LoginThrottleClear(race_admin_login_throttle_t *throttle) {
+  if (throttle) {
+    memset(throttle, 0, sizeof(*throttle));
+  }
+}
+
+bool Race_Admin_LoginThrottleAllowed(race_admin_login_throttle_t *throttle,
+                                     uint64_t now) {
+  if (!throttle) {
+    return false;
+  }
+  if (throttle->blocked_until) {
+    if (now < throttle->blocked_until) {
+      return false;
+    }
+    Race_Admin_LoginThrottleClear(throttle);
+  }
+  if (throttle->failures &&
+      (now < throttle->window_started_at ||
+       now - throttle->window_started_at >=
+         RACE_ADMIN_LOGIN_FAILURE_WINDOW)) {
+    Race_Admin_LoginThrottleClear(throttle);
+  }
+  return true;
+}
+
+void Race_Admin_LoginThrottleRecordFailure(
+  race_admin_login_throttle_t *throttle, uint64_t now) {
+  if (!throttle || !Race_Admin_LoginThrottleAllowed(throttle, now)) {
+    return;
+  }
+
+  if (!throttle->failures) {
+    throttle->window_started_at = now;
+  }
+  throttle->failures++;
+  if (throttle->failures >= RACE_ADMIN_LOGIN_FAILURE_LIMIT) {
+    throttle->failures = RACE_ADMIN_LOGIN_FAILURE_LIMIT;
+    throttle->blocked_until = UINT64_MAX - now < RACE_ADMIN_LOGIN_COOLDOWN
+      ? UINT64_MAX
+      : now + RACE_ADMIN_LOGIN_COOLDOWN;
+  }
 }
 
 void Race_Admin_SessionClear(race_admin_session_t *session) {
@@ -560,7 +693,9 @@ static uint32_t Race_Admin_Crc32(const void *data, size_t length) {
 bool Race_Admin_Serialize(const race_admin_document_t *document,
                           char *output, size_t output_size,
                           size_t *output_length) {
-  if (!Race_Admin_DocumentValid(document, true) || !output || !output_size) {
+  if (!Race_Admin_DocumentValid(document, true) || !output || !output_size ||
+      (document->count &&
+       !Race_Admin_DocumentHasEnabledCredentialedOwner(document))) {
     return false;
   }
 
@@ -570,14 +705,18 @@ bool Race_Admin_Serialize(const race_admin_document_t *document,
   };
   Race_Admin_Write(&writer, RACE_ADMIN_MAGIC "\n");
   Race_Admin_Write(&writer, "generation=%" PRIu64 "\n", document->generation);
-  Race_Admin_Write(&writer, "credential=" RACE_ADMIN_CREDENTIAL_MODE "\n");
+  Race_Admin_Write(&writer,
+                   "credential=" RACE_ADMIN_CREDENTIAL_MODE_V2 "\n");
   Race_Admin_Write(&writer, "accounts=%zu\n", document->count);
   for (size_t i = 0; i < document->count; i++) {
     const race_admin_account_t *account = document->accounts + i;
-    Race_Admin_Write(&writer, "account=%s|%s|%s|%u|%" PRIu64 "\n",
+    Race_Admin_Write(&writer,
+                     "account=%s|%s|%s|%u|%" PRIu64 "|%s\n",
                      account->id, account->handle,
                      Race_Admin_RoleName(account->role),
-                     account->enabled ? 1u : 0u, account->revision);
+                     account->enabled ? 1u : 0u, account->revision,
+                     *account->credential ? account->credential
+                                          : RACE_ADMIN_CREDENTIAL_NONE);
   }
 
   if (writer.failed) {
@@ -659,14 +798,16 @@ static bool Race_Admin_ParseCrc(const char *text, uint32_t *value) {
   return true;
 }
 
-static bool Race_Admin_ParseAccount(char *line, race_admin_account_t *account) {
+static bool Race_Admin_ParseAccount(char *line, bool credentialed,
+                                    race_admin_account_t *account) {
   if (!line || strncmp(line, "account=", 8) || !account) {
     return false;
   }
 
-  char *fields[5];
+  char *fields[6];
+  const size_t field_count = credentialed ? 6u : 5u;
   fields[0] = line + 8;
-  for (size_t i = 1; i < 5u; i++) {
+  for (size_t i = 1; i < field_count; i++) {
     char *separator = strchr(fields[i - 1u], '|');
     if (!separator) {
       return false;
@@ -674,7 +815,7 @@ static bool Race_Admin_ParseAccount(char *line, race_admin_account_t *account) {
     *separator = '\0';
     fields[i] = separator + 1;
   }
-  if (strchr(fields[4], '|')) {
+  if (strchr(fields[field_count - 1u], '|')) {
     return false;
   }
 
@@ -690,6 +831,10 @@ static bool Race_Admin_ParseAccount(char *line, race_admin_account_t *account) {
       !Race_Admin_ParseUint64(fields[4], &revision) || !revision) {
     return false;
   }
+  if (credentialed && strcmp(fields[5], RACE_ADMIN_CREDENTIAL_NONE) &&
+      !Race_AdminPassword_EncodedValid(fields[5])) {
+    return false;
+  }
 
   memset(account, 0, sizeof(*account));
   memcpy(account->id, id, sizeof(id));
@@ -697,11 +842,15 @@ static bool Race_Admin_ParseAccount(char *line, race_admin_account_t *account) {
   account->role = role;
   account->enabled = !strcmp(fields[3], "1");
   account->revision = revision;
+  if (credentialed && strcmp(fields[5], RACE_ADMIN_CREDENTIAL_NONE)) {
+    memcpy(account->credential, fields[5], strlen(fields[5]) + 1u);
+  }
   return true;
 }
 
-race_admin_parse_result_t Race_Admin_Parse(const void *data, size_t length,
-                                           race_admin_document_t *document) {
+race_admin_parse_result_t Race_Admin_ParseWithInfo(
+  const void *data, size_t length, race_admin_document_t *document,
+  race_admin_parse_info_t *info) {
   if (!data || !document || !length) {
     return RACE_ADMIN_PARSE_MALFORMED;
   }
@@ -721,8 +870,17 @@ race_admin_parse_result_t Race_Admin_Parse(const void *data, size_t length,
     return RACE_ADMIN_PARSE_MALFORMED;
   }
   const size_t first_length = (size_t) (first_newline - text);
-  if (first_length != sizeof(RACE_ADMIN_MAGIC) - 1u ||
-      memcmp(text, RACE_ADMIN_MAGIC, first_length)) {
+  const bool version_four =
+    first_length == sizeof(RACE_ADMIN_MAGIC_V4) - 1u &&
+    !memcmp(text, RACE_ADMIN_MAGIC_V4, first_length);
+  const bool version_three =
+    first_length == sizeof(RACE_ADMIN_MAGIC_V3) - 1u &&
+    !memcmp(text, RACE_ADMIN_MAGIC_V3, first_length);
+  const bool version_two = first_length == sizeof(RACE_ADMIN_MAGIC_V2) - 1u &&
+                           !memcmp(text, RACE_ADMIN_MAGIC_V2, first_length);
+  const bool version_one = first_length == sizeof(RACE_ADMIN_MAGIC_V1) - 1u &&
+                           !memcmp(text, RACE_ADMIN_MAGIC_V1, first_length);
+  if (!version_one && !version_two && !version_three && !version_four) {
     if (first_length >= sizeof(RACE_ADMIN_MAGIC_PREFIX) - 1u &&
         !memcmp(text, RACE_ADMIN_MAGIC_PREFIX,
                 sizeof(RACE_ADMIN_MAGIC_PREFIX) - 1u)) {
@@ -760,12 +918,26 @@ race_admin_parse_result_t Race_Admin_Parse(const void *data, size_t length,
 
   char *cursor = text;
   char *line = Race_Admin_NextLine(&cursor);
-  if (!line || strcmp(line, RACE_ADMIN_MAGIC)) {
+  if (!line || strcmp(line,
+                      version_four
+                        ? RACE_ADMIN_MAGIC_V4
+                        : version_three
+                          ? RACE_ADMIN_MAGIC_V3
+                          : version_two ? RACE_ADMIN_MAGIC_V2
+                                        : RACE_ADMIN_MAGIC_V1)) {
     return RACE_ADMIN_PARSE_MALFORMED;
   }
 
   race_admin_document_t parsed;
   Race_Admin_DocumentInit(&parsed);
+  race_admin_parse_info_t parsed_info = {
+    .format = version_four
+      ? RACE_ADMIN_FORMAT_V4
+      : version_three
+        ? RACE_ADMIN_FORMAT_V3
+        : version_two ? RACE_ADMIN_FORMAT_V2 : RACE_ADMIN_FORMAT_V1
+  };
+  Race_AdminAllowlist_Init(&parsed_info.embedded_v3_allowlist);
 
   line = Race_Admin_NextLine(&cursor);
   if (!line || strncmp(line, "generation=", 11) ||
@@ -775,8 +947,41 @@ race_admin_parse_result_t Race_Admin_Parse(const void *data, size_t length,
   }
 
   line = Race_Admin_NextLine(&cursor);
-  if (!line || strcmp(line, "credential=" RACE_ADMIN_CREDENTIAL_MODE)) {
+  if (!line || strcmp(line,
+                      version_two || version_three || version_four
+                        ? "credential=" RACE_ADMIN_CREDENTIAL_MODE_V2
+                        : "credential=" RACE_ADMIN_CREDENTIAL_MODE_V1)) {
     return RACE_ADMIN_PARSE_MALFORMED;
+  }
+
+  if (version_three) {
+    line = Race_Admin_NextLine(&cursor);
+    size_t operator_cvar_count;
+    if (!line || strncmp(line, "operator_cvars=", 15) ||
+        !Race_Admin_ParseSize(line + 15, RACE_ADMIN_MAX_OPERATOR_CVARS,
+                              &operator_cvar_count)) {
+      return RACE_ADMIN_PARSE_MALFORMED;
+    }
+
+    for (size_t i = 0; i < operator_cvar_count; i++) {
+      line = Race_Admin_NextLine(&cursor);
+      if (!line || strncmp(line, "cvar=", 5) ||
+          !Race_AdminAllowlist_NameValid(line + 5)) {
+        return RACE_ADMIN_PARSE_MALFORMED;
+      }
+      if (parsed_info.embedded_v3_allowlist.count &&
+          strcmp(parsed_info.embedded_v3_allowlist.names[
+                   parsed_info.embedded_v3_allowlist.count - 1u],
+                 line + 5) >= 0) {
+        return RACE_ADMIN_PARSE_MALFORMED;
+      }
+      race_admin_allowlist_t candidate;
+      if (!Race_AdminAllowlist_Add(&parsed_info.embedded_v3_allowlist,
+                                   line + 5, &candidate)) {
+        return RACE_ADMIN_PARSE_MALFORMED;
+      }
+      parsed_info.embedded_v3_allowlist = candidate;
+    }
   }
 
   line = Race_Admin_NextLine(&cursor);
@@ -788,19 +993,31 @@ race_admin_parse_result_t Race_Admin_Parse(const void *data, size_t length,
 
   for (size_t i = 0; i < parsed.count; i++) {
     line = Race_Admin_NextLine(&cursor);
-    if (!Race_Admin_ParseAccount(line, parsed.accounts + i)) {
+    if (!Race_Admin_ParseAccount(line,
+                                 version_two || version_three || version_four,
+                                 parsed.accounts + i)) {
       return RACE_ADMIN_PARSE_MALFORMED;
     }
   }
 
   line = Race_Admin_NextLine(&cursor);
   if (!line || strncmp(line, "crc=", 4) || strcmp(line + 4, crc_text) ||
-      *cursor || !Race_Admin_DocumentValid(&parsed, true)) {
+      *cursor || !Race_Admin_DocumentValid(&parsed, true) ||
+      ((version_two || version_three || version_four) && parsed.count &&
+       !Race_Admin_DocumentHasEnabledCredentialedOwner(&parsed))) {
     return RACE_ADMIN_PARSE_MALFORMED;
   }
 
   *document = parsed;
+  if (info) {
+    *info = parsed_info;
+  }
   return RACE_ADMIN_PARSE_OK;
+}
+
+race_admin_parse_result_t Race_Admin_Parse(const void *data, size_t length,
+                                           race_admin_document_t *document) {
+  return Race_Admin_ParseWithInfo(data, length, document, NULL);
 }
 
 const char *Race_Admin_ParseResultName(race_admin_parse_result_t result) {

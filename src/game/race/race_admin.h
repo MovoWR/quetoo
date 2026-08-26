@@ -11,16 +11,28 @@
 
 #include <stddef.h>
 
+#include "race_admin_allowlist.h"
 #include "race_admin_types.h"
 
-#define RACE_ADMIN_MAGIC "QUETOO_RACE_ADMINS_V1"
+#define RACE_ADMIN_MAGIC_V1 "QUETOO_RACE_ADMINS_V1"
+#define RACE_ADMIN_MAGIC_V2 "QUETOO_RACE_ADMINS_V2"
+#define RACE_ADMIN_MAGIC_V3 "QUETOO_RACE_ADMINS_V3"
+#define RACE_ADMIN_MAGIC_V4 "QUETOO_RACE_ADMINS_V4"
+#define RACE_ADMIN_MAGIC RACE_ADMIN_MAGIC_V4
 #define RACE_ADMIN_MAGIC_PREFIX "QUETOO_RACE_ADMINS_"
-#define RACE_ADMIN_CREDENTIAL_MODE "disabled"
+#define RACE_ADMIN_CREDENTIAL_MODE_V1 "disabled"
+#define RACE_ADMIN_CREDENTIAL_MODE_V2 "argon2id"
+#define RACE_ADMIN_CREDENTIAL_NONE "-"
 
 #define RACE_ADMIN_MAX_ACCOUNTS 64
 #define RACE_ADMIN_HANDLE_MAX 32
 #define RACE_ADMIN_HANDLE_SIZE (RACE_ADMIN_HANDLE_MAX + 1)
+#define RACE_ADMIN_CREDENTIAL_SIZE 128
 #define RACE_ADMIN_SERIALIZED_MAX 16384
+
+#define RACE_ADMIN_LOGIN_FAILURE_LIMIT 5
+#define RACE_ADMIN_LOGIN_FAILURE_WINDOW 60000u
+#define RACE_ADMIN_LOGIN_COOLDOWN 60000u
 
 typedef struct {
   char id[RACE_ADMIN_ACCOUNT_ID_SIZE];
@@ -28,6 +40,7 @@ typedef struct {
   race_admin_role_t role;
   bool enabled;
   uint64_t revision;
+  char credential[RACE_ADMIN_CREDENTIAL_SIZE];
 } race_admin_account_t;
 
 typedef struct {
@@ -35,6 +48,18 @@ typedef struct {
   size_t count;
   race_admin_account_t accounts[RACE_ADMIN_MAX_ACCOUNTS];
 } race_admin_document_t;
+
+typedef enum {
+  RACE_ADMIN_FORMAT_V1,
+  RACE_ADMIN_FORMAT_V2,
+  RACE_ADMIN_FORMAT_V3,
+  RACE_ADMIN_FORMAT_V4
+} race_admin_format_t;
+
+typedef struct {
+  race_admin_format_t format;
+  race_admin_allowlist_t embedded_v3_allowlist;
+} race_admin_parse_info_t;
 
 typedef enum {
   RACE_ADMIN_PARSE_OK,
@@ -49,7 +74,6 @@ bool Race_Admin_CanonicalizeAccountId(const char *input,
                                       char output[RACE_ADMIN_ACCOUNT_ID_SIZE]);
 bool Race_Admin_CanonicalizeHandle(const char *input,
                                    char output[RACE_ADMIN_HANDLE_SIZE]);
-
 const char *Race_Admin_RoleName(race_admin_role_t role);
 race_admin_role_t Race_Admin_RoleForName(const char *name);
 uint32_t Race_Admin_RoleCapabilities(race_admin_role_t role);
@@ -70,7 +94,7 @@ const race_admin_account_t *Race_Admin_AccountByHandle(
 
 bool Race_Admin_AddAccount(const race_admin_document_t *current,
                            const char *id, const char *handle,
-                           race_admin_role_t role,
+                           race_admin_role_t role, const char *credential,
                            race_admin_document_t *candidate);
 bool Race_Admin_RemoveAccount(const race_admin_document_t *current,
                               const char *id,
@@ -84,6 +108,16 @@ bool Race_Admin_SetAccountEnabled(const race_admin_document_t *current,
 bool Race_Admin_SetAccountHandle(const race_admin_document_t *current,
                                  const char *id, const char *handle,
                                  race_admin_document_t *candidate);
+bool Race_Admin_SetAccountCredential(const race_admin_document_t *current,
+                                     const char *id, const char *credential,
+                                     race_admin_document_t *candidate);
+bool Race_Admin_DocumentHasEnabledCredentialedOwner(
+  const race_admin_document_t *document);
+void Race_Admin_LoginThrottleClear(race_admin_login_throttle_t *throttle);
+bool Race_Admin_LoginThrottleAllowed(race_admin_login_throttle_t *throttle,
+                                     uint64_t now);
+void Race_Admin_LoginThrottleRecordFailure(
+  race_admin_login_throttle_t *throttle, uint64_t now);
 
 void Race_Admin_SessionClear(race_admin_session_t *session);
 bool Race_Admin_SessionGrant(race_admin_session_t *session,
@@ -109,4 +143,7 @@ bool Race_Admin_Serialize(const race_admin_document_t *document,
                           size_t *output_length);
 race_admin_parse_result_t Race_Admin_Parse(const void *data, size_t length,
                                            race_admin_document_t *document);
+race_admin_parse_result_t Race_Admin_ParseWithInfo(
+  const void *data, size_t length, race_admin_document_t *document,
+  race_admin_parse_info_t *info);
 const char *Race_Admin_ParseResultName(race_admin_parse_result_t result);

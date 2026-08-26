@@ -22,6 +22,7 @@
 #include "g_local.h"
 #include "bg_pmove.h"
 #include "race_module_compat.h"
+#include "race_settings_service.h"
 
 /**
  * @brief The entity class structure.
@@ -585,6 +586,10 @@ void G_SpawnEntities(const char *name, const cm_entity_t *props, cm_entity_t *co
 
   q_strlcpy(g_level.name, name, sizeof(g_level.name));
 
+  // Worldspawn consumes movement cvars during entity spawning. Resolve the
+  // incoming map's settings first so a previous map override cannot leak.
+  Race_SettingsService_PrepareLevel(g_level.name);
+
   g_level.frags    = $(alloc(Vector), initWithSize, sizeof(g_frag_t));
 
 #if defined(G_CTF)
@@ -788,6 +793,11 @@ static void G_worldspawn(g_entity_t *ent) {
   g_level.gameplay = G_ClampGameplay(g_level.gameplay); // coerce to a mode this module supports
 
   gi.SetConfigString(CS_GAMEPLAY, va("%d", g_level.gameplay));
+
+  // g_gameplay holds what the admin asked for, which may be an alias, or "default"
+  // to defer to this level's worldspawn; publish what it resolved to as well, since
+  // that is the only form a server browser can present
+  gi.ForceSetCvarString("g_gameplay_mode", G_GameplayById(g_level.gameplay)->name);
 
   const cm_entity_t *items = gi.EntityValue(ent->def, "items");
   if (q_strcasecmp(items->string, "quake") == 0) {

@@ -21,6 +21,7 @@
 
 #include "cg_local.h"
 #include "cg_race_double_jump.h"
+#include "cg_race_settings.h"
 #include "cg_race_weapon_tuning.h"
 #include "cg_module_compat.h"
 #include "race_hook.h"
@@ -276,6 +277,9 @@ static void Cg_UpdateConfigString(int32_t i) {
   switch (i) {
     case CS_RACE_WEAPON_TUNING_STATUS:
       Cg_RaceWeaponTuning_UpdateStatus(s);
+      return;
+    case CS_RACE_SETTINGS_STATUS:
+      Cg_RaceSettings_UpdateStatus(s);
       return;
     case CS_GAMEPLAY:
       cg_state.gameplay = (g_gameplay_id_t) strtol(s, NULL, 10);

@@ -20,7 +20,9 @@
  */
 
 #include "g_local.h"
+#include "race_admin_service.h"
 #include "race_module_compat.h"
+#include "race_settings_service.h"
 #include "race_weapon_tuning_service.h"
 
 g_import_t gi;
@@ -921,7 +923,8 @@ void G_Init(void) {
   gi.AddCvar("game_name", GAME_NAME, CVAR_SERVER_INFO | CVAR_NO_SET, NULL);
   gi.AddCvar("game_date", __DATE__, CVAR_SERVER_INFO | CVAR_NO_SET, NULL);
 
-  g_admin_password = gi.AddCvar("g_admin_password", "", CVAR_LATCH, "Password to authenticate as an admin.");
+  g_admin_password = gi.AddCvar("g_admin_password", "", CVAR_LATCH,
+                                "Deprecated and ignored by Race; use radmin accounts.");
   g_ammo_respawn_time = gi.AddCvar("g_ammo_respawn_time", "20.0", CVAR_SERVER_INFO, "Ammo respawn interval in seconds.");
   g_auto_join = gi.AddCvar("g_auto_join", "1", CVAR_SERVER_INFO, "Automatically assigns players to teams.");
   g_balance_armor_shard_respawn = gi.AddCvar("g_balance_armor_shard_respawn", "15", 0, NULL);
@@ -1037,6 +1040,9 @@ void G_Init(void) {
   g_gameplay = gi.AddCvar("g_gameplay", "default", CVAR_SERVER_INFO,
     "Selects deathmatch, instagib or arena combat. Prefix with team_ for team play, "
     "e.g. team_deathmatch, team_instagib or team_arena.");
+  gi.AddCvar("g_gameplay_mode", "", CVAR_SERVER_INFO | CVAR_NO_SET,
+    "The gameplay mode this level actually resolved to, published for the server browser. "
+    "Read g_gameplay for what was requested.");
 
   // player movement parameters (hydrated into pm_params_t by G_MovementParams)
   g_air_acceleration = gi.AddCvar("g_air_acceleration", "2.0", 0, "Acceleration applied while airborne. Default 2.0; set 0 for classic-Quake2 movement.");
@@ -1081,7 +1087,7 @@ void G_Init(void) {
   g_show_attacker_stats = gi.AddCvar("g_show_attacker_stats", "0", CVAR_SERVER_INFO, "Allows can see their attackers' health and armor when they die.");
   g_spawn_farthest = gi.AddCvar("g_spawn_farthest", "1", CVAR_SERVER_INFO, NULL);
   g_spectator_chat = gi.AddCvar("g_spectator_chat", "1", CVAR_SERVER_INFO, "If enabled, spectators can only talk to other spectators.");
-  g_time_limit = gi.AddCvar("g_time_limit", "20", CVAR_SERVER_INFO, "The time limit per level in minutes.");
+  g_time_limit = gi.AddCvar("g_time_limit", "30", CVAR_SERVER_INFO, "The time limit per level in minutes.");
   g_weapon_respawn_time = gi.AddCvar("g_weapon_respawn_time", "5", CVAR_SERVER_INFO, "Weapon respawn interval in seconds.");
   g_weapon_stay = gi.AddCvar("g_weapon_stay", "0", CVAR_SERVER_INFO, "If enabled, weapons will remain when picked up rather than respawn with delay.");
 
@@ -1092,6 +1098,8 @@ void G_Init(void) {
   // first frame rather than whatever garbage/unsupported value it was started
   // with; the level's own gameplay resolution (G_worldspawn) is unaffected
   G_CoerceGameplay();
+  Race_SettingsService_PostInit();
+  Race_AdminService_PostInit();
   Race_WeaponTuningService_PostInit();
 
   // set these to false to avoid spurious game restarts and alerts on init

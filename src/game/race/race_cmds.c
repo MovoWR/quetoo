@@ -14,15 +14,39 @@
 #include "race_map_browser_service.h"
 #include "race_map_state_service.h"
 #include "race_modes.h"
+#include "race_profiles.h"
 #include "race_replay_playback_service.h"
+#include "race_settings_service.h"
 #include "race_vote_service.h"
 #include "race_vote_menu_service.h"
 #include "race_weapon_tuning_service.h"
 
 bool Race_ClientCommand(g_client_t *cl, const char *cmd) {
 
+  if (Race_Profiles_ClientCommand(cl, cmd)) {
+    return true;
+  }
+
   // Claim both forms before the generic `race <replay-selector>` fallback.
   if (Race_WeaponTuningService_ClientCommand(cl, cmd)) {
+    return true;
+  }
+
+  if (q_strcmp(cmd, "radmin") == 0) {
+    if (gi.Argc() == 2 && q_strcmp(gi.Argv(1), "logout") == 0) {
+      Race_AdminService_ClientLogout(cl);
+    } else if (gi.Argc() == 2) {
+      Race_AdminService_ClientChallenge(cl, gi.Argv(1));
+    } else if (gi.Argc() == 5 && q_strcmp(gi.Argv(1), "proof") == 0) {
+      Race_AdminService_ClientProof(cl, gi.Argv(2), gi.Argv(3), gi.Argv(4));
+    } else {
+      gi.ClientPrint(cl, PRINT_HIGH,
+                     "Usage: set radmin_password <password>; radmin <account> | radmin logout\n");
+    }
+    return true;
+  }
+
+  if (Race_SettingsService_ClientCommand(cl, cmd)) {
     return true;
   }
 
@@ -108,7 +132,7 @@ bool Race_ClientCommand(g_client_t *cl, const char *cmd) {
       Race_VoteService_ClientCommand(cl);
     } else if (q_strcmp(gi.Argv(1), "help") == 0) {
       gi.ClientPrint(cl, PRINT_HIGH,
-                     "Race commands: mode, store, restart_stage, replay, raceline, race [status|help|mapstate|replay|raceline|vote|admin|admin_logout]\n");
+                     "Race commands: mode, store, restart_stage, replay, raceline, radmin, race [status|help|mapstate|replay|raceline|vote|admin|admin_logout]\n");
     } else if (q_strcmp(gi.Argv(1), "replay") == 0) {
       Race_ReplayPlaybackService_ClientCommand(cl);
     } else if (q_strcmp(gi.Argv(1), "raceline") == 0) {
@@ -116,7 +140,11 @@ bool Race_ClientCommand(g_client_t *cl, const char *cmd) {
     } else if (q_strcmp(gi.Argv(1), "mapstate") == 0) {
       Race_MapStateService_PrintStatus(cl);
     } else if (q_strcmp(gi.Argv(1), "admin_logout") == 0) {
-      Race_AdminService_ClientLogout(cl);
+      if (gi.Argc() == 2) {
+        Race_AdminService_ClientLogout(cl);
+      } else {
+        gi.ClientPrint(cl, PRINT_HIGH, "Usage: race admin_logout\n");
+      }
     } else if (q_strcmp(gi.Argv(1), "status") == 0) {
       Race_PrintStatus(cl);
     } else if (q_strcmp(gi.Argv(1), "off") == 0) {

@@ -23,6 +23,7 @@
 #include "cg_local.h"
 #include "cg_module_compat.h"
 #include "cg_race_hud.h"
+#include "cg_race_admin_auth.h"
 #include "cg_race_finish_report.h"
 #include "cg_race_barriers.h"
 #include "cg_race_double_jump.h"
@@ -30,8 +31,10 @@
 #include "cg_race_markers.h"
 #include "cg_race_physics.h"
 #include "cg_race_practice_markers.h"
+#include "cg_race_profiles.h"
 #include "cg_race_replay.h"
 #include "cg_race_training.h"
+#include "cg_race_settings.h"
 #include "cg_race_weapon_tuning.h"
 #include "ui/home/HomeViewController.h"
 #include "ui/main/MainViewController.h"
@@ -49,8 +52,11 @@ static void Cg_RaceJumpers_f(void) {
  * @brief Installs the module-owned Race HUD on the existing additive HUD chain.
  */
 void Cg_Module_Init(void) {
+  Cg_RaceAdminAuth_Init();
+  Cg_RaceProfiles_Init();
   Cg_RaceDoubleJump_Init();
   Cg_RaceWeaponTuning_Init();
+  Cg_RaceSettings_Init();
   Cg_RacePhysics_Init();
   Cg_RaceFinishReport_Init();
   Cg_RaceHud_Init();
@@ -69,8 +75,11 @@ void Cg_Module_Init(void) {
  * @brief Releases all Race CGAME subsystem state.
  */
 void Cg_Module_Shutdown(void) {
+  Cg_RaceProfiles_Shutdown();
+  Cg_RaceAdminAuth_Shutdown();
   Cg_RaceDoubleJump_Clear();
   Cg_RaceWeaponTuning_Clear();
+  Cg_RaceSettings_Clear();
   Cg_RaceBarriers_Clear();
   Cg_RaceReplay_Clear();
   Cg_RaceFinishReport_Clear();
@@ -80,7 +89,9 @@ void Cg_Module_Shutdown(void) {
 }
 
 bool Cg_Module_ParseMessage(const int32_t command) {
-  return Cg_RaceWeaponTuning_ParseMessage(command) ||
+  return Cg_RaceProfiles_ParseMessage(command) ||
+         Cg_RaceAdminAuth_ParseMessage(command) ||
+         Cg_RaceWeaponTuning_ParseMessage(command) ||
          Cg_RaceHud_ParseMessage(command) ||
          Cg_RaceFinishReport_ParseMessage(command) ||
          Cg_RaceMapBrowser_ParseMessage(command) ||
@@ -88,8 +99,10 @@ bool Cg_Module_ParseMessage(const int32_t command) {
 }
 
 void Cg_Module_ClearState(void) {
+  Cg_RaceAdminAuth_Clear();
   Cg_RaceDoubleJump_Clear();
   Cg_RaceWeaponTuning_Clear();
+  Cg_RaceSettings_Clear();
   MainViewController_ClearState();
   Cg_RaceMapBrowser_Clear();
   Cg_RaceFinishReport_Clear();

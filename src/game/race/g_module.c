@@ -99,6 +99,14 @@ bool G_Module_IntermissionClientCommand(g_client_t *cl, const char *cmd) {
   if (Race_WeaponTuningService_ClientCommand(cl, cmd)) {
     return true;
   }
+  if (Race_SettingsService_ClientCommand(cl, cmd)) {
+    return true;
+  }
+  if (q_strcmp(cmd, "radmin") == 0 ||
+      (q_strcmp(cmd, "race") == 0 && gi.Argc() >= 2 &&
+       q_strcmp(gi.Argv(1), "admin_logout") == 0)) {
+    return Race_ClientCommand(cl, cmd);
+  }
   return Race_VoteMenuService_ClientCommand(cl, cmd);
 }
 
@@ -124,10 +132,12 @@ void G_Module_ClientBegin(g_client_t *cl) {
   Race_ResetClientKillRate(cl);
   Race_AssignClientMode(cl);
   Race_WeaponTuningService_ClientBegin(cl);
+  Race_Profiles_ClientBegin(cl);
 }
 
 void G_Module_ClientDisconnect(g_client_t *cl) {
   Race_ResetClientKillRate(cl);
+  Race_Profiles_ClientDisconnect(cl);
   Race_VoteService_ClientDisconnect(cl);
   Race_VoteMenuService_ClientDisconnect(cl);
   Race_DisconnectClient(cl);

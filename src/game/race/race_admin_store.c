@@ -13,9 +13,9 @@
 
 #include "race_persistence.h"
 
-race_admin_store_result_t Race_AdminStore_Load(
+race_admin_store_result_t Race_AdminStore_LoadWithInfo(
   const char *committed, race_admin_document_t *document,
-  race_admin_parse_result_t *parse_result) {
+  race_admin_parse_result_t *parse_result, race_admin_parse_info_t *info) {
   if (!committed || !*committed || !document) {
     return RACE_ADMIN_STORE_INVALID_ARGUMENT;
   }
@@ -26,6 +26,10 @@ race_admin_store_result_t Race_AdminStore_Load(
     committed, serialized, sizeof(serialized), &serialized_length);
   if (persisted == RACE_PERSISTENCE_NOT_FOUND) {
     Race_Admin_DocumentInit(document);
+    if (info) {
+      info->format = RACE_ADMIN_FORMAT_V4;
+      Race_AdminAllowlist_Init(&info->embedded_v3_allowlist);
+    }
     if (parse_result) {
       *parse_result = RACE_ADMIN_PARSE_OK;
     }
@@ -39,10 +43,14 @@ race_admin_store_result_t Race_AdminStore_Load(
       ? RACE_ADMIN_STORE_CORRUPT
       : RACE_ADMIN_STORE_IO_ERROR;
   }
+  if (!Race_Persistence_RestrictOwner(committed)) {
+    return RACE_ADMIN_STORE_IO_ERROR;
+  }
 
   race_admin_document_t parsed;
-  const race_admin_parse_result_t result = Race_Admin_Parse(
-    serialized, serialized_length, &parsed);
+  race_admin_parse_info_t parsed_info;
+  const race_admin_parse_result_t result = Race_Admin_ParseWithInfo(
+    serialized, serialized_length, &parsed, &parsed_info);
   if (parse_result) {
     *parse_result = result;
   }
@@ -51,7 +59,16 @@ race_admin_store_result_t Race_AdminStore_Load(
   }
 
   *document = parsed;
+  if (info) {
+    *info = parsed_info;
+  }
   return RACE_ADMIN_STORE_OK;
+}
+
+race_admin_store_result_t Race_AdminStore_Load(
+  const char *committed, race_admin_document_t *document,
+  race_admin_parse_result_t *parse_result) {
+  return Race_AdminStore_LoadWithInfo(committed, document, parse_result, NULL);
 }
 
 race_admin_store_result_t Race_AdminStore_Commit(
@@ -71,9 +88,14 @@ race_admin_store_result_t Race_AdminStore_Commit(
     return RACE_ADMIN_STORE_INVALID_ARGUMENT;
   }
 
-  race_persistence_result_t persisted = Race_Persistence_WriteCandidate(
-    candidate, serialized, serialized_length);
+  race_persistence_result_t persisted =
+    Race_Persistence_WriteCandidateOwnerOnly(candidate, serialized,
+                                             serialized_length);
   if (persisted != RACE_PERSISTENCE_OK) {
+    return RACE_ADMIN_STORE_IO_ERROR;
+  }
+  if (!Race_Persistence_RestrictOwner(candidate)) {
+    Race_Persistence_Remove(candidate);
     return RACE_ADMIN_STORE_IO_ERROR;
   }
 
@@ -99,9 +121,11 @@ race_admin_store_result_t Race_AdminStore_Commit(
   }
 
   persisted = Race_Persistence_Promote(candidate, committed);
-  return persisted == RACE_PERSISTENCE_OK
-    ? RACE_ADMIN_STORE_OK
-    : RACE_ADMIN_STORE_IO_ERROR;
+  if (persisted != RACE_PERSISTENCE_OK ||
+      !Race_Persistence_RestrictOwner(committed)) {
+    return RACE_ADMIN_STORE_IO_ERROR;
+  }
+  return RACE_ADMIN_STORE_OK;
 }
 
 const char *Race_AdminStore_ResultName(race_admin_store_result_t result) {

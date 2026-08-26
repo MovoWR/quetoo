@@ -70,14 +70,15 @@ static void Race_InitMedia(void) {
 
 static void Race_ConfigureLevel(void) {
 
+  Race_SettingsService_PrepareLevel(g_level.name);
   Race_ConfigureLevel_Previous();
+  Race_SettingsService_FinalizeLevel(g_level.name);
 
   Race_Trigger_ConfigureLevel();
   Race_Course_Validate(&g_level.race_course);
   Race_Trigger_FinalizeCourse();
 
   Race_PhysicsService_ConfigureLevel(g_level.name);
-  Race_SettingsService_Load(g_level.name);
   Race_WeaponTuningService_ConfigureLevel();
   Race_MapStateService_Load(g_level.name);
   Race_ReplayService_ConfigureLevel(g_level.name);

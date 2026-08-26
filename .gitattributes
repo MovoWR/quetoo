@@ -4,3 +4,4 @@
 *.sh text eol=lf
 Makefile text eol=lf
 **/Makefile text eol=lf
+deps/argon2/** text eol=lf

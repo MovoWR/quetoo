@@ -13,11 +13,50 @@
     <Filter Include="deps\minizip">
       <UniqueIdentifier>{f4f39ce9-7fd0-41df-b833-c69714662f6f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="deps\argon2">
+      <UniqueIdentifier>{6ab7991a-ddd2-430c-962f-a0c19d291c5b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\argon2\include">
+      <UniqueIdentifier>{e35f986b-073d-4a18-a891-31c65fe01acc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\argon2\src">
+      <UniqueIdentifier>{3ab05fc9-3709-4e51-b0af-ff545c27a366}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\argon2\src\blake2">
+      <UniqueIdentifier>{a341bddb-a8bd-4175-b6cc-c7ebd70fc580}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="game.def" />
+    <None Include="..\deps\argon2\LICENSE">
+      <Filter>deps\argon2</Filter>
+    </None>
+    <None Include="..\deps\argon2\UPSTREAM.md">
+      <Filter>deps\argon2</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\deps\argon2\include\argon2.h">
+      <Filter>deps\argon2\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\blake2\blake2-impl.h">
+      <Filter>deps\argon2\src\blake2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\blake2\blake2.h">
+      <Filter>deps\argon2\src\blake2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\blake2\blamka-round-ref.h">
+      <Filter>deps\argon2\src\blake2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\core.h">
+      <Filter>deps\argon2\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\encoding.h">
+      <Filter>deps\argon2\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\argon2\src\thread.h">
+      <Filter>deps\argon2\src</Filter>
+    </ClInclude>
     <ClInclude Include="..\deps\minizip\miniz.h">
       <Filter>deps\minizip</Filter>
     </ClInclude>
@@ -78,7 +117,19 @@
     <ClInclude Include="..\src\game\race\race_admin.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\game\race\race_admin_admission.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_admin_allowlist.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\game\race\race_admin_actions.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_admin_auth.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_admin_password.h">
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\game\race\race_admin_service.h">
@@ -168,6 +219,12 @@
     <ClInclude Include="..\src\game\race\race_profiles.h">
       <Filter>src\race</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\game\race\race_profile_auth.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_connection_address.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\game\race\race_replay_format.h">
       <Filter>src\race</Filter>
     </ClInclude>
@@ -196,6 +253,9 @@
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\game\race\race_settings_store.h">
+      <Filter>src\race</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\race\race_settings_wire.h">
       <Filter>src\race</Filter>
     </ClInclude>
     <ClInclude Include="..\src\game\race\race_trigger.h">
@@ -293,6 +353,21 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\deps\argon2\src\argon2.c">
+      <Filter>deps\argon2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\blake2\blake2b.c">
+      <Filter>deps\argon2\src\blake2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\core.c">
+      <Filter>deps\argon2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\encoding.c">
+      <Filter>deps\argon2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\argon2\src\ref.c">
+      <Filter>deps\argon2\src</Filter>
+    </ClCompile>
     <ClCompile Include="..\deps\minizip\miniz.c">
       <Filter>deps\minizip</Filter>
     </ClCompile>
@@ -413,7 +488,19 @@
     <ClCompile Include="..\src\game\race\race_admin.c">
       <Filter>src\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\game\race\race_admin_admission.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_admin_allowlist.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\game\race\race_admin_actions.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_admin_auth.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_admin_password.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_admin_service.c">
@@ -494,6 +581,12 @@
     <ClCompile Include="..\src\game\race\race_profiles.c">
       <Filter>src\race</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\game\race\race_profile_auth.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_connection_address.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\game\race\race_replay_format.c">
       <Filter>src\race</Filter>
     </ClCompile>
@@ -522,6 +615,9 @@
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_settings_store.c">
+      <Filter>src\race</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\race\race_settings_wire.c">
       <Filter>src\race</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game\race\race_trigger.c">

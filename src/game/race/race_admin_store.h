@@ -22,6 +22,9 @@ typedef enum {
 race_admin_store_result_t Race_AdminStore_Load(
   const char *committed, race_admin_document_t *document,
   race_admin_parse_result_t *parse_result);
+race_admin_store_result_t Race_AdminStore_LoadWithInfo(
+  const char *committed, race_admin_document_t *document,
+  race_admin_parse_result_t *parse_result, race_admin_parse_info_t *info);
 race_admin_store_result_t Race_AdminStore_Commit(
   const char *committed, const char *candidate,
   const race_admin_document_t *document,

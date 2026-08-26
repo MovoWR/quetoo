@@ -36,17 +36,24 @@
 #include "cg_input_viewer_math.h"
 #include "cg_strafe_helper_math.h"
 #include "race_admin.h"
+#include "race_admin_admission.h"
+#include "race_admin_allowlist.h"
+#include "race_admin_auth.h"
+#include "race_admin_password.h"
 #include "race_admin_store.h"
+#include "race_connection_address.h"
 #include "race_finish_report.h"
 #include "race_logic.h"
 #include "race_leaderboard.h"
 #include "race_leaderboard_wire.h"
 #include "race_map_state.h"
 #include "race_map_state_store.h"
+#include "race_map_properties.h"
 #include "race_persistence.h"
 #include "race_physics.h"
 #include "race_publication.h"
 #include "race_profile.h"
+#include "race_profile_auth.h"
 #include "race_replay_format.h"
 #include "race_replay_playback.h"
 #include "race_replay_record.h"
@@ -58,6 +65,7 @@
 #include "race_vote_menu.h"
 #include "miniz.h"
 #include "race_wire.h"
+#include "shared/parse.h"
 
 #define RACE_TEST_LENGTHOF(a) (sizeof(a) / sizeof(*(a)))
 
@@ -65,6 +73,10 @@ void Race_MapBrowser_AddTests(TCase *tcase);
 
 #define RACE_TEST_UID_A "01234567-89ab-4cde-8f01-23456789abcd"
 #define RACE_TEST_UID_B "fedcba98-7654-4321-a012-fedcba987654"
+#define RACE_TEST_PROFILE_CREDENTIAL \
+  "$argon2id$v=19$m=19456,t=2,p=1$" \
+  "AAAAAAAAAAAAAAAAAAAAAA$" \
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 #define RACE_TEST_PATH_SIZE 1024
 // g_stat_t slot serialized by QRPL v1 for the Race input contract.
 #define RACE_TEST_INPUT_STAT 23u
@@ -72,6 +84,8 @@ void Race_MapBrowser_AddTests(TCase *tcase);
 #define RACE_TEST_ADMIN_CAPABILITIES_STAT 28u
 _Static_assert(RACE_TEST_INPUT_STAT < MAX_STATS,
                "Race input stat must fit QRPL v1 stats");
+_Static_assert(RACE_SETTING_VALUE_MAX + 2u == MAX_TOKEN_CHARS,
+               "Race setting values must fit one production command token");
 
 static char race_test_directory[RACE_TEST_PATH_SIZE];
 static char race_test_committed[RACE_TEST_PATH_SIZE];
@@ -864,34 +878,6 @@ static uint32_t Race_TestSettingsCrc32(const void *data, size_t length) {
   return ~crc;
 }
 
-static size_t Race_TestSettingsReplace(char *data, size_t length,
-                                       size_t capacity,
-                                       const char *needle,
-                                       const char *replacement) {
-  char *found = strstr(data, needle);
-  ck_assert_ptr_nonnull(found);
-
-  const size_t needle_length = strlen(needle);
-  const size_t replacement_length = strlen(replacement);
-  const size_t offset = (size_t) (found - data);
-  ck_assert_msg(length - needle_length + replacement_length < capacity,
-                "Replacement exceeds settings test buffer");
-  memmove(found + replacement_length, found + needle_length,
-          length - offset - needle_length + 1u);
-  memcpy(found, replacement, replacement_length);
-  return length - needle_length + replacement_length;
-}
-
-static void Race_TestSettingsUpdateChecksum(char *data, size_t length) {
-  char *checksum = strstr(data, "crc=");
-  ck_assert_ptr_nonnull(checksum);
-  const size_t offset = (size_t) (checksum - data);
-  ck_assert_uint_eq(offset + 13u, length);
-  snprintf(checksum + 4, 9, "%08x", Race_TestSettingsCrc32(data, offset));
-  checksum[12] = '\n';
-  checksum[13] = '\0';
-}
-
 START_TEST(_Race_CourseValidation) {
   race_course_t finishless;
   Race_Course_Reset(&finishless);
@@ -1603,6 +1589,60 @@ START_TEST(_Race_ProfileIdentityPolicy) {
   memset(oversized_name, 'x', RACE_PROFILE_NAME_SIZE);
   oversized_name[RACE_PROFILE_NAME_SIZE] = '\0';
   ck_assert(!Race_Profile_Init(&profile, RACE_TEST_UID_A, oversized_name));
+  ck_assert(!Race_Profile_SetCredential(&profile, "not-a-credential"));
+} END_TEST
+
+START_TEST(_Race_ProfileProofOfPossession) {
+  static const char owner_secret[] =
+    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  static const char attacker_secret[] =
+    "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  const uint8_t salt[RACE_ADMIN_PASSWORD_SALT_SIZE] = { 0 };
+  const uint8_t nonce[RACE_PROFILE_AUTH_NONCE_SIZE] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+  };
+  char credential[RACE_PROFILE_CREDENTIAL_SIZE];
+  ck_assert(Race_ProfileAuth_DeriveCredential(
+    owner_secret, salt, credential));
+
+  uint8_t owner_proof[RACE_PROFILE_AUTH_PROOF_SIZE];
+  uint8_t attacker_proof[RACE_PROFILE_AUTH_PROOF_SIZE];
+  ck_assert(Race_ProfileAuth_CreateProof(
+    RACE_TEST_UID_A, owner_secret, salt, nonce, owner_proof));
+  ck_assert(Race_ProfileAuth_CreateProof(
+    RACE_TEST_UID_A, attacker_secret, salt, nonce, attacker_proof));
+  ck_assert(Race_ProfileAuth_VerifyProof(
+    RACE_TEST_UID_A, credential, nonce, owner_proof));
+  ck_assert(!Race_ProfileAuth_VerifyProof(
+    RACE_TEST_UID_A, credential, nonce, attacker_proof));
+
+  uint8_t changed_nonce[RACE_PROFILE_AUTH_NONCE_SIZE];
+  memcpy(changed_nonce, nonce, sizeof(changed_nonce));
+  changed_nonce[0]++;
+  ck_assert(!Race_ProfileAuth_VerifyProof(
+    RACE_TEST_UID_A, credential, changed_nonce, owner_proof));
+
+  char command[RACE_PROFILE_AUTH_PROOF_COMMAND_SIZE];
+  ck_assert(Race_ProfileAuth_FormatProofCommand(
+    RACE_TEST_UID_A, nonce, owner_proof, command));
+  ck_assert_ptr_nonnull(strstr(command, "race_profile proof " RACE_TEST_UID_A));
+  ck_assert_ptr_null(strstr(command, owner_secret));
+  ck_assert_ptr_null(strstr(command, credential));
+} END_TEST
+
+START_TEST(_Race_ConnectionAddressIdentity) {
+  char address[RACE_CONNECTION_ADDRESS_SIZE];
+  ck_assert(Race_ConnectionAddressKey("192.0.2.10:27910", address));
+  ck_assert_str_eq(address, "192.0.2.10");
+  ck_assert(Race_ConnectionAddressKey("[2001:DB8::1]:27910", address));
+  ck_assert_str_eq(address, "2001:db8::1");
+  ck_assert(Race_ConnectionAddressKey("2001:DB8::2", address));
+  ck_assert_str_eq(address, "2001:db8::2");
+  ck_assert(Race_ConnectionAddressKey("loopback", address));
+  ck_assert_str_eq(address, "loopback");
+  ck_assert(!Race_ConnectionAddressKey("", address));
+  ck_assert(!Race_ConnectionAddressKey("[2001:db8::1]:bad", address));
+  ck_assert(!Race_ConnectionAddressKey("192.0.2.1;quit", address));
 } END_TEST
 
 START_TEST(_Race_ProfilePathSafety) {
@@ -1629,6 +1669,8 @@ START_TEST(_Race_ProfilePathSafety) {
 START_TEST(_Race_ProfileSerialization) {
   race_profile_t profile;
   ck_assert(Race_Profile_Init(&profile, RACE_TEST_UID_A, "^1Runner"));
+  ck_assert(Race_Profile_SetCredential(&profile,
+                                       RACE_TEST_PROFILE_CREDENTIAL));
 
   char first[RACE_PROFILE_SERIALIZED_MAX];
   char second[RACE_PROFILE_SERIALIZED_MAX];
@@ -1638,22 +1680,29 @@ START_TEST(_Race_ProfileSerialization) {
   ck_assert_uint_eq(first_length, second_length);
   ck_assert_int_eq(memcmp(first, second, first_length), 0);
   ck_assert_str_eq(first,
-                   "RACE_PROFILE_V1\n"
+                   "RACE_PROFILE_V2\n"
                    "uid=" RACE_TEST_UID_A "\n"
-                   "name=5e3152756e6e6572\n");
+                   "name=5e3152756e6e6572\n"
+                   "credential=" RACE_TEST_PROFILE_CREDENTIAL "\n");
 
   race_profile_t parsed;
   ck_assert_int_eq(Race_Profile_Parse(first, first_length, &parsed),
                    RACE_PROFILE_PARSE_OK);
   ck_assert_str_eq(parsed.uid, profile.uid);
   ck_assert_str_eq(parsed.display_name, profile.display_name);
+  ck_assert_str_eq(parsed.credential, profile.credential);
+  ck_assert(Race_Profile_HasCredential(&parsed));
 } END_TEST
 
 START_TEST(_Race_ProfileSerializationBounds) {
   race_profile_t profile;
-  ck_assert(Race_Profile_Init(&profile, RACE_TEST_UID_A, ""));
-
   char serialized[RACE_PROFILE_SERIALIZED_MAX];
+  ck_assert(Race_Profile_Init(&profile, RACE_TEST_UID_A, ""));
+  ck_assert(!Race_Profile_Serialize(&profile, serialized,
+                                    sizeof(serialized), NULL));
+  ck_assert(Race_Profile_SetCredential(&profile,
+                                       RACE_TEST_PROFILE_CREDENTIAL));
+
   size_t serialized_length;
   ck_assert(Race_Profile_Serialize(&profile, serialized, sizeof(serialized),
                                    &serialized_length));
@@ -1667,6 +1716,8 @@ START_TEST(_Race_ProfileSerializationBounds) {
   memset(maximum_name, 'z', RACE_PROFILE_NAME_MAX);
   maximum_name[RACE_PROFILE_NAME_MAX] = '\0';
   ck_assert(Race_Profile_Init(&profile, RACE_TEST_UID_A, maximum_name));
+  ck_assert(Race_Profile_SetCredential(&profile,
+                                       RACE_TEST_PROFILE_CREDENTIAL));
   ck_assert(Race_Profile_Serialize(&profile, serialized, sizeof(serialized),
                                    &serialized_length));
   ck_assert_int_eq(Race_Profile_Parse(serialized, serialized_length, &parsed),
@@ -1675,6 +1726,8 @@ START_TEST(_Race_ProfileSerializationBounds) {
 
   const char opaque_name[] = { (char) 0xc3, '(', '\0' };
   ck_assert(Race_Profile_Init(&profile, RACE_TEST_UID_A, opaque_name));
+  ck_assert(Race_Profile_SetCredential(&profile,
+                                       RACE_TEST_PROFILE_CREDENTIAL));
   ck_assert(Race_Profile_Serialize(&profile, serialized, sizeof(serialized),
                                    &serialized_length));
   ck_assert_int_eq(Race_Profile_Parse(serialized, serialized_length, &parsed),
@@ -1694,6 +1747,8 @@ START_TEST(_Race_ProfileMalformedInput) {
     "RACE_PROFILE_V1\nuid=01234567-89AB-4CDE-8F01-23456789ABCD\nname=52\n",
     "RACE_PROFILE_V1\nuid=" RACE_TEST_UID_A "\nuid=" RACE_TEST_UID_A "\nname=52\n",
     "RACE_PROFILE_V1\nuid=" RACE_TEST_UID_A "\nname=52\nunknown=value\n",
+    "RACE_PROFILE_V2\nuid=" RACE_TEST_UID_A "\nname=52\n",
+    "RACE_PROFILE_V2\nuid=" RACE_TEST_UID_A "\nname=52\ncredential=bad\n",
     "RACE_PROFILES_V1\nuid=" RACE_TEST_UID_A "\nname=52\n"
   };
 
@@ -1704,7 +1759,7 @@ START_TEST(_Race_ProfileMalformedInput) {
   }
 
   static const char unknown_version[] =
-    "RACE_PROFILE_V2\nuid=" RACE_TEST_UID_A "\nname=52\n";
+    "RACE_PROFILE_V3\nuid=" RACE_TEST_UID_A "\nname=52\n";
   ck_assert_int_eq(Race_Profile_Parse(unknown_version, strlen(unknown_version), &parsed),
                    RACE_PROFILE_PARSE_UNKNOWN_VERSION);
 
@@ -1717,6 +1772,14 @@ START_TEST(_Race_ProfileMalformedInput) {
     "RACE_PROFILE_V1\nuid=" RACE_TEST_UID_A "\nname=52\n\0trailing";
   ck_assert_int_eq(Race_Profile_Parse(embedded_nul, sizeof(embedded_nul) - 1, &parsed),
                    RACE_PROFILE_PARSE_MALFORMED);
+
+  static const char legacy[] =
+    "RACE_PROFILE_V1\nuid=" RACE_TEST_UID_A "\nname=52\n";
+  ck_assert_int_eq(Race_Profile_Parse(legacy, strlen(legacy), &parsed),
+                   RACE_PROFILE_PARSE_OK);
+  ck_assert_str_eq(parsed.display_name, "R");
+  ck_assert(!Race_Profile_HasCredential(&parsed));
+  ck_assert(!Race_Profile_Serialize(&parsed, oversized, sizeof(oversized), NULL));
 } END_TEST
 
 START_TEST(_Race_PersistenceCandidatePromotion) {
@@ -1765,7 +1828,118 @@ START_TEST(_Race_PersistenceRealPathBounds) {
     virtual_path, real_path, copied, strlen(real_path)));
   ck_assert(!Race_Persistence_CopyRealPath(
     virtual_path, virtual_path, copied, sizeof(copied)));
+  ck_assert(!Race_Persistence_CopyRealPath(
+    "../runner.profile", real_path, copied, sizeof(copied)));
+  ck_assert(!Race_Persistence_CopyRealPath(
+    "race/../runner.profile", real_path, copied, sizeof(copied)));
+  ck_assert(!Race_Persistence_CopyRealPath(
+    "race//runner.profile", real_path, copied, sizeof(copied)));
+  ck_assert(!Race_Persistence_CopyRealPath(
+    "C:/race/runner.profile", real_path, copied, sizeof(copied)));
 } END_TEST
+
+#if !defined(_WIN32)
+START_TEST(_Race_PersistenceRejectsSymbolicLinks) {
+  char buffer[64];
+  size_t length;
+
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+                     race_test_committed, "protected", 9),
+                   RACE_PERSISTENCE_OK);
+  ck_assert_int_eq(symlink(race_test_committed, race_test_candidate), 0);
+
+  ck_assert_int_eq(Race_Persistence_Read(
+                     race_test_candidate, buffer, sizeof(buffer), &length),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+                     race_test_candidate, "replacement", 11),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  ck_assert_int_eq(Race_Persistence_Remove(race_test_candidate),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  Race_TestPersistenceRead(race_test_committed, buffer, sizeof(buffer),
+                           "protected");
+
+  struct stat link_info;
+  ck_assert_int_eq(lstat(race_test_candidate, &link_info), 0);
+  ck_assert(S_ISLNK(link_info.st_mode));
+  ck_assert_int_eq(unlink(race_test_candidate), 0);
+
+  char actual_directory[RACE_TEST_PATH_SIZE];
+  char linked_directory[RACE_TEST_PATH_SIZE];
+  char linked_file[RACE_TEST_PATH_SIZE];
+  char actual_file[RACE_TEST_PATH_SIZE];
+  snprintf(actual_directory, sizeof(actual_directory), "%s/actual",
+           race_test_directory);
+  snprintf(linked_directory, sizeof(linked_directory), "%s/linked",
+           race_test_directory);
+  snprintf(linked_file, sizeof(linked_file), "%s/linked/escape",
+           race_test_directory);
+  snprintf(actual_file, sizeof(actual_file), "%s/actual/escape",
+           race_test_directory);
+
+  ck_assert_int_eq(Race_TestMkdir(actual_directory), 0);
+  ck_assert_int_eq(symlink(actual_directory, linked_directory), 0);
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+                     linked_file, "replacement", 11),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  ck_assert_int_ne(lstat(actual_file, &link_info), 0);
+  ck_assert_int_eq(unlink(linked_directory), 0);
+  ck_assert_int_eq(Race_TestRmdir(actual_directory), 0);
+
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+                     race_test_candidate, "replacement", 11),
+                   RACE_PERSISTENCE_OK);
+  ck_assert_int_eq(symlink(race_test_committed, race_test_map_committed), 0);
+  ck_assert_int_eq(Race_Persistence_Promote(
+                     race_test_candidate, race_test_map_committed),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  Race_TestPersistenceRead(race_test_candidate, buffer, sizeof(buffer),
+                           "replacement");
+  Race_TestPersistenceRead(race_test_committed, buffer, sizeof(buffer),
+                           "protected");
+  ck_assert_int_eq(lstat(race_test_map_committed, &link_info), 0);
+  ck_assert(S_ISLNK(link_info.st_mode));
+  ck_assert_int_eq(unlink(race_test_map_committed), 0);
+
+  ck_assert_int_eq(Race_Persistence_Remove(race_test_candidate),
+                   RACE_PERSISTENCE_OK);
+  ck_assert_int_eq(link(race_test_committed, race_test_candidate), 0);
+  ck_assert_int_eq(Race_Persistence_Read(
+                     race_test_candidate, buffer, sizeof(buffer), &length),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+                     race_test_candidate, "replacement", 11),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  ck_assert_int_eq(Race_Persistence_Remove(race_test_candidate),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  ck_assert_int_eq(unlink(race_test_candidate), 0);
+  Race_TestPersistenceRead(race_test_committed, buffer, sizeof(buffer),
+                           "protected");
+
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+                     race_test_candidate, "replacement", 11),
+                   RACE_PERSISTENCE_OK);
+  ck_assert_int_eq(link(race_test_committed, race_test_map_committed), 0);
+  ck_assert_int_eq(Race_Persistence_Promote(
+                     race_test_candidate, race_test_map_committed),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  Race_TestPersistenceRead(race_test_candidate, buffer, sizeof(buffer),
+                           "replacement");
+  ck_assert_int_eq(unlink(race_test_map_committed), 0);
+  Race_TestPersistenceRead(race_test_committed, buffer, sizeof(buffer),
+                           "protected");
+
+  ck_assert_int_eq(Race_Persistence_Remove(race_test_candidate),
+                   RACE_PERSISTENCE_OK);
+  ck_assert_int_eq(link(race_test_committed, race_test_candidate), 0);
+  ck_assert_int_eq(Race_Persistence_Promote(
+                     race_test_candidate, race_test_map_committed),
+                   RACE_PERSISTENCE_UNSAFE_PATH);
+  ck_assert_int_eq(unlink(race_test_candidate), 0);
+  Race_TestPersistenceRead(race_test_committed, buffer, sizeof(buffer),
+                           "protected");
+} END_TEST
+#endif
 
 START_TEST(_Race_PersistenceFailures) {
   char buffer[64];
@@ -1775,7 +1949,7 @@ START_TEST(_Race_PersistenceFailures) {
   char unavailable[RACE_TEST_PATH_SIZE];
   snprintf(unavailable, sizeof(unavailable), "%s/missing/candidate", race_test_directory);
   ck_assert_int_eq(Race_Persistence_WriteCandidate(unavailable, "replacement", 11),
-                   RACE_PERSISTENCE_IO_ERROR);
+                   RACE_PERSISTENCE_NOT_FOUND);
   Race_TestPersistenceRead(race_test_committed, buffer, sizeof(buffer), "committed");
 
   ck_assert_int_eq(Race_Persistence_WriteCandidate(race_test_candidate, "replacement", 11),
@@ -1819,6 +1993,8 @@ START_TEST(_Race_PersistenceBoundsAndCorruption) {
 START_TEST(_Race_PersistenceReconnectAndRename) {
   race_profile_t first;
   ck_assert(Race_Profile_Init(&first, RACE_TEST_UID_A, "First name"));
+  ck_assert(Race_Profile_SetCredential(&first,
+                                       RACE_TEST_PROFILE_CREDENTIAL));
 
   char serialized[RACE_PROFILE_SERIALIZED_MAX];
   size_t serialized_length;
@@ -1840,6 +2016,7 @@ START_TEST(_Race_PersistenceReconnectAndRename) {
   ck_assert_int_eq(Race_Profile_Parse(loaded, loaded_length, &reconnected),
                    RACE_PROFILE_PARSE_OK);
   ck_assert_str_eq(reconnected.uid, first.uid);
+  ck_assert_str_eq(reconnected.credential, first.credential);
 
   ck_assert(Race_Profile_SetDisplayName(&reconnected, "Second name"));
   ck_assert(Race_Profile_Serialize(&reconnected, serialized, sizeof(serialized),
@@ -1858,6 +2035,7 @@ START_TEST(_Race_PersistenceReconnectAndRename) {
                    RACE_PROFILE_PARSE_OK);
   ck_assert_str_eq(restarted.uid, first.uid);
   ck_assert_str_eq(restarted.display_name, "Second name");
+  ck_assert_str_eq(restarted.credential, first.credential);
 } END_TEST
 
 START_TEST(_Race_LeaderboardPbWrAndIdentity) {
@@ -3782,25 +3960,38 @@ START_TEST(_Race_SettingsCatalogAndTypes) {
   const race_setting_descriptor_t *catalog = Race_Settings_Catalog(&count);
   ck_assert_uint_eq(count, RACE_SETTING_TOTAL);
   ck_assert(Race_Settings_ValidateCatalog(catalog, count, NULL, 0));
-  ck_assert(Race_Settings_CatalogRankCompatible(catalog, count,
-                                                 RACE_PHYSICS_PRESET_Q2_V1_KEY,
-                                                 NULL, 0));
+  static const char *const aliases[RACE_SETTING_TOTAL] = {
+    "finish_cue_enabled", "finish_cue_gain", "checkpoint_feedback",
+    "voting_time", "max_votes", "vote_menu_duration", "vote_menu_choices",
+    "vote_allow_spectators", "weapons", "gravity", "gameplay",
+    "min_clients", "frag_limit", "time_limit", "music"
+  };
+  static const char *const cvars[RACE_SETTING_TOTAL] = {
+    "g_race_finish_cue_enabled", "g_race_finish_cue_gain",
+    "g_race_checkpoint_feedback", "g_race_voting_time", "g_race_max_votes",
+    "g_race_vote_menu_duration", "g_race_vote_menu_choices",
+    "g_race_vote_allow_spectators", "g_race_weapons", "g_gravity",
+    "g_gameplay", "sv_min_clients", "g_frag_limit", "g_time_limit",
+    "g_music"
+  };
 
-  ck_assert_str_eq(catalog[RACE_SETTING_FINISH_CUE_ENABLED].key,
-                   "finish_cue_enabled");
-  ck_assert_str_eq(catalog[RACE_SETTING_FINISH_CUE_GAIN].key,
-                   "finish_cue_gain");
-  ck_assert_str_eq(catalog[RACE_SETTING_CHECKPOINT_FEEDBACK].key,
-                   "checkpoint_feedback");
-  ck_assert_str_eq(catalog[RACE_SETTING_WEAPONS].key, "weapons");
-  ck_assert(catalog[RACE_SETTING_WEAPONS].default_value.boolean);
-  ck_assert_int_eq(catalog[RACE_SETTING_WEAPONS].scopes,
-                   RACE_SETTING_SCOPE_GLOBAL | RACE_SETTING_SCOPE_MAP);
-  ck_assert(!catalog[RACE_SETTING_WEAPONS].runtime_mutable);
-  ck_assert(catalog[RACE_SETTING_WEAPONS].next_map);
-  ck_assert_ptr_eq(Race_Settings_DescriptorForKey("finish_cue_gain"),
-                   catalog + RACE_SETTING_FINISH_CUE_GAIN);
-  ck_assert_ptr_null(Race_Settings_DescriptorForKey("timelimit"));
+  for (size_t i = 0; i < count; i++) {
+    ck_assert_uint_eq(catalog[i].id, i);
+    ck_assert_str_eq(catalog[i].alias, aliases[i]);
+    ck_assert_str_eq(catalog[i].cvar, cvars[i]);
+    ck_assert_str_eq(catalog[i].map_key, aliases[i]);
+    ck_assert_ptr_eq(Race_Settings_DescriptorForName(aliases[i]), catalog + i);
+    ck_assert_ptr_eq(Race_Settings_DescriptorForCvar(cvars[i]), catalog + i);
+    ck_assert_ptr_eq(Race_Settings_DescriptorForMapKey(aliases[i]), catalog + i);
+  }
+  ck_assert_ptr_null(Race_Settings_DescriptorForName("timelimit"));
+  ck_assert_ptr_null(Race_Settings_DescriptorForCvar("sv_hostname"));
+  ck_assert_ptr_null(Race_Settings_DescriptorForMapKey("not_a_setting"));
+
+  ck_assert_str_eq(catalog[RACE_SETTING_TIME_LIMIT].default_value, "30");
+  ck_assert(catalog[RACE_SETTING_WEAPONS].map_overridable);
+  ck_assert_int_eq(catalog[RACE_SETTING_WEAPONS].activation,
+                   RACE_SETTING_ACTIVATION_RESTART);
 
   race_setting_value_t value;
   const race_setting_descriptor_t *boolean =
@@ -3819,360 +4010,271 @@ START_TEST(_Race_SettingsCatalogAndTypes) {
   ck_assert_int_eq(value.integer, 100);
   ck_assert(!Race_Settings_ParseValue(integer, "0", &value, NULL, 0));
   ck_assert(!Race_Settings_ParseValue(integer, "101", &value, NULL, 0));
-  ck_assert(!Race_Settings_ParseValue(integer, "+50", &value, NULL, 0));
-  ck_assert(!Race_Settings_ParseValue(integer, "050", &value, NULL, 0));
 
-  const race_setting_descriptor_t *enumeration =
-    catalog + RACE_SETTING_CHECKPOINT_FEEDBACK;
-  ck_assert(Race_Settings_ParseValue(enumeration, "time", &value, NULL, 0));
-  ck_assert_str_eq(value.enumeration, "time");
-  ck_assert(Race_Settings_ParseValue(enumeration, "silent", &value, NULL, 0));
-  ck_assert_str_eq(value.enumeration, "silent");
-  ck_assert(!Race_Settings_ParseValue(enumeration, "verbose", &value, NULL, 0));
+  char canonical[RACE_SETTING_VALUE_SIZE];
+  ck_assert(Race_Settings_CanonicalizeValue(
+    catalog + RACE_SETTING_CHECKPOINT_FEEDBACK, "silent", canonical,
+    sizeof(canonical), NULL, 0));
+  ck_assert_str_eq(canonical, "silent");
+  ck_assert(!Race_Settings_CanonicalizeValue(
+    catalog + RACE_SETTING_CHECKPOINT_FEEDBACK, "verbose", canonical,
+    sizeof(canonical), NULL, 0));
+  ck_assert(Race_Settings_CanonicalizeValue(
+    catalog + RACE_SETTING_TIME_LIMIT, "30.0", canonical,
+    sizeof(canonical), NULL, 0));
+  ck_assert_str_eq(canonical, "30");
 
-  for (size_t i = 0; i < count; i++) {
-    ck_assert_int_ne(catalog[i].type, (race_setting_type_t) 3);
-    ck_assert_int_eq(catalog[i].ranking_impact,
-                     RACE_SETTING_RANKING_COMPATIBLE);
-    ck_assert(!catalog[i].affects_prediction);
-  }
+  char maximum_value[RACE_SETTING_VALUE_SIZE];
+  memset(maximum_value, 'm', RACE_SETTING_VALUE_MAX);
+  maximum_value[RACE_SETTING_VALUE_MAX] = '\0';
+  const race_setting_descriptor_t *string = catalog + RACE_SETTING_MUSIC;
+  ck_assert(Race_Settings_CanonicalizeValue(
+    string, maximum_value, canonical, sizeof(canonical), NULL, 0));
+  ck_assert_str_eq(canonical, maximum_value);
+
+  char oversized_value[RACE_SETTING_VALUE_SIZE + 1u];
+  memset(oversized_value, 'm', RACE_SETTING_VALUE_MAX + 1u);
+  oversized_value[RACE_SETTING_VALUE_MAX + 1u] = '\0';
+  ck_assert(!Race_Settings_CanonicalizeValue(
+    string, oversized_value, canonical, sizeof(canonical), NULL, 0));
+
+  char accepted_token[RACE_SETTING_VALUE_MAX + 3u];
+  accepted_token[0] = '"';
+  memcpy(accepted_token + 1u, maximum_value, RACE_SETTING_VALUE_MAX);
+  accepted_token[RACE_SETTING_VALUE_MAX + 1u] = '"';
+  accepted_token[RACE_SETTING_VALUE_MAX + 2u] = '\0';
+  parser_t accepted_parser = Parse_Init(accepted_token, PARSER_NO_COMMENTS);
+  char parsed_token[MAX_TOKEN_CHARS];
+  ck_assert(Parse_Token(
+    &accepted_parser, PARSE_DEFAULT, parsed_token, sizeof(parsed_token)));
+  ck_assert_str_eq(parsed_token, maximum_value);
+
+  char rejected_token[RACE_SETTING_VALUE_MAX + 4u];
+  rejected_token[0] = '"';
+  memcpy(rejected_token + 1u, oversized_value,
+         RACE_SETTING_VALUE_MAX + 1u);
+  rejected_token[RACE_SETTING_VALUE_MAX + 2u] = '"';
+  rejected_token[RACE_SETTING_VALUE_MAX + 3u] = '\0';
+  parser_t rejected_parser = Parse_Init(rejected_token, PARSER_NO_COMMENTS);
+  ck_assert(!Parse_Token(
+    &rejected_parser, PARSE_DEFAULT, parsed_token, sizeof(parsed_token)));
 
   race_setting_descriptor_t invalid[RACE_SETTING_TOTAL];
   memcpy(invalid, catalog, sizeof(invalid));
-  invalid[1].key = invalid[0].key;
+  invalid[1].alias = invalid[0].alias;
   ck_assert(!Race_Settings_ValidateCatalog(invalid, count, NULL, 0));
 
   memcpy(invalid, catalog, sizeof(invalid));
-  invalid[1].id = invalid[0].id;
+  invalid[1].cvar = invalid[0].cvar;
   ck_assert(!Race_Settings_ValidateCatalog(invalid, count, NULL, 0));
 
   memcpy(invalid, catalog, sizeof(invalid));
-  invalid[0].ranking_impact = RACE_SETTING_RANKING_INVALIDATES_QUETOO_COMMON;
-  ck_assert(!Race_Settings_CatalogRankCompatible(invalid, count,
-                                                  RACE_PHYSICS_PRESET_Q2_V1_KEY,
-                                                  NULL, 0));
-
-  memcpy(invalid, catalog, sizeof(invalid));
-  invalid[0].affects_prediction = true;
-  ck_assert(!Race_Settings_CatalogRankCompatible(invalid, count,
-                                                  RACE_PHYSICS_PRESET_Q2_V1_KEY,
-                                                  NULL, 0));
-  ck_assert(!Race_Settings_CatalogRankCompatible(catalog, count,
-                                                  "future/ruleset",
-                                                  NULL, 0));
+  invalid[1].map_key = invalid[0].map_key;
+  ck_assert(!Race_Settings_ValidateCatalog(invalid, count, NULL, 0));
 } END_TEST
 
-START_TEST(_Race_SettingsResolutionAndRevision) {
-  race_settings_state_t state;
-  ck_assert(Race_Settings_StateInit(&state));
-  ck_assert_uint_eq(state.revision, 1u);
-  ck_assert(state.entries[RACE_SETTING_FINISH_CUE_ENABLED].effective.boolean);
-  ck_assert_int_eq(state.entries[RACE_SETTING_FINISH_CUE_ENABLED].source,
-                   RACE_SETTING_SOURCE_DEFAULT);
-  ck_assert(state.entries[RACE_SETTING_WEAPONS].effective.boolean);
-  ck_assert_int_eq(state.entries[RACE_SETTING_WEAPONS].source,
-                   RACE_SETTING_SOURCE_DEFAULT);
+START_TEST(_Race_SettingsGsetFormatAndMutation) {
+  race_gset_document_t document;
+  Race_SettingsStore_DocumentInit(&document);
+  ck_assert_uint_eq(document.count, 0u);
 
-  race_settings_state_t candidate;
-  race_settings_change_t change;
-  race_settings_state_t weapons_state;
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_MAP,
-                                   "weapons", "0",
-                                   &weapons_state, &change, NULL, 0));
-  ck_assert(!weapons_state.entries[RACE_SETTING_WEAPONS].effective.boolean);
-  ck_assert(change.effective_changed);
-  ck_assert(!Race_Settings_StateSet(&weapons_state, RACE_SETTING_SOURCE_RUNTIME,
-                                    "weapons", "1",
-                                    &candidate, &change, NULL, 0));
+  race_gset_document_t empty;
+  ck_assert(Race_SettingsStore_Parse(NULL, 0u, &empty));
+  ck_assert_uint_eq(empty.count, 0u);
+  ck_assert(!Race_SettingsStore_Parse(NULL, 1u, &empty));
 
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_GLOBAL,
-                                   "finish_cue_enabled", "0",
-                                   &candidate, &change, NULL, 0));
-  ck_assert(change.source_changed);
-  ck_assert(change.effective_changed);
-  ck_assert_uint_eq(candidate.revision, 2u);
-  state = candidate;
-
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_MAP,
-                                   "finish_cue_enabled", "1",
-                                   &candidate, &change, NULL, 0));
-  ck_assert(change.effective_changed);
-  ck_assert_uint_eq(candidate.revision, 3u);
-  ck_assert_int_eq(candidate.entries[RACE_SETTING_FINISH_CUE_ENABLED].source,
-                   RACE_SETTING_SOURCE_MAP);
-  state = candidate;
-
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_RUNTIME,
-                                   "finish_cue_enabled", "0",
-                                   &candidate, &change, NULL, 0));
-  ck_assert(change.effective_changed);
-  ck_assert_uint_eq(candidate.revision, 4u);
-  ck_assert_int_eq(candidate.entries[RACE_SETTING_FINISH_CUE_ENABLED].source,
-                   RACE_SETTING_SOURCE_RUNTIME);
-  state = candidate;
-
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_GLOBAL,
-                                   "finish_cue_enabled", "1",
-                                   &candidate, &change, NULL, 0));
-  ck_assert(change.source_changed);
-  ck_assert(!change.effective_changed);
-  ck_assert_uint_eq(candidate.revision, 4u);
-  state = candidate;
-
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_GLOBAL,
-                                   "finish_cue_enabled", "1",
-                                   &candidate, &change, NULL, 0));
-  ck_assert(!change.source_changed);
-  ck_assert(!change.effective_changed);
-  ck_assert_uint_eq(candidate.revision, 4u);
-
-  ck_assert(!Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_GLOBAL,
-                                    "finish_cue_gain", "101",
-                                    &candidate, &change, NULL, 0));
-  ck_assert_uint_eq(state.revision, 4u);
-
-  ck_assert(Race_Settings_StateUnset(&state, RACE_SETTING_SOURCE_RUNTIME,
-                                     "finish_cue_enabled",
-                                     &candidate, &change, NULL, 0));
-  ck_assert(change.effective_changed);
-  ck_assert_uint_eq(candidate.revision, 5u);
-  ck_assert_int_eq(candidate.entries[RACE_SETTING_FINISH_CUE_ENABLED].source,
-                   RACE_SETTING_SOURCE_MAP);
-  state = candidate;
-
-  candidate = state;
-  for (size_t i = 0; i < RACE_SETTING_TOTAL; i++) {
-    memset(&candidate.sources[i][RACE_SETTING_SOURCE_MAP], 0,
-           sizeof(candidate.sources[i][RACE_SETTING_SOURCE_MAP]));
-    memset(&candidate.sources[i][RACE_SETTING_SOURCE_RUNTIME], 0,
-           sizeof(candidate.sources[i][RACE_SETTING_SOURCE_RUNTIME]));
-  }
-  ck_assert(Race_Settings_StateResolve(&state, &candidate, &change, NULL, 0));
-  ck_assert(change.source_changed);
-  ck_assert(!change.effective_changed);
-  ck_assert_uint_eq(candidate.revision, 5u);
-  ck_assert_int_eq(candidate.entries[RACE_SETTING_FINISH_CUE_ENABLED].source,
-                   RACE_SETTING_SOURCE_GLOBAL);
-
-  state = candidate;
-  state.revision = UINT64_MAX;
-  ck_assert(Race_Settings_StateValid(&state));
-  ck_assert(!Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_RUNTIME,
-                                    "checkpoint_feedback", "silent",
-                                    &candidate, &change, NULL, 0));
-  ck_assert(state.entries[RACE_SETTING_CHECKPOINT_FEEDBACK].effective.enumeration[0]);
-} END_TEST
-
-START_TEST(_Race_SettingsFormatAndLegacyPolicy) {
-  race_settings_state_t state;
-  race_settings_state_t candidate;
-  race_settings_change_t change;
-  ck_assert(Race_Settings_StateInit(&state));
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_GLOBAL,
-                                   "finish_cue_enabled", "0",
-                                   &candidate, &change, NULL, 0));
-  state = candidate;
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_GLOBAL,
-                                   "finish_cue_gain", "50",
-                                   &candidate, &change, NULL, 0));
-  state = candidate;
-
-  race_settings_document_t document;
-  ck_assert(Race_Settings_DocumentFromState(&document,
-                                            RACE_SETTING_SCOPE_GLOBAL,
-                                            NULL, 7u, &state));
+  race_gset_document_t candidate;
+  ck_assert(Race_SettingsStore_Set(&document, "g_time_limit", "45", &candidate));
+  document = candidate;
+  ck_assert(Race_SettingsStore_Set(
+    &document, "g_race_checkpoint_feedback", "silent", &candidate));
+  document = candidate;
+  ck_assert(Race_SettingsStore_Set(
+    &document, "g_music", "race theme", &candidate));
+  document = candidate;
+  ck_assert_uint_eq(document.count, 3u);
+  ck_assert_str_eq(document.assignments[0].name,
+                   "g_music");
+  ck_assert_str_eq(document.assignments[1].name,
+                   "g_race_checkpoint_feedback");
+  ck_assert_str_eq(document.assignments[2].name, "g_time_limit");
 
   char serialized[4096];
   size_t length;
-  ck_assert(Race_Settings_Serialize(&document, serialized,
-                                    sizeof(serialized), &length));
+  ck_assert(Race_SettingsStore_Serialize(
+    &document, serialized, sizeof(serialized), &length));
   ck_assert_uint_eq(length, strlen(serialized));
+  ck_assert_int_eq(serialized[length], '\0');
+  ck_assert_ptr_nonnull(strstr(serialized, "# Race global cvar overrides\n"));
+  ck_assert_ptr_nonnull(strstr(serialized,
+                               "set g_race_checkpoint_feedback \"silent\"\n"));
+  ck_assert_ptr_nonnull(strstr(serialized,
+                               "set g_music \"race theme\"\n"));
 
-  race_settings_document_t parsed;
-  ck_assert_int_eq(Race_Settings_Parse(serialized, length,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_OK);
-  ck_assert(Race_Settings_DocumentEquals(&document, &parsed));
+  race_gset_document_t parsed;
+  ck_assert(Race_SettingsStore_Parse(serialized, length, &parsed));
+  ck_assert(Race_SettingsStore_Equals(&document, &parsed));
+  ck_assert_ptr_nonnull(Race_SettingsStore_Find(&parsed, "g_time_limit"));
+  ck_assert_ptr_null(Race_SettingsStore_Find(&parsed, "g_missing"));
 
-  char repeated[4096];
-  size_t repeated_length;
-  ck_assert(Race_Settings_Serialize(&parsed, repeated,
-                                    sizeof(repeated), &repeated_length));
-  ck_assert_uint_eq(repeated_length, length);
-  ck_assert_int_eq(memcmp(serialized, repeated, length), 0);
+  ck_assert(Race_SettingsStore_Remove(&parsed, "g_time_limit", &candidate));
+  ck_assert_uint_eq(candidate.count, 2u);
+  ck_assert(Race_SettingsStore_Remove(&candidate, "g_missing", &parsed));
+  ck_assert(Race_SettingsStore_Equals(&candidate, &parsed));
 
-  char committed[MAX_OS_PATH];
-  char persistence_candidate[MAX_OS_PATH];
-  ck_assert(Race_Settings_Paths(RACE_SETTING_SCOPE_GLOBAL, NULL,
-                               committed, sizeof(committed),
-                               persistence_candidate,
-                               sizeof(persistence_candidate)));
-  ck_assert_str_eq(committed, "settings/global.settings");
-  ck_assert_str_eq(persistence_candidate, "settings/global.candidate");
-  ck_assert(Race_Settings_Paths(RACE_SETTING_SCOPE_MAP, "maps/EDGE.bsp",
-                               committed, sizeof(committed),
-                               persistence_candidate,
-                               sizeof(persistence_candidate)));
-  ck_assert_str_eq(committed,
-                   "settings/maps/65646765.settings");
+  static const char duplicate[] =
+    "set g_time_limit \"30\"\n"
+    "set g_time_limit \"45\"\n";
+  ck_assert(!Race_SettingsStore_Parse(duplicate, sizeof(duplicate) - 1u,
+                                      &parsed));
+  static const char malformed[] = "set g_time_limit 30\n";
+  ck_assert(!Race_SettingsStore_Parse(malformed, sizeof(malformed) - 1u,
+                                      &parsed));
+  ck_assert(!Race_SettingsStore_Set(&document, "bad name", "1", &candidate));
 
-  char malformed[4096];
-  memcpy(malformed, serialized, length + 1u);
-  malformed[strlen(RACE_SETTINGS_MAGIC) - 1u] = '2';
-  ck_assert_int_eq(Race_Settings_Parse(malformed, length,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_UNKNOWN_VERSION);
+  char maximum_value[RACE_SETTING_VALUE_SIZE];
+  memset(maximum_value, 'm', RACE_SETTING_VALUE_MAX);
+  maximum_value[RACE_SETTING_VALUE_MAX] = '\0';
+  ck_assert(Race_SettingsStore_Set(
+    &empty, "g_music", maximum_value, &candidate));
 
-  memcpy(malformed, serialized, length + 1u);
-  size_t malformed_length = Race_TestSettingsReplace(
-    malformed, length, sizeof(malformed),
-    "finish_cue_enabled", "legacy_timelimit__");
-  Race_TestSettingsUpdateChecksum(malformed, malformed_length);
-  ck_assert_int_eq(Race_Settings_Parse(malformed, malformed_length,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_UNKNOWN_KEY);
+  char oversized_value[RACE_SETTING_VALUE_SIZE + 1u];
+  memset(oversized_value, 'm', RACE_SETTING_VALUE_MAX + 1u);
+  oversized_value[RACE_SETTING_VALUE_MAX + 1u] = '\0';
+  ck_assert(!Race_SettingsStore_Set(
+    &empty, "g_music", oversized_value, &candidate));
+} END_TEST
 
-  memcpy(malformed, serialized, length + 1u);
-  malformed_length = Race_TestSettingsReplace(
-    malformed, length, sizeof(malformed),
-    "finish_cue_gain", "finish_cue_enabled");
-  Race_TestSettingsUpdateChecksum(malformed, malformed_length);
-  ck_assert_int_eq(Race_Settings_Parse(malformed, malformed_length,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_DUPLICATE_KEY);
+START_TEST(_Race_SettingsMapPropertiesEditing) {
+  static const char catalog[] =
+    "# preserve this comment\n"
+    "{\n"
+    "  name edge\n"
+    "  message \"Edge map\"\n"
+    "  gravity 900\n"
+    "}\n"
+    "{ name other weapons 1 }\n";
+  const race_setting_descriptor_t *weapons =
+    Race_Settings_DescriptorForName("weapons");
+  ck_assert_ptr_nonnull(weapons);
 
-  memcpy(malformed, serialized, length + 1u);
-  malformed_length = Race_TestSettingsReplace(
-    malformed, length, sizeof(malformed),
-    "finish_cue_enabled|bool|0", "finish_cue_enabled|enum|time");
-  Race_TestSettingsUpdateChecksum(malformed, malformed_length);
-  ck_assert_int_eq(Race_Settings_Parse(malformed, malformed_length,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_WRONG_TYPE);
+  char error[256];
+  race_map_properties_t properties;
+  ck_assert_int_eq(Race_MapProperties_Parse(
+    catalog, sizeof(catalog) - 1u, "edge", &properties, error, sizeof(error)),
+    RACE_MAP_PROPERTIES_OK);
+  ck_assert_uint_eq(properties.rows, 2u);
+  ck_assert_uint_eq(properties.map_matches, 1u);
+  ck_assert(properties.properties[RACE_SETTING_GRAVITY].present);
+  ck_assert_str_eq(properties.properties[RACE_SETTING_GRAVITY].canonical, "900");
+  ck_assert(!properties.properties[RACE_SETTING_WEAPONS].present);
 
-  memcpy(malformed, serialized, length + 1u);
-  malformed_length = Race_TestSettingsReplace(
-    malformed, length, sizeof(malformed),
-    "finish_cue_gain|int|50", "finish_cue_gain|int|0");
-  Race_TestSettingsUpdateChecksum(malformed, malformed_length);
-  ck_assert_int_eq(Race_Settings_Parse(malformed, malformed_length,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_INVALID_VALUE);
+  char edited[4096];
+  race_map_properties_edit_t edit;
+  ck_assert_int_eq(Race_MapProperties_Edit(
+    catalog, sizeof(catalog) - 1u, "edge", weapons, "0", edited,
+    sizeof(edited), &edit, error, sizeof(error)), RACE_MAP_PROPERTIES_OK);
+  ck_assert(edit.changed);
+  ck_assert(!edit.appended_row);
+  ck_assert_ptr_nonnull(strstr(edited, "message \"Edge map\""));
+  ck_assert_ptr_nonnull(strstr(edited, "name other weapons 1"));
+  ck_assert_int_eq(Race_MapProperties_ValidateCandidate(
+    edited, edit.length, "edge", weapons, "0", &properties,
+    error, sizeof(error)), RACE_MAP_PROPERTIES_OK);
+  ck_assert(properties.properties[RACE_SETTING_WEAPONS].present);
+  ck_assert(properties.properties[RACE_SETTING_WEAPONS].valid);
+  ck_assert_str_eq(properties.properties[RACE_SETTING_WEAPONS].canonical, "0");
 
-  memcpy(malformed, serialized, length + 1u);
-  char *unchecked_value = strstr(malformed, "finish_cue_gain|int|50");
-  ck_assert_ptr_nonnull(unchecked_value);
-  unchecked_value[strlen("finish_cue_gain|int|5")] = '1';
-  ck_assert_int_eq(Race_Settings_Parse(malformed, length,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_CHECKSUM);
-  ck_assert_int_eq(Race_Settings_Parse(serialized, length - 1u,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_MALFORMED);
-  ck_assert_int_eq(Race_Settings_Parse(serialized,
-                                       RACE_SETTINGS_MAX_FILE_BYTES + 1u,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_TOO_LARGE);
+  char cleared[4096];
+  ck_assert_int_eq(Race_MapProperties_Edit(
+    edited, edit.length, "edge", weapons, NULL, cleared, sizeof(cleared),
+    &edit, error, sizeof(error)), RACE_MAP_PROPERTIES_OK);
+  ck_assert(edit.changed);
+  ck_assert(edit.removed);
+  ck_assert_int_eq(Race_MapProperties_ValidateCandidate(
+    cleared, edit.length, "edge", weapons, NULL, &properties,
+    error, sizeof(error)), RACE_MAP_PROPERTIES_OK);
 
-  const char legacy[] = "// Race admin settings\nset timelimit \"20\"\n";
-  ck_assert_int_eq(Race_Settings_Parse(legacy, sizeof(legacy) - 1u,
-                                       RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                       &parsed),
-                   RACE_SETTINGS_PARSE_LEGACY_UNSUPPORTED);
+  const race_setting_descriptor_t *cue =
+    Race_Settings_DescriptorForName("finish_cue_enabled");
+  ck_assert_ptr_nonnull(cue);
+  ck_assert_int_eq(Race_MapProperties_Edit(
+    catalog, sizeof(catalog) - 1u, "fresh", cue, "0", edited,
+    sizeof(edited), &edit, error, sizeof(error)), RACE_MAP_PROPERTIES_OK);
+  ck_assert(edit.appended_row);
+  ck_assert_int_eq(Race_MapProperties_ValidateCandidate(
+    edited, edit.length, "fresh", cue, "0", &properties,
+    error, sizeof(error)), RACE_MAP_PROPERTIES_OK);
+
+  static const char duplicate_property[] =
+    "{ name edge weapons 0 weapons 1 }\n";
+  ck_assert_int_eq(Race_MapProperties_Edit(
+    duplicate_property, sizeof(duplicate_property) - 1u, "edge", weapons,
+    "0", edited, sizeof(edited), &edit, error, sizeof(error)),
+    RACE_MAP_PROPERTIES_DUPLICATE_PROPERTY);
+  ck_assert_int_eq(Race_MapProperties_ValidateVirtualPath(
+    "maps.lst", error, sizeof(error)), RACE_MAP_PROPERTIES_OK);
+  ck_assert_int_ne(Race_MapProperties_ValidateVirtualPath(
+    "../maps.lst", error, sizeof(error)), RACE_MAP_PROPERTIES_OK);
 } END_TEST
 
 START_TEST(_Race_SettingsPersistenceAndRecovery) {
-  race_settings_document_t loaded;
-  race_settings_parse_result_t parse_result;
-  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed,
-                                           RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                           &loaded, &parse_result),
+  race_gset_document_t loaded;
+  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed, &loaded),
                    RACE_SETTINGS_STORE_MISSING);
-  ck_assert_uint_eq(loaded.generation, 0u);
+  ck_assert_uint_eq(loaded.count, 0u);
 
-  race_settings_state_t state;
-  race_settings_state_t candidate;
-  race_settings_change_t change;
-  ck_assert(Race_Settings_StateInit(&state));
-  ck_assert(Race_Settings_StateSet(&state, RACE_SETTING_SOURCE_GLOBAL,
-                                   "checkpoint_feedback", "silent",
-                                   &candidate, &change, NULL, 0));
-  state = candidate;
-
-  race_settings_document_t committed;
-  ck_assert(Race_Settings_DocumentFromState(&committed,
-                                            RACE_SETTING_SCOPE_GLOBAL,
-                                            NULL, 1u, &state));
+  race_gset_document_t committed;
+  Race_SettingsStore_DocumentInit(&committed);
+  race_gset_document_t candidate;
+  ck_assert(Race_SettingsStore_Set(
+    &committed, "g_race_checkpoint_feedback", "silent", &candidate));
+  committed = candidate;
   ck_assert_int_eq(Race_SettingsStore_Commit(race_test_committed,
                                              race_test_candidate,
-                                             &committed, &parse_result),
+                                             &committed),
                    RACE_SETTINGS_STORE_OK);
-  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed,
-                                           RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                           &loaded, &parse_result),
+  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed, &loaded),
                    RACE_SETTINGS_STORE_OK);
-  ck_assert(Race_Settings_DocumentEquals(&committed, &loaded));
+  ck_assert(Race_SettingsStore_Equals(&committed, &loaded));
 
-  race_settings_document_t stale = committed;
-  stale.generation = 2u;
-  char serialized[4096];
-  size_t serialized_length;
-  ck_assert(Race_Settings_Serialize(&stale, serialized,
-                                    sizeof(serialized), &serialized_length));
-  ck_assert_int_eq(Race_Persistence_WriteCandidate(race_test_candidate,
-                                                   serialized,
-                                                   serialized_length),
-                   RACE_PERSISTENCE_OK);
-  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed,
-                                           RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                           &loaded, &parse_result),
+  static const char stale_candidate[] = "set g_time_limit \"45\"\n";
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+    race_test_candidate, stale_candidate, sizeof(stale_candidate) - 1u),
+    RACE_PERSISTENCE_OK);
+  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed, &loaded),
                    RACE_SETTINGS_STORE_OK);
-  ck_assert(Race_Settings_DocumentEquals(&committed, &loaded));
+  ck_assert(Race_SettingsStore_Equals(&committed, &loaded));
 
   char unavailable[RACE_TEST_PATH_SIZE];
   snprintf(unavailable, sizeof(unavailable),
-           "%s/missing/candidate.settings", race_test_directory);
+           "%s/missing/gset.candidate", race_test_directory);
   ck_assert_int_eq(Race_SettingsStore_Commit(race_test_committed,
                                              unavailable,
-                                             &stale, &parse_result),
+                                             &candidate),
                    RACE_SETTINGS_STORE_IO_ERROR);
-  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed,
-                                           RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                           &loaded, &parse_result),
+  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed, &loaded),
                    RACE_SETTINGS_STORE_OK);
-  ck_assert(Race_Settings_DocumentEquals(&committed, &loaded));
+  ck_assert(Race_SettingsStore_Equals(&committed, &loaded));
 
   Race_TestPersistenceRemove(race_test_candidate);
   ck_assert_int_eq(Race_SettingsStore_Commit(race_test_directory,
                                              race_test_candidate,
-                                             &stale, &parse_result),
+                                             &candidate),
                    RACE_SETTINGS_STORE_IO_ERROR);
-  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed,
-                                           RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                           &loaded, &parse_result),
+  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed, &loaded),
                    RACE_SETTINGS_STORE_OK);
-  ck_assert(Race_Settings_DocumentEquals(&committed, &loaded));
+  ck_assert(Race_SettingsStore_Equals(&committed, &loaded));
 
-  const char corrupt[] = "QUETOO_RACE_SETTINGS_V1\nscope=global\n";
+  static const char corrupt[] = "set g_time_limit 30\n";
   ck_assert_int_eq(Race_Persistence_WriteCandidate(race_test_committed,
                                                    corrupt,
                                                    sizeof(corrupt) - 1u),
                    RACE_PERSISTENCE_OK);
-  race_settings_document_t unchanged = loaded;
-  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed,
-                                           RACE_SETTING_SCOPE_GLOBAL, NULL,
-                                           &loaded, &parse_result),
+  race_gset_document_t unchanged = loaded;
+  ck_assert_int_eq(Race_SettingsStore_Load(race_test_committed, &loaded),
                    RACE_SETTINGS_STORE_CORRUPT);
-  ck_assert(Race_Settings_DocumentEquals(&unchanged, &loaded));
+  ck_assert(Race_SettingsStore_Equals(&unchanged, &loaded));
   char preserved[128];
   Race_TestPersistenceRead(race_test_committed, preserved,
                            sizeof(preserved), corrupt);
@@ -4208,6 +4310,17 @@ static void Race_TestReplaceSameLength(char *text, const char *from,
   memcpy(match, to, strlen(to));
 }
 
+#define RACE_TEST_ADMIN_CREDENTIAL_PREFIX \
+  "$argon2id$v=19$m=19456,t=2,p=1$"
+#define RACE_TEST_ADMIN_CREDENTIAL \
+  RACE_TEST_ADMIN_CREDENTIAL_PREFIX \
+  "AAAAAAAAAAAAAAAAAAAAAA$" \
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+#define RACE_TEST_ADMIN_CREDENTIAL_ALTERNATE \
+  RACE_TEST_ADMIN_CREDENTIAL_PREFIX \
+  "AAAAAAAAAAAAAAAAAAAAAA$" \
+  "BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
 START_TEST(_Race_AdminAccountModel) {
   race_admin_document_t document;
   ck_assert(Race_Admin_DocumentInit(&document));
@@ -4215,7 +4328,7 @@ START_TEST(_Race_AdminAccountModel) {
 
   race_admin_document_t candidate;
   ck_assert(Race_Admin_AddAccount(&document, "OWNER-01", "Alice",
-                                  RACE_ADMIN_ROLE_OWNER, &candidate));
+                                  RACE_ADMIN_ROLE_OWNER, NULL, &candidate));
   document = candidate;
   ck_assert_uint_eq(document.generation, 1u);
   ck_assert_uint_eq(document.count, 1u);
@@ -4225,18 +4338,18 @@ START_TEST(_Race_AdminAccountModel) {
   ck_assert_int_eq(document.accounts[0].role, RACE_ADMIN_ROLE_OWNER);
 
   ck_assert(!Race_Admin_AddAccount(&document, "OWNER-01", "other",
-                                   RACE_ADMIN_ROLE_MODERATOR, &candidate));
+                                   RACE_ADMIN_ROLE_MODERATOR, NULL, &candidate));
   ck_assert(!Race_Admin_AddAccount(&document, "other", "ALICE",
-                                   RACE_ADMIN_ROLE_MODERATOR, &candidate));
+                                   RACE_ADMIN_ROLE_MODERATOR, NULL, &candidate));
   ck_assert(!Race_Admin_AddAccount(&document, "bad id", "valid",
-                                   RACE_ADMIN_ROLE_MODERATOR, &candidate));
+                                   RACE_ADMIN_ROLE_MODERATOR, NULL, &candidate));
   ck_assert(!Race_Admin_AddAccount(&document, "valid", "bad handle",
-                                   RACE_ADMIN_ROLE_MODERATOR, &candidate));
+                                   RACE_ADMIN_ROLE_MODERATOR, NULL, &candidate));
   char oversized[RACE_ADMIN_HANDLE_SIZE + 1u];
   memset(oversized, 'a', sizeof(oversized) - 1u);
   oversized[sizeof(oversized) - 1u] = '\0';
   ck_assert(!Race_Admin_AddAccount(&document, "valid", oversized,
-                                   RACE_ADMIN_ROLE_MODERATOR, &candidate));
+                                   RACE_ADMIN_ROLE_MODERATOR, NULL, &candidate));
 
   ck_assert_uint_eq(Race_Admin_RoleCapabilities(RACE_ADMIN_ROLE_MODERATOR),
                     RACE_ADMIN_CAP_PLAYER_KICK |
@@ -4246,6 +4359,14 @@ START_TEST(_Race_AdminAccountModel) {
             RACE_ADMIN_CAP_SETTINGS_MUTATE);
   ck_assert(Race_Admin_RoleCapabilities(RACE_ADMIN_ROLE_OWNER) &
             RACE_ADMIN_CAP_ACCOUNT_MANAGE);
+  ck_assert(Race_Admin_RoleCapabilities(RACE_ADMIN_ROLE_OWNER) &
+            RACE_ADMIN_CAP_SERVER_CVAR);
+  ck_assert(Race_Admin_RoleCapabilities(RACE_ADMIN_ROLE_OPERATOR) &
+            RACE_ADMIN_CAP_SERVER_CVAR);
+  ck_assert(Race_Admin_RoleCapabilities(RACE_ADMIN_ROLE_OWNER) &
+            RACE_ADMIN_CAP_CVAR_ALLOWLIST_MANAGE);
+  ck_assert(!(Race_Admin_RoleCapabilities(RACE_ADMIN_ROLE_OPERATOR) &
+              RACE_ADMIN_CAP_CVAR_ALLOWLIST_MANAGE));
   ck_assert_uint_eq(Race_Admin_RoleCapabilities(RACE_ADMIN_ROLE_NONE), 0u);
 
   ck_assert(Race_Admin_SetAccountRole(&document, "owner-01",
@@ -4269,19 +4390,20 @@ START_TEST(_Race_AdminAccountModel) {
     snprintf(id, sizeof(id), "id%02zu", i);
     snprintf(handle, sizeof(handle), "handle%02zu", i);
     ck_assert(Race_Admin_AddAccount(&maximum, id, handle,
-                                    RACE_ADMIN_ROLE_MODERATOR, &candidate));
+                                    RACE_ADMIN_ROLE_MODERATOR, NULL,
+                                    &candidate));
     maximum = candidate;
   }
   ck_assert_uint_eq(maximum.count, RACE_ADMIN_MAX_ACCOUNTS);
   ck_assert(!Race_Admin_AddAccount(&maximum, "overflow", "overflow",
-                                   RACE_ADMIN_ROLE_OWNER, &candidate));
+                                   RACE_ADMIN_ROLE_OWNER, NULL, &candidate));
 } END_TEST
 
 START_TEST(_Race_AdminSessionAndAuthorization) {
   race_admin_document_t document, candidate;
   ck_assert(Race_Admin_DocumentInit(&document));
   ck_assert(Race_Admin_AddAccount(&document, "moderator-id", "moderator",
-                                  RACE_ADMIN_ROLE_MODERATOR, &candidate));
+                                  RACE_ADMIN_ROLE_MODERATOR, NULL, &candidate));
   document = candidate;
 
   race_admin_session_t session = { 0 };
@@ -4336,10 +4458,10 @@ START_TEST(_Race_AdminActionAuthorization) {
   race_admin_document_t document, candidate;
   ck_assert(Race_Admin_DocumentInit(&document));
   ck_assert(Race_Admin_AddAccount(&document, "moderator-id", "moderator",
-                                  RACE_ADMIN_ROLE_MODERATOR, &candidate));
+                                  RACE_ADMIN_ROLE_MODERATOR, NULL, &candidate));
   document = candidate;
   ck_assert(Race_Admin_AddAccount(&document, "operator-id", "operator",
-                                  RACE_ADMIN_ROLE_OPERATOR, &candidate));
+                                  RACE_ADMIN_ROLE_OPERATOR, NULL, &candidate));
   document = candidate;
 
   ck_assert_int_eq(Race_Admin_ActionCapability(
@@ -4351,6 +4473,15 @@ START_TEST(_Race_AdminActionAuthorization) {
                    RACE_ADMIN_CAP_PLAYER_KICK);
   ck_assert_int_eq(Race_Admin_ActionCapability(RACE_ADMIN_ACTION_VOTE_CANCEL),
                    RACE_ADMIN_CAP_VOTE_ADMIN);
+  ck_assert_int_eq(Race_Admin_ActionCapability(
+                     RACE_ADMIN_ACTION_ACCOUNT_MANAGE),
+                   RACE_ADMIN_CAP_ACCOUNT_MANAGE);
+  ck_assert_int_eq(Race_Admin_ActionCapability(
+                     RACE_ADMIN_ACTION_SERVER_CVAR),
+                   RACE_ADMIN_CAP_SERVER_CVAR);
+  ck_assert_int_eq(Race_Admin_ActionCapability(
+                     RACE_ADMIN_ACTION_CVAR_ALLOWLIST_MANAGE),
+                   RACE_ADMIN_CAP_CVAR_ALLOWLIST_MANAGE);
   ck_assert_int_eq(Race_Admin_ActionCapability(RACE_ADMIN_ACTION_TOTAL), 0);
 
   race_admin_session_t session = { 0 };
@@ -4368,6 +4499,12 @@ START_TEST(_Race_AdminActionAuthorization) {
     &session, &document, RACE_ADMIN_ACTION_PLAYER_KICK));
   ck_assert(Race_Admin_SessionCanPerform(
     &session, &document, RACE_ADMIN_ACTION_VOTE_CANCEL));
+  ck_assert(!Race_Admin_SessionCanPerform(
+    &session, &document, RACE_ADMIN_ACTION_ACCOUNT_MANAGE));
+  ck_assert(!Race_Admin_SessionCanPerform(
+    &session, &document, RACE_ADMIN_ACTION_SERVER_CVAR));
+  ck_assert(!Race_Admin_SessionCanPerform(
+    &session, &document, RACE_ADMIN_ACTION_CVAR_ALLOWLIST_MANAGE));
 
   race_admin_session_t wrong_vote_capability = session;
   wrong_vote_capability.capabilities &= ~RACE_ADMIN_CAP_VOTE_ADMIN;
@@ -4377,8 +4514,20 @@ START_TEST(_Race_AdminActionAuthorization) {
   ck_assert(Race_Admin_SessionGrant(&session, &document, "operator-id"));
   for (race_admin_action_t action = RACE_ADMIN_ACTION_SETTINGS_MUTATE;
        action < RACE_ADMIN_ACTION_TOTAL; action++) {
+    ck_assert_int_eq(Race_Admin_SessionCanPerform(&session, &document, action),
+                     action != RACE_ADMIN_ACTION_ACCOUNT_MANAGE &&
+                     action != RACE_ADMIN_ACTION_CVAR_ALLOWLIST_MANAGE);
+  }
+
+  ck_assert(Race_Admin_AddAccount(&document, "owner-id", "owner",
+                                  RACE_ADMIN_ROLE_OWNER, NULL, &candidate));
+  document = candidate;
+  ck_assert(Race_Admin_SessionGrant(&session, &document, "owner-id"));
+  for (race_admin_action_t action = RACE_ADMIN_ACTION_SETTINGS_MUTATE;
+       action < RACE_ADMIN_ACTION_TOTAL; action++) {
     ck_assert(Race_Admin_SessionCanPerform(&session, &document, action));
   }
+  ck_assert(Race_Admin_SessionGrant(&session, &document, "operator-id"));
 
   // The current map-change reconnect handshake clears connection-local state.
   race_admin_session_t map_session = session;
@@ -4436,6 +4585,90 @@ START_TEST(_Race_AdminActionAuthorization) {
     &session, &document, RACE_ADMIN_ACTION_PLAYER_KICK));
 } END_TEST
 
+START_TEST(_Race_AdminExternalCvarAllowlist) {
+  race_admin_allowlist_t allowlist, candidate;
+  ck_assert(Race_AdminAllowlist_Init(&allowlist));
+  ck_assert(Race_AdminAllowlist_Valid(&allowlist));
+  ck_assert(Race_AdminAllowlist_NameValid("sv_hostname"));
+  ck_assert(Race_AdminAllowlist_NameValid("g.physics-test"));
+  ck_assert(!Race_AdminAllowlist_NameValid(""));
+  ck_assert(!Race_AdminAllowlist_NameValid("sv hostname"));
+  ck_assert(!Race_AdminAllowlist_NameValid("rcon_password"));
+
+  ck_assert(Race_AdminAllowlist_Add(&allowlist, "sv_hostname", &candidate));
+  allowlist = candidate;
+  ck_assert(Race_AdminAllowlist_Add(&allowlist, "g_gravity", &candidate));
+  allowlist = candidate;
+  ck_assert_uint_eq(allowlist.count, 2u);
+  ck_assert_str_eq(allowlist.names[0], "g_gravity");
+  ck_assert_str_eq(allowlist.names[1], "sv_hostname");
+  ck_assert(Race_AdminAllowlist_Contains(&allowlist, "g_gravity"));
+  ck_assert(!Race_AdminAllowlist_Contains(&allowlist, "G_GRAVITY"));
+  ck_assert(!Race_AdminAllowlist_Add(&allowlist, "g_gravity", &candidate));
+
+  char serialized[RACE_ADMIN_ALLOWLIST_SERIALIZED_MAX];
+  size_t serialized_length;
+  ck_assert(Race_AdminAllowlist_Serialize(
+    &allowlist, serialized, sizeof(serialized), &serialized_length));
+  ck_assert_str_eq(serialized, "g_gravity\nsv_hostname\n");
+
+  race_admin_allowlist_t parsed;
+  ck_assert_int_eq(Race_AdminAllowlist_Parse(
+    serialized, serialized_length, &parsed), RACE_ADMIN_ALLOWLIST_PARSE_OK);
+  ck_assert(Race_AdminAllowlist_Equals(&allowlist, &parsed));
+  static const char with_comments[] =
+    "# Operator cvars\n\n"
+    "g_gravity\r\n"
+    "sv_hostname\n";
+  ck_assert_int_eq(Race_AdminAllowlist_Parse(
+    with_comments, sizeof(with_comments) - 1u, &parsed),
+    RACE_ADMIN_ALLOWLIST_PARSE_OK);
+  ck_assert(Race_AdminAllowlist_Equals(&allowlist, &parsed));
+  static const char duplicate[] = "g_gravity\ng_gravity\n";
+  ck_assert_int_eq(Race_AdminAllowlist_Parse(
+    duplicate, sizeof(duplicate) - 1u, &parsed),
+    RACE_ADMIN_ALLOWLIST_PARSE_DUPLICATE);
+  static const char unordered[] = "sv_hostname\ng_gravity\n";
+  ck_assert_int_eq(Race_AdminAllowlist_Parse(
+    unordered, sizeof(unordered) - 1u, &parsed),
+    RACE_ADMIN_ALLOWLIST_PARSE_MALFORMED);
+
+  ck_assert(Race_AdminAllowlist_Remove(&allowlist, "g_gravity", &candidate));
+  ck_assert_uint_eq(candidate.count, 1u);
+  ck_assert_str_eq(candidate.names[0], "sv_hostname");
+} END_TEST
+
+START_TEST(_Race_AdminExternalCvarAllowlistPersistence) {
+  race_admin_allowlist_t allowlist, candidate, loaded;
+  race_admin_allowlist_parse_result_t parse_result;
+  ck_assert(Race_AdminAllowlist_Init(&allowlist));
+  ck_assert(Race_AdminAllowlist_Add(&allowlist, "g_gravity", &candidate));
+  allowlist = candidate;
+  ck_assert(Race_AdminAllowlist_Add(&allowlist, "sv_hostname", &candidate));
+  allowlist = candidate;
+
+  ck_assert_int_eq(Race_AdminAllowlistStore_Load(
+    race_test_admin_committed, &loaded, &parse_result),
+    RACE_ADMIN_ALLOWLIST_STORE_MISSING);
+  ck_assert_uint_eq(loaded.count, 0u);
+  ck_assert_int_eq(Race_AdminAllowlistStore_Commit(
+    race_test_admin_committed, race_test_admin_candidate, &allowlist,
+    &parse_result), RACE_ADMIN_ALLOWLIST_STORE_OK);
+  ck_assert_int_eq(Race_AdminAllowlistStore_Load(
+    race_test_admin_committed, &loaded, &parse_result),
+    RACE_ADMIN_ALLOWLIST_STORE_OK);
+  ck_assert(Race_AdminAllowlist_Equals(&allowlist, &loaded));
+
+  static const char corrupt[] = "sv_hostname\ng_gravity\n";
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+    race_test_admin_committed, corrupt, sizeof(corrupt) - 1u),
+    RACE_PERSISTENCE_OK);
+  ck_assert_int_eq(Race_AdminAllowlistStore_Load(
+    race_test_admin_committed, &loaded, &parse_result),
+    RACE_ADMIN_ALLOWLIST_STORE_CORRUPT);
+  ck_assert_int_eq(parse_result, RACE_ADMIN_ALLOWLIST_PARSE_MALFORMED);
+} END_TEST
+
 START_TEST(_Race_AdminActionInputsAndSettings) {
   int32_t slot = -1;
   ck_assert(Race_Admin_ParseClientSlot("0", 8, &slot));
@@ -4458,67 +4691,54 @@ START_TEST(_Race_AdminActionInputsAndSettings) {
   ck_assert_int_eq(Race_Admin_ValidateKickTarget(0, 8, 8, true),
                    RACE_ADMIN_KICK_TARGET_INVALID);
 
-  char canonical[RACE_MAP_IDENTITY_SIZE];
-  ck_assert(Race_MapState_CanonicalizeMap("Race-Test", canonical));
-  ck_assert_str_eq(canonical, "race-test");
+  char map_identity[RACE_MAP_IDENTITY_SIZE];
+  ck_assert(Race_MapState_CanonicalizeMap("Race-Test", map_identity));
+  ck_assert_str_eq(map_identity, "race-test");
   const char *unsafe_maps[] = {
     "../race-test", "race-test;quit", "race-test\nquit",
     "C:/race-test", "/race-test",
     "maps/../../race-test.bsp"
   };
   for (size_t i = 0; i < lengthof(unsafe_maps); i++) {
-    ck_assert(!Race_MapState_CanonicalizeMap(unsafe_maps[i], canonical));
+    ck_assert(!Race_MapState_CanonicalizeMap(unsafe_maps[i], map_identity));
   }
   char oversized_map[RACE_MAP_IDENTITY_SIZE + 1u];
   memset(oversized_map, 'a', sizeof(oversized_map) - 1u);
   oversized_map[sizeof(oversized_map) - 1u] = '\0';
-  ck_assert(!Race_MapState_CanonicalizeMap(oversized_map, canonical));
+  ck_assert(!Race_MapState_CanonicalizeMap(oversized_map, map_identity));
 
   race_admin_document_t document, admin_candidate;
   ck_assert(Race_Admin_DocumentInit(&document));
   ck_assert(Race_Admin_AddAccount(&document, "moderator-id", "moderator",
-                                  RACE_ADMIN_ROLE_MODERATOR,
+                                  RACE_ADMIN_ROLE_MODERATOR, NULL,
                                   &admin_candidate));
   document = admin_candidate;
   ck_assert(Race_Admin_AddAccount(&document, "operator-id", "operator",
-                                  RACE_ADMIN_ROLE_OPERATOR,
+                                  RACE_ADMIN_ROLE_OPERATOR, NULL,
                                   &admin_candidate));
   document = admin_candidate;
 
-  race_settings_state_t state, settings_candidate;
-  race_settings_change_t change;
-  ck_assert(Race_Settings_StateInit(&state));
   race_admin_session_t session = { 0 };
   ck_assert(Race_Admin_SessionGrant(&session, &document, "moderator-id"));
-  bool mutated = false;
-  if (Race_Admin_SessionCanPerform(
-        &session, &document, RACE_ADMIN_ACTION_SETTINGS_MUTATE)) {
-    mutated = Race_Settings_StateSet(
-      &state, RACE_SETTING_SOURCE_RUNTIME, "finish_cue_enabled", "0",
-      &settings_candidate, &change, NULL, 0);
-  }
-  ck_assert(!mutated);
-  ck_assert_uint_eq(state.revision, 1u);
+  ck_assert(!Race_Admin_SessionCanPerform(
+    &session, &document, RACE_ADMIN_ACTION_SETTINGS_MUTATE));
 
   ck_assert(Race_Admin_SessionGrant(&session, &document, "operator-id"));
   ck_assert(Race_Admin_SessionCanPerform(
     &session, &document, RACE_ADMIN_ACTION_SETTINGS_MUTATE));
-  ck_assert(Race_Settings_StateSet(
-    &state, RACE_SETTING_SOURCE_RUNTIME, "finish_cue_enabled", "0",
-    &settings_candidate, &change, NULL, 0));
-  ck_assert(change.effective_changed);
-  state = settings_candidate;
-  ck_assert_uint_eq(state.revision, 2u);
-  ck_assert(!Race_Settings_StateSet(
-    &state, RACE_SETTING_SOURCE_RUNTIME, "finish_cue_gain", "101",
-    &settings_candidate, &change, NULL, 0));
-  ck_assert_uint_eq(state.revision, 2u);
-  ck_assert(Race_Settings_StateSet(
-    &state, RACE_SETTING_SOURCE_RUNTIME, "finish_cue_enabled", "0",
-    &settings_candidate, &change, NULL, 0));
-  ck_assert(!change.source_changed);
-  ck_assert(!change.effective_changed);
-  ck_assert_uint_eq(settings_candidate.revision, 2u);
+
+  const race_setting_descriptor_t *cue =
+    Race_Settings_DescriptorForName("finish_cue_enabled");
+  const race_setting_descriptor_t *gain =
+    Race_Settings_DescriptorForName("finish_cue_gain");
+  char canonical[RACE_SETTING_VALUE_SIZE];
+  ck_assert_ptr_nonnull(cue);
+  ck_assert_ptr_nonnull(gain);
+  ck_assert(Race_Settings_CanonicalizeValue(
+    cue, "0", canonical, sizeof(canonical), NULL, 0));
+  ck_assert_str_eq(canonical, "0");
+  ck_assert(!Race_Settings_CanonicalizeValue(
+    gain, "101", canonical, sizeof(canonical), NULL, 0));
 } END_TEST
 
 START_TEST(_Race_PhysicsCatalogAndRankingPolicy) {
@@ -4959,7 +5179,7 @@ START_TEST(_Race_AdminIdentityIsolation) {
   race_admin_document_t document, candidate;
   ck_assert(Race_Admin_DocumentInit(&document));
   ck_assert(Race_Admin_AddAccount(&document, "separate-admin", "admin-handle",
-                                  RACE_ADMIN_ROLE_OWNER, &candidate));
+                                  RACE_ADMIN_ROLE_OWNER, NULL, &candidate));
   document = candidate;
 
   const char *spoofed_profile_guid = RACE_TEST_UID_A;
@@ -4980,14 +5200,389 @@ START_TEST(_Race_AdminIdentityIsolation) {
     &spoofed, &document, RACE_ADMIN_CAP_ACCOUNT_MANAGE));
 } END_TEST
 
+START_TEST(_Race_AdminPasswordPolicyAndVerification) {
+  ck_assert(Race_AdminPassword_Valid("Abcdef12"));
+  ck_assert(!Race_AdminPassword_Valid("Abcdef1"));
+  ck_assert(!Race_AdminPassword_Valid("abcd 123"));
+  ck_assert(!Race_AdminPassword_Valid("abcd;123"));
+  ck_assert(!Race_AdminPassword_Valid("abcd\"123"));
+  ck_assert(!Race_AdminPassword_Valid("abcd\\123"));
+  ck_assert(!Race_AdminPassword_Valid("abcd$123"));
+  ck_assert(!Race_AdminPassword_Valid("abcd/123"));
+  ck_assert(!Race_AdminPassword_Valid("$g_password"));
+  ck_assert(!Race_AdminPassword_Valid("//Secret9"));
+  ck_assert(!Race_AdminPassword_Valid(NULL));
+
+  char maximum[RACE_ADMIN_PASSWORD_MAX + 1u];
+  memset(maximum, 'a', RACE_ADMIN_PASSWORD_MAX);
+  maximum[RACE_ADMIN_PASSWORD_MAX] = '\0';
+  ck_assert(Race_AdminPassword_Valid(maximum));
+
+  char oversized[RACE_ADMIN_PASSWORD_MAX + 2u];
+  memset(oversized, 'a', RACE_ADMIN_PASSWORD_MAX + 1u);
+  oversized[RACE_ADMIN_PASSWORD_MAX + 1u] = '\0';
+  ck_assert(!Race_AdminPassword_Valid(oversized));
+
+  const uint8_t salt[RACE_ADMIN_PASSWORD_SALT_SIZE] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+  };
+  char encoded[RACE_ADMIN_CREDENTIAL_SIZE] = "unchanged";
+  ck_assert(!Race_AdminPassword_HashWithSalt("short", salt, encoded));
+  ck_assert_str_eq(encoded, "unchanged");
+  ck_assert(Race_AdminPassword_HashWithSalt("CorrectHorse9", salt, encoded));
+  ck_assert(Race_AdminPassword_EncodedValid(encoded));
+  ck_assert_int_eq(Race_AdminPassword_Verify(encoded, "CorrectHorse9"),
+                   RACE_ADMIN_PASSWORD_VERIFY_MATCH);
+  ck_assert_int_eq(Race_AdminPassword_Verify(encoded, "Different9"),
+                   RACE_ADMIN_PASSWORD_VERIFY_MISMATCH);
+
+  uint8_t nonce[RACE_ADMIN_AUTH_NONCE_SIZE];
+  uint8_t proof[RACE_ADMIN_AUTH_PROOF_SIZE];
+  memset(nonce, 0x5a, sizeof(nonce));
+  ck_assert(Race_AdminAuth_CreatePasswordProof(
+    "owner-1", "CorrectHorse9", salt, nonce, proof));
+  ck_assert(Race_AdminAuth_VerifyCredentialProof(
+    "owner-1", encoded, nonce, proof));
+  ck_assert(!Race_AdminAuth_VerifyCredentialProof(
+    "owner-2", encoded, nonce, proof));
+  nonce[0] ^= 1u;
+  ck_assert(!Race_AdminAuth_VerifyCredentialProof(
+    "owner-1", encoded, nonce, proof));
+
+  uint8_t dummy_salt_one[RACE_ADMIN_AUTH_SALT_SIZE];
+  uint8_t dummy_salt_repeat[RACE_ADMIN_AUTH_SALT_SIZE];
+  uint8_t dummy_salt_two[RACE_ADMIN_AUTH_SALT_SIZE];
+  ck_assert(Race_AdminAuth_DeriveDummySalt(
+    encoded, "missing-1", dummy_salt_one));
+  ck_assert(Race_AdminAuth_DeriveDummySalt(
+    encoded, "missing-1", dummy_salt_repeat));
+  ck_assert(Race_AdminAuth_DeriveDummySalt(
+    encoded, "missing-2", dummy_salt_two));
+  ck_assert_mem_eq(dummy_salt_one, dummy_salt_repeat,
+                   sizeof(dummy_salt_one));
+  ck_assert(memcmp(dummy_salt_one, dummy_salt_two,
+                   sizeof(dummy_salt_one)) != 0);
+  ck_assert(memcmp(dummy_salt_one, salt, sizeof(dummy_salt_one)) != 0);
+  nonce[0] ^= 1u;
+  proof[0] ^= 1u;
+  ck_assert(!Race_AdminAuth_VerifyCredentialProof(
+    "owner-1", encoded, nonce, proof));
+
+  char malformed[RACE_ADMIN_CREDENTIAL_SIZE];
+  memcpy(malformed, encoded, sizeof(malformed));
+  malformed[strlen(malformed) - 1u] = 'B';
+  ck_assert(!Race_AdminPassword_EncodedValid(malformed));
+  ck_assert_int_eq(Race_AdminPassword_Verify(malformed, "CorrectHorse9"),
+                   RACE_ADMIN_PASSWORD_VERIFY_ERROR);
+  ck_assert(!Race_AdminPassword_EncodedValid(NULL));
+} END_TEST
+
+START_TEST(_Race_AdminChallengeAndWireProof) {
+  uint8_t nonce[RACE_ADMIN_AUTH_NONCE_SIZE];
+  uint8_t proof[RACE_ADMIN_AUTH_PROOF_SIZE];
+  memset(nonce, 0xa5, sizeof(nonce));
+  memset(proof, 0x3c, sizeof(proof));
+
+  char command[RACE_ADMIN_AUTH_PROOF_COMMAND_SIZE];
+  ck_assert(Race_AdminAuth_FormatProofCommand(
+    "owner-1", nonce, proof, command));
+  ck_assert_str_eq(
+    command,
+    "radmin proof owner-1 "
+    "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5"
+    "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5 "
+    "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
+    "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c\n");
+  ck_assert_ptr_null(strstr(command, "CorrectHorse9"));
+  ck_assert_ptr_null(strchr(command, '$'));
+
+  uint8_t decoded[RACE_ADMIN_AUTH_NONCE_SIZE];
+  char nonce_hex[RACE_ADMIN_AUTH_NONCE_HEX_SIZE];
+  ck_assert(Race_AdminAuth_HexEncode(
+    nonce, sizeof(nonce), nonce_hex, sizeof(nonce_hex)));
+  ck_assert(Race_AdminAuth_HexDecode(nonce_hex, decoded, sizeof(decoded)));
+  ck_assert_mem_eq(decoded, nonce, sizeof(nonce));
+  nonce_hex[0] = 'A';
+  ck_assert(!Race_AdminAuth_HexDecode(nonce_hex, decoded, sizeof(decoded)));
+  nonce_hex[0] = 'a';
+  nonce_hex[sizeof(nonce_hex) - 2u] = '\0';
+  ck_assert(!Race_AdminAuth_HexDecode(nonce_hex, decoded, sizeof(decoded)));
+
+  race_admin_challenge_t challenge = { 0 };
+  ck_assert(Race_AdminAuth_IssueChallenge(
+    &challenge, "owner-1", nonce, 1000u));
+  ck_assert(Race_AdminAuth_ConsumeChallenge(
+    &challenge, "owner-1", nonce, 1100u, 100u));
+  ck_assert(!Race_AdminAuth_ConsumeChallenge(
+    &challenge, "owner-1", nonce, 1100u, 100u));
+
+  ck_assert(Race_AdminAuth_IssueChallenge(
+    &challenge, "owner-1", nonce, 1000u));
+  ck_assert(!Race_AdminAuth_ConsumeChallenge(
+    &challenge, "owner-2", nonce, 1001u, 100u));
+  ck_assert(!challenge.issued);
+  ck_assert(Race_AdminAuth_IssueChallenge(
+    &challenge, "owner-1", nonce, 1000u));
+  ck_assert(!Race_AdminAuth_ConsumeChallenge(
+    &challenge, "owner-1", nonce, 1101u, 100u));
+  ck_assert(!challenge.issued);
+} END_TEST
+
+START_TEST(_Race_AdminCredentialMigrationAndV3RoundTrip) {
+  char version_one[] =
+    RACE_ADMIN_MAGIC_V1 "\n"
+    "generation=1\n"
+    "credential=" RACE_ADMIN_CREDENTIAL_MODE_V1 "\n"
+    "accounts=1\n"
+    "account=owner|owner|owner|1|1\n"
+    "crc=00000000\n";
+  Race_TestAdminResign(version_one);
+
+  race_admin_document_t document;
+  race_admin_parse_info_t parse_info;
+  ck_assert_int_eq(Race_Admin_ParseWithInfo(
+    version_one, strlen(version_one), &document, &parse_info),
+    RACE_ADMIN_PARSE_OK);
+  ck_assert_uint_eq(document.generation, 1u);
+  ck_assert_uint_eq(document.count, 1u);
+  ck_assert_str_eq(document.accounts[0].credential, "");
+  ck_assert(!Race_Admin_DocumentHasEnabledCredentialedOwner(&document));
+  ck_assert_int_eq(parse_info.format, RACE_ADMIN_FORMAT_V1);
+  ck_assert_uint_eq(parse_info.embedded_v3_allowlist.count, 0u);
+
+  char version_two[] =
+    RACE_ADMIN_MAGIC_V2 "\n"
+    "generation=4\n"
+    "credential=" RACE_ADMIN_CREDENTIAL_MODE_V2 "\n"
+    "accounts=1\n"
+    "account=owner|owner|owner|1|2|" RACE_TEST_ADMIN_CREDENTIAL "\n"
+    "crc=00000000\n";
+  Race_TestAdminResign(version_two);
+  race_admin_document_t version_two_document;
+  ck_assert_int_eq(Race_Admin_ParseWithInfo(
+    version_two, strlen(version_two), &version_two_document, &parse_info),
+    RACE_ADMIN_PARSE_OK);
+  ck_assert_int_eq(parse_info.format, RACE_ADMIN_FORMAT_V2);
+  ck_assert_uint_eq(parse_info.embedded_v3_allowlist.count, 0u);
+  ck_assert(Race_Admin_DocumentHasEnabledCredentialedOwner(
+    &version_two_document));
+
+  char version_three[] =
+    RACE_ADMIN_MAGIC_V3 "\n"
+    "generation=5\n"
+    "credential=" RACE_ADMIN_CREDENTIAL_MODE_V2 "\n"
+    "operator_cvars=1\n"
+    "cvar=sv_hostname\n"
+    "accounts=1\n"
+    "account=owner|owner|owner|1|3|" RACE_TEST_ADMIN_CREDENTIAL "\n"
+    "crc=00000000\n";
+  Race_TestAdminResign(version_three);
+  race_admin_document_t version_three_document;
+  ck_assert_int_eq(Race_Admin_ParseWithInfo(
+    version_three, strlen(version_three), &version_three_document,
+    &parse_info), RACE_ADMIN_PARSE_OK);
+  ck_assert_int_eq(parse_info.format, RACE_ADMIN_FORMAT_V3);
+  ck_assert_uint_eq(parse_info.embedded_v3_allowlist.count, 1u);
+  ck_assert_str_eq(parse_info.embedded_v3_allowlist.names[0], "sv_hostname");
+  ck_assert(Race_Admin_DocumentHasEnabledCredentialedOwner(
+    &version_three_document));
+
+  race_admin_document_t candidate;
+  ck_assert(Race_Admin_SetAccountCredential(
+    &document, "owner", RACE_TEST_ADMIN_CREDENTIAL, &candidate));
+  document = candidate;
+  ck_assert_uint_eq(document.generation, 2u);
+  ck_assert_uint_eq(document.accounts[0].revision, 2u);
+  ck_assert(Race_Admin_DocumentHasEnabledCredentialedOwner(&document));
+
+  char serialized[RACE_ADMIN_SERIALIZED_MAX];
+  size_t serialized_length;
+  ck_assert(Race_Admin_Serialize(&document, serialized, sizeof(serialized),
+                                 &serialized_length));
+  serialized[serialized_length] = '\0';
+  ck_assert_ptr_nonnull(strstr(serialized, RACE_ADMIN_MAGIC_V4 "\n"));
+  ck_assert_ptr_nonnull(strstr(
+    serialized, "credential=" RACE_ADMIN_CREDENTIAL_MODE_V2 "\n"));
+  ck_assert_ptr_null(strstr(serialized, "operator_cvars="));
+  ck_assert_ptr_null(strstr(serialized, "cvar="));
+  ck_assert_ptr_nonnull(strstr(serialized, RACE_TEST_ADMIN_CREDENTIAL));
+
+  race_admin_document_t parsed;
+  ck_assert_int_eq(Race_Admin_ParseWithInfo(
+    serialized, serialized_length, &parsed, &parse_info), RACE_ADMIN_PARSE_OK);
+  ck_assert_int_eq(parse_info.format, RACE_ADMIN_FORMAT_V4);
+  ck_assert_uint_eq(parse_info.embedded_v3_allowlist.count, 0u);
+  ck_assert(Race_Admin_DocumentEquals(&document, &parsed));
+
+  char disabled_operator[] =
+    RACE_ADMIN_MAGIC_V1 "\n"
+    "generation=9\n"
+    "credential=" RACE_ADMIN_CREDENTIAL_MODE_V1 "\n"
+    "accounts=1\n"
+    "account=legacy|legacy|operator|0|7\n"
+    "crc=00000000\n";
+  Race_TestAdminResign(disabled_operator);
+  ck_assert_int_eq(Race_Admin_Parse(disabled_operator,
+                                    strlen(disabled_operator), &document),
+                   RACE_ADMIN_PARSE_OK);
+  ck_assert(!Race_Admin_DocumentHasEnabledCredentialedOwner(&document));
+  ck_assert(Race_Admin_SetAccountCredential(
+    &document, "legacy", RACE_TEST_ADMIN_CREDENTIAL, &candidate));
+  document = candidate;
+  ck_assert(Race_Admin_SetAccountRole(&document, "legacy",
+                                      RACE_ADMIN_ROLE_OWNER, &candidate));
+  document = candidate;
+  ck_assert(Race_Admin_SetAccountEnabled(&document, "legacy", true,
+                                         &candidate));
+  document = candidate;
+  ck_assert(Race_Admin_DocumentHasEnabledCredentialedOwner(&document));
+  ck_assert_uint_eq(document.generation, 12u);
+  ck_assert_uint_eq(document.accounts[0].revision, 10u);
+  ck_assert_int_eq(document.accounts[0].role, RACE_ADMIN_ROLE_OWNER);
+  ck_assert(document.accounts[0].enabled);
+} END_TEST
+
+START_TEST(_Race_AdminCredentialOwnerInvariantAndSessionRevision) {
+  race_admin_document_t document, candidate;
+  ck_assert(Race_Admin_DocumentInit(&document));
+  ck_assert(Race_Admin_AddAccount(&document, "owner-1", "owner-1",
+                                  RACE_ADMIN_ROLE_OWNER,
+                                  RACE_TEST_ADMIN_CREDENTIAL, &candidate));
+  document = candidate;
+  ck_assert(Race_Admin_DocumentHasEnabledCredentialedOwner(&document));
+
+  race_admin_session_t session = { 0 };
+  ck_assert(Race_Admin_SessionGrant(&session, &document, "owner-1"));
+  ck_assert(Race_Admin_SetAccountCredential(
+    &document, "owner-1", RACE_TEST_ADMIN_CREDENTIAL_ALTERNATE, &candidate));
+  ck_assert(!Race_Admin_SessionAuthenticated(&session, &candidate));
+  document = candidate;
+  ck_assert_uint_eq(document.accounts[0].revision, 2u);
+  ck_assert(Race_Admin_SessionGrant(&session, &document, "owner-1"));
+
+  ck_assert(!Race_Admin_RemoveAccount(&document, "owner-1", &candidate));
+  ck_assert(Race_Admin_DocumentEquals(&document, &candidate));
+  ck_assert(!Race_Admin_SetAccountRole(&document, "owner-1",
+                                       RACE_ADMIN_ROLE_OPERATOR, &candidate));
+  ck_assert(Race_Admin_DocumentEquals(&document, &candidate));
+  ck_assert(!Race_Admin_SetAccountEnabled(&document, "owner-1", false,
+                                          &candidate));
+  ck_assert(Race_Admin_DocumentEquals(&document, &candidate));
+
+  race_admin_document_t with_two;
+  ck_assert(Race_Admin_AddAccount(&document, "owner-2", "owner-2",
+                                  RACE_ADMIN_ROLE_OWNER,
+                                  RACE_TEST_ADMIN_CREDENTIAL, &with_two));
+  ck_assert(Race_Admin_RemoveAccount(&with_two, "owner-1", &candidate));
+  ck_assert(Race_Admin_DocumentHasEnabledCredentialedOwner(&candidate));
+  ck_assert(Race_Admin_SetAccountRole(&with_two, "owner-1",
+                                      RACE_ADMIN_ROLE_OPERATOR, &candidate));
+  ck_assert(Race_Admin_DocumentHasEnabledCredentialedOwner(&candidate));
+  ck_assert(Race_Admin_SetAccountEnabled(&with_two, "owner-1", false,
+                                         &candidate));
+  ck_assert(Race_Admin_DocumentHasEnabledCredentialedOwner(&candidate));
+} END_TEST
+
+START_TEST(_Race_AdminLoginThrottleBoundaries) {
+  race_admin_login_throttle_t throttle;
+  Race_Admin_LoginThrottleClear(&throttle);
+  ck_assert(Race_Admin_LoginThrottleAllowed(&throttle, 1000u));
+
+  for (size_t i = 0; i < RACE_ADMIN_LOGIN_FAILURE_LIMIT - 1u; i++) {
+    Race_Admin_LoginThrottleRecordFailure(&throttle, 1000u);
+  }
+  ck_assert_uint_eq(throttle.failures,
+                    RACE_ADMIN_LOGIN_FAILURE_LIMIT - 1u);
+  ck_assert(Race_Admin_LoginThrottleAllowed(
+    &throttle, 1000u + RACE_ADMIN_LOGIN_FAILURE_WINDOW - 1u));
+  ck_assert(Race_Admin_LoginThrottleAllowed(
+    &throttle, 1000u + RACE_ADMIN_LOGIN_FAILURE_WINDOW));
+  ck_assert_uint_eq(throttle.failures, 0u);
+
+  for (size_t i = 0; i < RACE_ADMIN_LOGIN_FAILURE_LIMIT; i++) {
+    Race_Admin_LoginThrottleRecordFailure(&throttle, 1000u);
+  }
+  ck_assert_uint_eq(throttle.failures, RACE_ADMIN_LOGIN_FAILURE_LIMIT);
+  ck_assert_uint_eq(throttle.blocked_until,
+                    1000u + RACE_ADMIN_LOGIN_COOLDOWN);
+  ck_assert(!Race_Admin_LoginThrottleAllowed(
+    &throttle, 1000u + RACE_ADMIN_LOGIN_COOLDOWN - 1u));
+  ck_assert(Race_Admin_LoginThrottleAllowed(
+    &throttle, 1000u + RACE_ADMIN_LOGIN_COOLDOWN));
+  ck_assert_uint_eq(throttle.failures, 0u);
+  ck_assert_uint_eq(throttle.blocked_until, 0u);
+  ck_assert(!Race_Admin_LoginThrottleAllowed(NULL, 0u));
+} END_TEST
+
+START_TEST(_Race_AdminAdmissionSurvivesReconnectAndRotation) {
+  race_admin_admission_t admission;
+  Race_AdminAdmission_Init(&admission);
+  const uint64_t now = 1000u;
+
+  for (size_t i = 0u; i < RACE_ADMIN_LOGIN_FAILURE_LIMIT; i++) {
+    Race_AdminAdmission_RecordFailure(
+      &admission, "owner-1", "192.0.2.1", now);
+  }
+  ck_assert(!Race_AdminAdmission_BeginChallenge(
+    &admission, "owner-1", "192.0.2.2", now));
+  ck_assert(!Race_AdminAdmission_BeginChallenge(
+    &admission, "owner-2", "192.0.2.1", now));
+  ck_assert(Race_AdminAdmission_BeginChallenge(
+    &admission, "owner-2", "192.0.2.2", now));
+
+  Race_AdminAdmission_Init(&admission);
+  for (size_t i = 0u;
+       i < RACE_ADMIN_ADMISSION_GLOBAL_FAILURE_LIMIT; i++) {
+    char account[RACE_ADMIN_ACCOUNT_ID_SIZE];
+    char address[RACE_ADMIN_ADMISSION_KEY_SIZE];
+    snprintf(account, sizeof(account), "account-%zu", i);
+    snprintf(address, sizeof(address), "192.0.2.%zu", i + 1u);
+    Race_AdminAdmission_RecordFailure(&admission, account, address, now);
+  }
+  ck_assert(!Race_AdminAdmission_ProofAllowed(
+    &admission, "rotated", "198.51.100.1", now));
+  ck_assert(Race_AdminAdmission_ProofAllowed(
+    &admission, "rotated", "198.51.100.1",
+    now + RACE_ADMIN_ADMISSION_GLOBAL_COOLDOWN));
+
+  Race_AdminAdmission_Init(&admission);
+  for (size_t i = 0u;
+       i < RACE_ADMIN_ADMISSION_GLOBAL_CHALLENGE_LIMIT; i++) {
+    ck_assert(Race_AdminAdmission_BeginChallenge(
+      &admission, "owner-1", "192.0.2.1", now));
+  }
+  ck_assert(!Race_AdminAdmission_BeginChallenge(
+    &admission, "owner-1", "192.0.2.1", now));
+  ck_assert(!Race_AdminAdmission_BeginChallenge(
+    &admission, "owner-1", "192.0.2.1",
+    now + RACE_ADMIN_ADMISSION_CHALLENGE_COOLDOWN - 1u));
+  ck_assert(Race_AdminAdmission_BeginChallenge(
+    &admission, "owner-1", "192.0.2.1",
+    now + RACE_ADMIN_ADMISSION_CHALLENGE_COOLDOWN));
+
+  Race_AdminAdmission_Init(&admission);
+  for (size_t i = 0u;
+       i < RACE_ADMIN_ADMISSION_GLOBAL_FAILURE_LIMIT; i++) {
+    char account[RACE_ADMIN_ACCOUNT_ID_SIZE];
+    char address[RACE_ADMIN_ADMISSION_KEY_SIZE];
+    snprintf(account, sizeof(account), "overflow-%zu", i);
+    snprintf(address, sizeof(address), "203.0.113.%zu", i + 1u);
+    Race_AdminAdmission_RecordFailure(
+      &admission, account, address, UINT64_MAX - 1u);
+  }
+  ck_assert_uint_eq(admission.global_blocked_until, UINT64_MAX);
+} END_TEST
+
 START_TEST(_Race_AdminFormatAndCredentialPolicy) {
   race_admin_document_t document, candidate;
   ck_assert(Race_Admin_DocumentInit(&document));
   ck_assert(Race_Admin_AddAccount(&document, "a1", "h1",
-                                  RACE_ADMIN_ROLE_OWNER, &candidate));
+                                  RACE_ADMIN_ROLE_OWNER,
+                                  RACE_TEST_ADMIN_CREDENTIAL, &candidate));
   document = candidate;
   ck_assert(Race_Admin_AddAccount(&document, "b1", "h2",
-                                  RACE_ADMIN_ROLE_OPERATOR, &candidate));
+                                  RACE_ADMIN_ROLE_OPERATOR, NULL, &candidate));
   document = candidate;
 
   char serialized[RACE_ADMIN_SERIALIZED_MAX];
@@ -4995,7 +5590,12 @@ START_TEST(_Race_AdminFormatAndCredentialPolicy) {
   ck_assert(Race_Admin_Serialize(&document, serialized, sizeof(serialized),
                                  &serialized_length));
   serialized[serialized_length] = '\0';
-  ck_assert_ptr_nonnull(strstr(serialized, "credential=disabled\n"));
+  ck_assert_ptr_nonnull(strstr(serialized, RACE_ADMIN_MAGIC_V4 "\n"));
+  ck_assert_ptr_nonnull(strstr(serialized, "credential=argon2id\n"));
+  ck_assert_ptr_null(strstr(serialized, "operator_cvars="));
+  ck_assert_ptr_null(strstr(serialized, "cvar="));
+  ck_assert_ptr_nonnull(strstr(serialized, RACE_TEST_ADMIN_CREDENTIAL));
+  ck_assert_ptr_nonnull(strstr(serialized, "account=b1|h2|operator|1|1|-\n"));
   ck_assert_ptr_null(strstr(serialized, "password"));
   ck_assert_ptr_null(strstr(serialized, "supersecret"));
 
@@ -5006,7 +5606,7 @@ START_TEST(_Race_AdminFormatAndCredentialPolicy) {
 
   char malformed[RACE_ADMIN_SERIALIZED_MAX];
   memcpy(malformed, serialized, serialized_length + 1u);
-  Race_TestReplaceSameLength(malformed, "credential=disabled",
+  Race_TestReplaceSameLength(malformed, "credential=argon2id",
                              "credential=argon2xx");
   Race_TestAdminResign(malformed);
   ck_assert_int_eq(Race_Admin_Parse(malformed, strlen(malformed), &parsed),
@@ -5024,7 +5624,7 @@ START_TEST(_Race_AdminFormatAndCredentialPolicy) {
   ck_assert_int_eq(Race_Admin_Parse(malformed, strlen(malformed), &parsed),
                    RACE_ADMIN_PARSE_MALFORMED);
 
-  const char unknown[] = "QUETOO_RACE_ADMINS_V2\n";
+  const char unknown[] = "QUETOO_RACE_ADMINS_V5\n";
   ck_assert_int_eq(Race_Admin_Parse(unknown, sizeof(unknown) - 1u, &parsed),
                    RACE_ADMIN_PARSE_UNKNOWN_VERSION);
   const char legacy[] = "# Race admin accounts: name password level\nroot secret 5\n";
@@ -5050,14 +5650,46 @@ START_TEST(_Race_AdminPersistenceAndRecovery) {
   race_admin_document_t document, candidate;
   ck_assert(Race_Admin_DocumentInit(&document));
   ck_assert(Race_Admin_AddAccount(&document, "owner", "owner",
-                                  RACE_ADMIN_ROLE_OWNER, &candidate));
+                                  RACE_ADMIN_ROLE_OWNER,
+                                  RACE_TEST_ADMIN_CREDENTIAL, &candidate));
   document = candidate;
+
+  const char owner_only_probe[] = "owner-only";
+#if !defined(_WIN32)
+  ck_assert_int_eq(Race_Persistence_WriteCandidate(
+                     race_test_admin_candidate, "broad", 5),
+                   RACE_PERSISTENCE_OK);
+  ck_assert_int_eq(chmod(race_test_admin_candidate,
+                         S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), 0);
+#endif
+  ck_assert_int_eq(Race_Persistence_WriteCandidateOwnerOnly(
+                     race_test_admin_candidate, owner_only_probe,
+                     sizeof(owner_only_probe) - 1u),
+                   RACE_PERSISTENCE_OK);
+#if !defined(_WIN32)
+  struct stat candidate_info;
+  ck_assert_int_eq(stat(race_test_admin_candidate, &candidate_info), 0);
+  if ((candidate_info.st_mode & 0777) != 0777) {
+    ck_assert_int_eq(candidate_info.st_mode & 0777, 0600);
+  }
+#endif
+  ck_assert_int_eq(Race_Persistence_Remove(race_test_admin_candidate),
+                   RACE_PERSISTENCE_OK);
 
   race_admin_parse_result_t parse_result = RACE_ADMIN_PARSE_OK;
   ck_assert_int_eq(Race_AdminStore_Commit(race_test_admin_committed,
                                           race_test_admin_candidate,
                                           &document, &parse_result),
                    RACE_ADMIN_STORE_OK);
+#if !defined(_WIN32)
+  struct stat admin_info;
+  ck_assert_int_eq(stat(race_test_admin_committed, &admin_info), 0);
+  // WSL's v9fs mount reports synthetic 0777 modes while Windows enforces the
+  // inherited ACL. Native POSIX filesystems must expose the requested 0600.
+  if ((admin_info.st_mode & 0777) != 0777) {
+    ck_assert_int_eq(admin_info.st_mode & 0777, 0600);
+  }
+#endif
 
   race_admin_document_t loaded;
   ck_assert(Race_Admin_DocumentInit(&loaded));
@@ -5067,7 +5699,7 @@ START_TEST(_Race_AdminPersistenceAndRecovery) {
   ck_assert(Race_Admin_DocumentEquals(&document, &loaded));
 
   ck_assert(Race_Admin_AddAccount(&document, "operator", "operator",
-                                  RACE_ADMIN_ROLE_OPERATOR, &candidate));
+                                  RACE_ADMIN_ROLE_OPERATOR, NULL, &candidate));
   char stale[RACE_ADMIN_SERIALIZED_MAX];
   size_t stale_length;
   ck_assert(Race_Admin_Serialize(&candidate, stale, sizeof(stale),
@@ -5167,6 +5799,8 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_VoteMenuDeadlineAndTieResolution);
   tcase_add_test(tcase, _Race_ProfileIdentity);
   tcase_add_test(tcase, _Race_ProfileIdentityPolicy);
+  tcase_add_test(tcase, _Race_ProfileProofOfPossession);
+  tcase_add_test(tcase, _Race_ConnectionAddressIdentity);
   tcase_add_test(tcase, _Race_ProfilePathSafety);
   tcase_add_test(tcase, _Race_ProfileSerialization);
   tcase_add_test(tcase, _Race_ProfileSerializationBounds);
@@ -5197,8 +5831,8 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_RacelineExtractionAndWindow);
   tcase_add_test(tcase, _Race_PublicationOrderingAndFailures);
   tcase_add_test(tcase, _Race_SettingsCatalogAndTypes);
-  tcase_add_test(tcase, _Race_SettingsResolutionAndRevision);
-  tcase_add_test(tcase, _Race_SettingsFormatAndLegacyPolicy);
+  tcase_add_test(tcase, _Race_SettingsGsetFormatAndMutation);
+  tcase_add_test(tcase, _Race_SettingsMapPropertiesEditing);
   tcase_add_test(tcase, _Race_PhysicsCatalogAndRankingPolicy);
   tcase_add_test(tcase, _Race_PhysicsConfigCodec);
   tcase_add_test(tcase, _Race_PhysicsIdentityParameterAgreement);
@@ -5206,8 +5840,15 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(tcase, _Race_AdminAccountModel);
   tcase_add_test(tcase, _Race_AdminSessionAndAuthorization);
   tcase_add_test(tcase, _Race_AdminActionAuthorization);
+  tcase_add_test(tcase, _Race_AdminExternalCvarAllowlist);
   tcase_add_test(tcase, _Race_AdminActionInputsAndSettings);
   tcase_add_test(tcase, _Race_AdminIdentityIsolation);
+  tcase_add_test(tcase, _Race_AdminPasswordPolicyAndVerification);
+  tcase_add_test(tcase, _Race_AdminChallengeAndWireProof);
+  tcase_add_test(tcase, _Race_AdminCredentialMigrationAndV3RoundTrip);
+  tcase_add_test(tcase, _Race_AdminCredentialOwnerInvariantAndSessionRevision);
+  tcase_add_test(tcase, _Race_AdminLoginThrottleBoundaries);
+  tcase_add_test(tcase, _Race_AdminAdmissionSurvivesReconnectAndRotation);
   tcase_add_test(tcase, _Race_AdminFormatAndCredentialPolicy);
   Race_MapBrowser_AddTests(tcase);
   suite_add_tcase(suite, tcase);
@@ -5218,6 +5859,9 @@ int32_t main(int32_t argc, char **argv) {
                             Race_TestPersistenceTeardown);
   tcase_add_test(persistence, _Race_PersistenceCandidatePromotion);
   tcase_add_test(persistence, _Race_PersistenceRealPathBounds);
+#if !defined(_WIN32)
+  tcase_add_test(persistence, _Race_PersistenceRejectsSymbolicLinks);
+#endif
   tcase_add_test(persistence, _Race_PersistenceFailures);
   tcase_add_test(persistence, _Race_PersistenceBoundsAndCorruption);
   tcase_add_test(persistence, _Race_PersistenceReconnectAndRename);
@@ -5226,6 +5870,7 @@ int32_t main(int32_t argc, char **argv) {
   tcase_add_test(persistence, _Race_ReplayPersistencePublicationAndRecovery);
   tcase_add_test(persistence, _Race_SettingsPersistenceAndRecovery);
   tcase_add_test(persistence, _Race_AdminPersistenceAndRecovery);
+  tcase_add_test(persistence, _Race_AdminExternalCvarAllowlistPersistence);
   suite_add_tcase(suite, persistence);
 
   SRunner *runner = srunner_create(suite);

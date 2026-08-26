@@ -12,10 +12,21 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "race_settings.h"
+
 typedef struct g_client_s g_client_t;
 
 void Race_SettingsService_Init(void);
-void Race_SettingsService_Load(const char *map);
+void Race_SettingsService_PostInit(void);
+void Race_SettingsService_PrepareLevel(const char *map);
+void Race_SettingsService_FinalizeLevel(const char *map);
+
+bool Race_SettingsService_ClientCommand(g_client_t *cl, const char *command);
+void Race_SettingsService_PrintMigrationHint(g_client_t *cl);
+
+bool Race_SettingsService_EffectiveValue(race_setting_id_t id,
+                                         race_setting_value_t *value);
+bool Race_SettingsService_HasMapOverride(race_setting_id_t id);
 
 bool Race_SettingsService_FinishCueEnabled(void);
 float Race_SettingsService_FinishCueGain(void);
@@ -26,9 +37,3 @@ int32_t Race_SettingsService_VoteMenuDuration(void);
 int32_t Race_SettingsService_VoteMenuChoices(void);
 bool Race_SettingsService_VoteAllowSpectators(void);
 bool Race_SettingsService_WeaponsEnabled(void);
-
-bool Race_SettingsService_ClientInspect(g_client_t *cl, const char *key,
-                                        bool include_sources);
-bool Race_SettingsService_ClientMutate(g_client_t *cl, bool reset,
-                                       const char *source, const char *key,
-                                       const char *value);
